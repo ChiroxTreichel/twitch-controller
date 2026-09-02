@@ -1,0 +1,76 @@
+name: overlays
+
+# Web und Worker teilen sich Image und Code.
+x-php: &php
+  build:
+    context: ./docker
+    dockerfile: php/Dockerfile
+  image: overlays-php:latest
+  env_file: .env
+  working_dir: /var/www/html
+  volumes:
+    - ./:/var/www/html
+  depends_on:
+    db:
+      condition: service_healthy
+  restart: always
+
+services:
+  # --- Datenbank ---------------------------------------------------------
+  # Heisst absichtlich "db" und nicht "postgres": auf einem Server mit
+  # weiteren Stacks gibt es oft schon einen Netz-Alias "postgres", und
+  # dann waere nicht eindeutig, welche Datenbank gemeint ist.
+  # Kein Host-Port: nur die Container im Compose-Netz kommen ran.
+  # Das Schema legt die Anwendung selbst an (core/install.php sowie
+  # install.php je Plugin), hier passiert nichts weiter.
+  db:
+    build: ./docker/postgres
+    image: overlays-postgres:latest
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    restart: always
+
+  # --- Webserver: Verwaltung, Login, Webhooks, Plugin-Routen -------------
+  web:
+    <<: *php
+    ports:
+      - "${WEB_BIND:-127.0.0.1:2300}:80"
+
+  # --- Hintergrundaufgaben der Plugins (Hook "cron.tick") ---------------
+  worker:
+    <<: *php
+    command: php bin/worker.php
+
+  # --- Reverse Proxy mit automatischem TLS -------------------------------
+  # Standardmaessig aktiv (COMPOSE_PROFILES=caddy in der .env).
+  # Wer schon einen Proxy hat (z.B. Nginx Proxy Manager), setzt
+  # COMPOSE_PROFILES= und nutzt zusaetzlich docker-compose.npm.yaml.
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["caddy"]
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+    restart: always
+
+volumes:
+  caddy_data:
+  caddy_config:

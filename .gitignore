@@ -1,0 +1,21 @@
+# Geheimnisse
+/.env
+
+# Datenbank-Dateien
+/pgdata/
+
+# Vom Streamer hochgeladene Dateien (Alert-Videos, Sounds)
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+# Alter Code als Nachschlagewerk waehrend der Umstellung.
+# Bewusst nicht im Repository: enthaelt Tokens, Team-Daten und die
+# Konfiguration der bisherigen Installation.
+/legacy/
+
+# Logs
+*.log
+
+# Editor
+/.idea/
+/.vscode/

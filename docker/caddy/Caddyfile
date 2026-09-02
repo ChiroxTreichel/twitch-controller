@@ -1,0 +1,16 @@
+{
+	# Leer lassen ist erlaubt: Caddy nutzt dann einen anonymen ACME-Account.
+	email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	# Der Apache-Container macht Routing, PHP und die WebSocket-
+	# Weiterleitung an ws:9001. Caddy ist nur TLS + Frontdoor.
+	reverse_proxy web:80
+
+	log {
+		output stdout
+	}
+}

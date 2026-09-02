@@ -1,0 +1,24 @@
+# Override fuer Setups mit eigenem Reverse Proxy im selben Docker-Host
+# (z.B. Nginx Proxy Manager). Wird von install.sh automatisch aktiviert,
+# manuell ueber die .env:
+#
+#   COMPOSE_PROFILES=
+#   COMPOSE_FILE=docker-compose.yaml:docker-compose.npm.yaml
+#   PROXY_NETWORK=proxy
+#
+# Der Proxy traegt dann "overlays" als Ziel-Host mit Port 80 ein und muss
+# selbst in demselben Netz haengen.
+services:
+  web:
+    networks:
+      default: {}
+      proxy:
+        aliases:
+          - overlays
+
+networks:
+  proxy:
+    external: true
+    # Echter Name des vorhandenen Netzes - haeufig "proxy", bei
+    # Nginx-Proxy-Manager-Installationen oft "<ordner>_default".
+    name: ${PROXY_NETWORK:-proxy}

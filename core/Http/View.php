@@ -1,0 +1,112 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Overlays\Core\Http;
+
+use Overlays\Core\App;
+use RuntimeException;
+use Throwable;
+
+/**
+ * Sehr einfacher Renderer: PHP-Dateien als Vorlagen, ohne Template-
+ * Sprache. In der Vorlage stehen zur Verfuegung:
+ *
+ *   $app     die Anwendung
+ *   $e       Escaping-Funktion:  <?= $e($name) ?>
+ *   $url     Link-Helfer:        <?= $url('/konto/benutzer') ?>
+ *   dazu alle uebergebenen Daten
+ *
+ * Plugins koennen ihre eigenen Vorlagen rendern:
+ *   $app->view->from($plugin->directory . '/views')->render('seite', [...]);
+ */
+final class View
+{
+    /** @var list<string> */
+    private array $paths;
+
+    /**
+     * @param list<string> $paths
+     */
+    public function __construct(
+        private readonly App $app,
+        array $paths,
+    ) {
+        $this->paths = $paths;
+    }
+
+    /**
+     * Renderer, der zuerst im angegebenen Verzeichnis sucht und danach
+     * in den Kern-Vorlagen (damit Plugins das Layout mitbenutzen).
+     */
+    public function from(string $directory): self
+    {
+        return new self($this->app, array_merge([rtrim($directory, '/')], $this->paths));
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function render(string $template, array $data = [], ?string $layout = 'layout'): string
+    {
+        $content = $this->capture($template, $data);
+
+        if ($layout === null) {
+            return $content;
+        }
+
+        // Das Layout sieht dieselben Daten wie die Seite, plus den
+        // gerenderten Inhalt - so kann es z.B. den Einrichtungsschritt
+        // oder den aktiven Menuepunkt kennen.
+        return $this->capture($layout, array_merge($data, [
+            'content' => $content,
+            'title'   => (string) ($data['title'] ?? ''),
+            'active'  => (string) ($data['active'] ?? ''),
+        ]));
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    private function capture(string $template, array $data): string
+    {
+        $file = $this->locate($template);
+
+        $e = static fn (mixed $value): string => htmlspecialchars(
+            (string) ($value ?? ''),
+            ENT_QUOTES | ENT_SUBSTITUTE,
+            'UTF-8'
+        );
+        $url = fn (string $path = ''): string => $this->app->url($path);
+        $app = $this->app;
+        $view = $this;
+
+        ob_start();
+
+        try {
+            (static function (array $__scope, string $__file): void {
+                extract($__scope, EXTR_SKIP);
+                require $__file;
+            })($data + compact('e', 'url', 'app', 'view'), $file);
+        } catch (Throwable $exception) {
+            ob_end_clean();
+            throw $exception;
+        }
+
+        return (string) ob_get_clean();
+    }
+
+    private function locate(string $template): string
+    {
+        $relative = ltrim(str_replace(['..', '\\'], '', $template), '/');
+
+        foreach ($this->paths as $path) {
+            $file = $path . '/' . $relative . '.php';
+            if (is_file($file)) {
+                return $file;
+            }
+        }
+
+        throw new RuntimeException("Vorlage nicht gefunden: {$template}");
+    }
+}
