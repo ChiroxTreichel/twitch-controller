@@ -65,6 +65,12 @@
     <div class="note note-ok">
         <?= $e((string) count($report['created'])) ?> angelegt,
         <?= $e((string) count($report['kept'])) ?> bestanden schon.
+        <?php if ($report['deleted'] !== []): ?>
+            <div class="hint" style="margin-top:6px;">
+                <?= $e((string) count($report['deleted'])) ?> alte Abos entfernt &mdash; sie stammten
+                aus einer früheren Installation und hätten keine gültigen Meldungen mehr geliefert.
+            </div>
+        <?php endif; ?>
     </div>
 <?php endif; ?>
 

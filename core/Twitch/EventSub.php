@@ -179,6 +179,36 @@ final class EventSub
         $callback = $this->callbackUrl();
         $existing = $this->existing();
 
+        // Twitch signiert jedes Abo mit dem Secret, das beim Anlegen
+        // mitgegeben wurde - nachtraeglich aendern geht nicht. Ist das
+        // Secret hier ein anderes als beim letzten Abgleich (neu
+        // installiert, oder in den Einstellungen geaendert), sind alle
+        // vorhandenen Abos unbrauchbar: sie kaemen mit einer Signatur an,
+        // die wir nicht pruefen koennen, und wuerden verworfen.
+        //
+        // Ohne diese Pruefung waere der Fehler besonders unangenehm, weil
+        // der Abgleich "alles in Ordnung" meldet und trotzdem nie ein
+        // Event ankommt.
+        $secret = $this->app->settings->secret('twitch_webhook_secret');
+        $fingerprint = $secret === '' ? '' : hash('sha256', $secret);
+        $knownFingerprint = $this->app->settings->string('eventsub_secret_fingerprint');
+
+        if ($fingerprint !== '' && $fingerprint !== $knownFingerprint) {
+            foreach ($existing as $subscription) {
+                $transport = is_array($subscription['transport'] ?? null) ? $subscription['transport'] : [];
+                if (((string) ($transport['callback'] ?? '')) !== $callback) {
+                    continue;
+                }
+
+                if ($this->unsubscribe((string) ($subscription['id'] ?? ''))) {
+                    $report['deleted'][] = (string) ($subscription['type'] ?? '?') . ' (Secret war veraltet)';
+                }
+            }
+
+            // Alles neu anlegen - der Ist-Stand ist jetzt leer.
+            $existing = [];
+        }
+
         $existingKeys = [];
         foreach ($existing as $subscription) {
             $transport = is_array($subscription['transport'] ?? null) ? $subscription['transport'] : [];
@@ -235,6 +265,13 @@ final class EventSub
             if ($this->unsubscribe($id)) {
                 $report['deleted'][] = 'nicht mehr benoetigt';
             }
+        }
+
+        // Erst merken, wenn tatsaechlich Abos mit diesem Secret stehen -
+        // sonst wuerde ein fehlgeschlagener Abgleich das Aufraeumen beim
+        // naechsten Versuch verhindern.
+        if ($fingerprint !== '' && $report['failed'] === []) {
+            $this->app->settings->set('eventsub_secret_fingerprint', $fingerprint);
         }
 
         return $report;
