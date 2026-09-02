@@ -1,0 +1,260 @@
+# Entwicklung
+
+Technische Unterlagen. Für die Installation als Streamer siehe
+[README.md](../README.md).
+
+---
+
+## Aufbau
+
+```
+core/        Kern: Login, Benutzer, Aktivitäten, Plugin-Verwaltung, Twitch
+plugins/     Funktionserweiterungen, je ein Ordner
+public/      DocumentRoot, enthält nur den Front-Controller und Assets
+bin/         Hintergrundprozess
+docker/      Images und Serverkonfiguration
+docs/        diese Unterlagen
+```
+
+Der Kern kennt bewusst nur vier Seiten: **Benutzer**, **Aktivitäten**,
+**Plugins**, **Einstellungen**. Twitch ist Teil des Kerns, weil ohne
+Twitch-Login niemand hineinkommt. Alles andere — Overlay, Alerts, Ziele,
+Spenden, Throne — ist Plugin.
+
+Alle Requests laufen über `public/index.php`. Grund: Plugins liegen
+außerhalb des DocumentRoots und können keine Dateien darin ablegen, sie
+registrieren stattdessen Routen im Router.
+
+### Container
+
+| Service | Aufgabe |
+| --- | --- |
+| `web` | Apache mit PHP, beantwortet alle Requests |
+| `worker` | ruft im Takt den Hook `cron.tick` auf |
+| `db` | Postgres, kein Host-Port nach außen |
+| `caddy` | TLS und Frontdoor, im Compose-Profil `caddy` |
+
+Der Datenbankdienst heißt `db` und nicht `postgres`, damit er sich auf
+einem Server mit weiteren Stacks nicht mit einem vorhandenen Netz-Alias
+`postgres` beißt.
+
+### Konfiguration
+
+In der `.env` steht nur, was gebraucht wird, **bevor** die Datenbank
+erreichbar ist: `APP_URL`, `APP_KEY`, `DB_*` und die Compose-Schalter.
+Alles Fachliche liegt in der Tabelle `settings` und ist über die
+Oberfläche änderbar.
+
+Geheimnisse (Twitch-Client-Secret, Webhook-Secret, Tokens) liegen mit
+`APP_KEY` verschlüsselt in der Datenbank — siehe `core/Support/Crypto.php`.
+
+---
+
+## Plugins schreiben
+
+Ein Plugin ist ein Ordner unter `plugins/`:
+
+```
+plugins/<slug>/
+  plugin.json      Manifest
+  plugin.php       Einstiegspunkt: registriert Hooks und Routen
+  install.php      Tabellen anlegen (idempotent, läuft auch bei Updates)
+  uninstall.php    Tabellen abräumen
+  views/           eigene Vorlagen        (optional)
+  assets/          CSS, JS, Medien        (optional)
+  src/             Klassen unter Overlays\Plugin\<Slug>\  (optional)
+```
+
+`plugins/beispiel/` ist ein vollständig kommentiertes Beispiel und die
+ausführbare Fassung dieser Dokumentation.
+
+### Manifest
+
+```json
+{
+  "slug": "throne",
+  "name": "Throne",
+  "version": "1.0.0",
+  "description": "Wunschlisten-Spenden als Alert",
+  "requires": { "core": ">=1.0.0" },
+  "optional": { "alerts": ">=1.0.0" }
+}
+```
+
+`requires` sind harte Abhängigkeiten — fehlt eine, lässt sich das Plugin
+nicht aktivieren, und ein Plugin, von dem andere abhängen, lässt sich nicht
+deaktivieren. `optional` sind weiche: das Plugin läuft auch ohne, kann aber
+mehr, wenn das andere aktiv ist. Der Schlüssel `core` meint die
+Kernversion.
+
+Bedingungen: `*`, `1.2.3`, `>=1.2.3`, `<2.0.0`, `^1.2.3`, `~1.2.3` und
+Kombinationen mit Leerzeichen (`>=1.0.0 <2.0.0`).
+
+Der Ordnername muss dem `slug` entsprechen, und `plugin.php` muss
+existieren — sonst wird das Plugin beim Einlesen übersprungen und der Grund
+protokolliert.
+
+### Lebenszyklus
+
+| Aktion | Was passiert |
+| --- | --- |
+| Installieren | `install.php` mit `$fromVersion = null`, Eintrag in `plugins` |
+| Aktivieren | Abhängigkeiten prüfen, `enabled = true`, Hook `plugin.activated` |
+| Deaktivieren | prüft, dass kein aktives Plugin hart abhängt |
+| Aktualisieren | `install.php` mit der vorher installierten Version |
+| Entfernen | `uninstall.php`, dann Einstellungen des Scopes löschen |
+
+`install.php` läuft also mehrfach und muss idempotent sein
+(`CREATE TABLE IF NOT EXISTS`, `ADD COLUMN IF NOT EXISTS`). Für gezielte
+Schritte zwischen Versionen `$fromVersion` auswerten:
+
+```php
+if ($fromVersion !== null && version_compare($fromVersion, '1.1.0', '<')) {
+    $db->run('ALTER TABLE throne_ziele ADD COLUMN IF NOT EXISTS farbe TEXT');
+}
+```
+
+Die Ladereihenfolge ergibt sich aus den Abhängigkeiten (harte wie weiche);
+Zyklen werden erkannt und protokolliert. Ein Plugin, das beim Laden eine
+Exception wirft, wird übersprungen — die Plugin-Verwaltung bleibt dadurch
+immer bedienbar.
+
+### In plugin.php verfügbar
+
+| Variable | Typ |
+| --- | --- |
+| `$app` | `Overlays\Core\App` |
+| `$plugin` | `Overlays\Core\Plugin\Manifest` |
+| `$hooks` | `Overlays\Core\Hook\Hooks` |
+| `$router` | `Overlays\Core\Http\Router` |
+| `$settings` | `Overlays\Core\Config\Settings` |
+| `$db` | `Overlays\Core\Database\Db` |
+
+`plugin.php` soll nur registrieren, nicht arbeiten — sie wird bei jedem
+Request geladen.
+
+### Hooks
+
+`dispatch` meldet ein Ereignis, `filter` reicht einen Wert durch alle
+Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
+
+| Hook | Art | Zweck |
+| --- | --- | --- |
+| `admin.nav` | filter | Menüpunkte anhängen |
+| `permissions.catalog` | filter | eigene Rechte anmelden |
+| `core.event.stored` | dispatch | auf ein eingegangenes Event reagieren |
+| `core.events.normalize` | filter | eigene Event-Quellen vereinheitlichen |
+| `core.eventsub.subscriptions` | filter | zusätzliche Twitch-Abos anfordern |
+| `core.eventsub.revoked` | dispatch | Twitch hat ein Abo entzogen |
+| `core.twitch.broadcaster_scopes` | filter | zusätzliche Twitch-Rechte anfordern |
+| `core.twitch.bot_scopes` | filter | Twitch-Rechte für den Chat-Account |
+| `core.oauth.callback` | filter | eigenen Login-Flow abschließen |
+| `core.landing` | filter | Startseite übernehmen |
+| `cron.tick` | dispatch | wiederkehrende Aufgaben |
+| `plugin.installed` / `.activated` / `.deactivated` / `.upgraded` / `.uninstalled` | dispatch | Lebenszyklus |
+| `plugins.booted` | dispatch | alle Plugins geladen |
+| `user.login` / `.created` / `.removed` / `.permissions_changed` | dispatch | Benutzerverwaltung |
+
+`core.event.stored` läuft im Webhook-Request. Twitch erwartet eine schnelle
+Antwort, also dort nur notieren und die Arbeit in `cron.tick` erledigen.
+
+### Einstellungen und Daten
+
+Jedes Plugin hat einen eigenen Scope:
+
+```php
+$scope = Settings::pluginScope($plugin->slug);   // "plugin:throne"
+
+$app->settings->set('ziel', 250, $scope);
+$app->settings->int('ziel', 0, $scope);
+$app->settings->setSecret('api_key', $key, $scope);   // verschlüsselt
+$app->settings->secret('api_key', '', $scope);
+```
+
+Der Scope wird beim Entfernen des Plugins mitgelöscht. Für echte Tabellen
+`install.php` benutzen und die Namen mit dem Slug präfixen.
+
+### Routen und Rechte
+
+```php
+$router->get('/throne', $handler, [
+    'auth'       => true,
+    'permission' => 'Throne.Seite.View',
+]);
+```
+
+Muster kennen `{name}` für ein Segment und `{name*}` für den Rest des
+Pfades. Handler-Signatur: `fn(Request $request, array $params): Response`.
+
+Rechte folgen dem Schema `Bereich.Funktion.Recht`. Rechte auf `.View`
+bekommen neu eingeladene Benutzer automatisch. Superadmin umgeht jede
+Prüfung.
+
+Statische Plugin-Dateien liegen unter `/plugin/<slug>/assets/<pfad>` und
+werden vom Kern ausgeliefert (nur bekannte Dateitypen, kein
+Verzeichniswechsel).
+
+### Eigene Vorlagen
+
+```php
+$app->view->from($plugin->directory . '/views')->render('seite', [
+    'title'  => 'Throne',
+    'active' => 'throne',
+]);
+```
+
+In der Vorlage stehen `$e` (Escaping), `$url`, `$app` und die übergebenen
+Daten bereit. Ohne dritten Parameter wird das Layout des Kerns benutzt.
+
+---
+
+## Twitch
+
+Es gibt genau **eine** Redirect-URI: `https://<domain>/auth/callback`. Der
+Zweck des Logins steckt im HMAC-signierten `state`-Parameter, das Nonce in
+einem kurzlebigen Cookie. Plugins hängen eigene Login-Flows an
+`core.oauth.callback` und brauchen keine zweite URI.
+
+EventSub-Events kommen auf `https://<domain>/hooks/twitch` an und werden per
+HMAC gegen das Webhook-Secret geprüft, dazu gegen ihr Alter (Replay-Schutz).
+Anschließend werden sie normalisiert in `events` geschrieben;
+`UNIQUE(source, external_id)` macht Doppelzustellungen harmlos.
+
+Follows bekommen einen berechneten Schlüssel `follow:<user>:<zeit>` statt
+der zufälligen Nachrichten-ID. So kann ein Plugin, das von Twitch
+unterdrückte Follows über die Follower-Liste nachträgt, denselben
+Schlüssel verwenden — die Datenbank dedupliziert dann von selbst.
+
+Welche Abos gebraucht werden, ergibt sich aus der Basisliste des Kerns plus
+allem, was Plugins über `core.eventsub.subscriptions` melden. *Konto →
+Einstellungen → Abos abgleichen* legt Fehlendes an und entfernt, was auf
+unsere Callback-URL zeigt, aber nicht mehr gebraucht wird.
+
+---
+
+## Betrieb und Entwicklung
+
+```bash
+docker compose logs -f web worker     # Logs mitlesen
+docker compose ps                     # Was läuft
+docker compose restart worker         # nach Änderungen an Plugin-Hooks
+docker compose exec web bash          # in den Container
+```
+
+Änderungen am PHP-Code wirken sofort — der Code ist in die Container
+gemountet. Nur der `worker` lädt Plugins einmal beim Start und braucht
+deshalb einen Neustart.
+
+Es gibt bewusst kein Composer und keinen Build-Schritt: ein kleiner
+PSR-4-Autoloader in `core/Support/Autoloader.php` reicht, damit sich das
+Projekt klonen und starten lässt.
+
+### Datenbank
+
+```bash
+docker compose exec -T db psql -U overlays overlays
+docker compose exec -T db pg_dump -U overlays overlays > backup.sql
+```
+
+Das Schema legt die Anwendung selbst an: `core/install.php` für den Kern,
+`plugins/<slug>/install.php` je Plugin.

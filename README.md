@@ -1,192 +1,217 @@
-# Overlays
+# Twitch Controller
 
-Stream-Werkzeug für Twitch: ein schlanker Kern, alles Weitere als Plugin.
-Jeder hostet seine eigene Installation.
+Alerts, Ziele und Overlays für deinen Stream — auf deinem eigenen Server,
+ohne Fremdplattform dazwischen.
+
+Du bekommst eine Weboberfläche, in der du deine Follow-, Abo-, Bit- und
+Raid-Alerts einstellst und als Browserquelle in OBS einbindest. Deine
+Moderatoren kannst du einladen und ihnen genau die Rechte geben, die sie
+brauchen. Was du nicht brauchst, installierst du einfach nicht.
+
+---
+
+## Was du dafür brauchst
+
+**Einen kleinen Server mit Linux.** Bei Anbietern wie Hetzner, Netcup oder
+Contabo kostet einer ab etwa 4 € im Monat. Es geht auch ein Raspberry Pi
+zu Hause, wenn du dich damit auskennst. Nimm Ubuntu oder Debian, wenn du
+die Wahl hast.
+
+**Eine Domain.** Also eine Adresse wie `overlays.deinname.de`. Wenn du
+schon eine Domain hast, reicht eine Unteradresse davon. Sie muss auf deinen
+Server zeigen — bei deinem Domain-Anbieter heißt der passende Eintrag
+**A-Record**, dort trägst du die IP-Adresse deines Servers ein.
+
+**Zehn Minuten Zeit** und die Bereitschaft, einen Befehl in ein schwarzes
+Fenster zu kopieren. Mehr ist es nicht.
+
+> Warum überhaupt ein eigener Server? Weil damit deine Zuschauerdaten,
+> deine Spenden und deine Einstellungen dir gehören und nicht einem
+> Anbieter, der morgen die Preise ändert oder zumacht.
+
+---
 
 ## Installation
 
-Voraussetzungen: ein Server mit Docker, eine Domain, deren A-Record darauf zeigt.
+Verbinde dich mit deinem Server. Bei Windows nimmst du dazu
+[PuTTY](https://www.putty.org/) oder gibst in der Eingabeaufforderung
+`ssh benutzer@server-ip` ein; bei Mac und Linux dasselbe im Terminal.
+
+Dann kopierst du diese eine Zeile hinein und drückst Enter:
 
 ```bash
-git clone <repo> overlays && cd overlays
-cp .env.example .env
+curl -fsSL https://raw.githubusercontent.com/ChiroxTreichel/twitch-controller/main/install.sh | sudo bash
 ```
 
-In der `.env` müssen fünf Dinge stehen — mehr nicht:
+Jetzt wirst du zwei Dinge gefragt:
 
-| Wert | Bedeutung |
+1. **Deine Domain** — also `overlays.deinname.de`, ohne `https://`
+2. **Wie HTTPS laufen soll** — wenn du nicht weißt, was das bedeutet:
+   nimm die vorgeschlagene Antwort mit Enter. Sie ist richtig.
+
+Danach läuft alles von selbst. Beim ersten Mal dauert es ein paar Minuten,
+weil einiges heruntergeladen wird. Am Ende steht auf dem Bildschirm, was
+noch zu tun ist.
+
+Falls etwas fehlt — zum Beispiel Docker, das Programm, in dem alles läuft —
+fragt das Skript, ob es das nachinstallieren soll. Sag ruhig ja.
+
+---
+
+## Twitch-Verbindung anlegen
+
+Das ist der einzige Schritt, der etwas Klickarbeit ist. Twitch verlangt,
+dass jede Installation sich einmal offiziell anmeldet. Das musst nur du
+machen, nicht deine Zuschauer.
+
+1. Öffne [dev.twitch.tv/console/apps/create](https://dev.twitch.tv/console/apps/create)
+   und melde dich mit deinem Twitch-Account an.
+2. **Name**: irgendwas, zum Beispiel `Meine Overlays`. Sieht niemand außer
+   dir.
+3. **OAuth Redirect URLs**: hier trägst du genau das ein, mit deiner
+   eigenen Domain:
+
+   ```
+   https://overlays.deinname.de/auth/callback
+   ```
+
+   Achte darauf, dass kein Leerzeichen und kein Schrägstrich am Ende
+   dazukommt. Das ist die häufigste Stolperstelle.
+4. **Category**: `Website Integration`
+5. Auf **Create** klicken.
+6. Bei der neuen Anwendung auf **Manage** und dann auf **New Secret**.
+   Du siehst jetzt zwei lange Zeichenfolgen: **Client ID** und
+   **Client Secret**. Lass die Seite offen.
+
+Das Client Secret bekommst du nur einmal zu sehen. Falls du es verlierst,
+klickst du einfach erneut auf *New Secret* — das alte wird dann ungültig.
+
+---
+
+## Einrichtung im Browser
+
+Jetzt öffne deine Adresse im Browser:
+
+```
+https://overlays.deinname.de
+```
+
+Du landest automatisch in der Einrichtung und wirst durch vier Schritte
+geführt:
+
+**1. Prüfung** — Es wird kontrolliert, ob auf dem Server alles vorhanden
+ist. Steht überall „in Ordnung", klickst du weiter.
+
+**2. Twitch-Anwendung** — Hier setzt du die Client ID und das Client
+Secret aus dem vorigen Abschnitt ein. Das dritte Feld ist schon
+ausgefüllt, das lässt du so.
+
+**3. Kanal verbinden** — Ein Klick, dann fragt Twitch, ob du erlauben
+willst. **Wichtig:** melde dich hier mit deinem Kanal-Account an, nicht
+mit einem Bot- oder Zweitaccount. Dieser Account wird der Besitzer deiner
+Installation.
+
+**4. Events** — Hier wird bei Twitch angemeldet, worüber du informiert
+werden willst: Follows, Abos, Bits, Raids. Ein Klick, fertig.
+
+Danach bist du drin.
+
+---
+
+## Was du jetzt hast
+
+Links im Menü findest du **Konto** mit vier Punkten:
+
+| Punkt | Wofür |
 | --- | --- |
-| `APP_DOMAIN` | die Domain, z.B. `overlays.example.com` |
-| `APP_URL` | `https://` plus diese Domain |
-| `APP_KEY` | `openssl rand -hex 32` |
-| `DB_PASS` | `openssl rand -hex 24` |
-| `ACME_EMAIL` | für Let's-Encrypt-Hinweise (darf leer bleiben) |
+| **Benutzer** | Moderatoren einladen und festlegen, was sie dürfen |
+| **Aktivitäten** | Alles, was im Kanal passiert ist — Follows, Abos, Bits, Raids |
+| **Plugins** | Zusatzfunktionen an- und abschalten |
+| **Einstellungen** | Deine Twitch-Verbindung |
 
-Dann:
+Der Kern selbst macht absichtlich wenig. Alles Weitere — Overlays für OBS,
+Alerts, Spendenziele, Chat-Befehle — kommt als **Plugin** dazu, und du
+installierst nur, was du wirklich willst. Unter *Konto → Plugins* siehst
+du, was verfügbar ist.
 
-```bash
-docker compose up -d
-```
+### Moderatoren einladen
 
-Danach `https://<deine-domain>` im Browser aufrufen. Der Rest — Twitch-App,
-Kanal, Event-Abos — läuft über den Einrichtungsassistenten.
+Unter *Konto → Benutzer* klickst du auf **Link erstellen** und schickst
+den Link an die Person. Sie meldet sich damit über Twitch an und ist
+drin — ohne Passwort, ohne dass du ihr Zugangsdaten geben musst.
 
-### Eigener Reverse Proxy statt Caddy
+Standardmäßig darf sie erst mal nur zuschauen. Über **Rechte** legst du
+einzeln fest, was sie ändern darf. Jedes Recht ist in normalem Deutsch
+erklärt.
 
-Wer schon einen Proxy betreibt (z.B. Nginx Proxy Manager), schaltet den
-mitgelieferten Caddy in der `.env` ab:
+Ohne so einen Link kann sich niemand anmelden — auch nicht, wenn er deine
+Adresse kennt.
 
-```
-COMPOSE_PROFILES=
-COMPOSE_FILE=docker-compose.yaml:docker-compose.npm.yaml
-```
+---
 
-Einmalig `docker network create proxy`, dann im Proxy auf Host `overlays`,
-Port 80 zeigen.
+## Auf dem neuesten Stand bleiben
 
-## Aufbau
-
-```
-core/        Kern: Login, Benutzer, Aktivitäten, Plugin-Verwaltung, Twitch
-plugins/     Funktionserweiterungen, je ein Ordner
-public/      DocumentRoot, enthält nur den Front-Controller und Assets
-bin/         Hintergrundprozess
-docker/      Images und Serverkonfiguration
-legacy/      alter Code als Nachschlagewerk (nicht im Repository)
-```
-
-Der Kern kennt bewusst nur vier Seiten: **Benutzer**, **Aktivitäten**,
-**Plugins**, **Einstellungen**. Twitch ist Teil des Kerns, weil ohne
-Twitch-Login niemand hineinkommt. Alles andere — Overlay, Alerts, Ziele,
-Spenden, Throne — ist Plugin.
-
-### Container
-
-| Service | Aufgabe |
-| --- | --- |
-| `web` | Apache mit PHP, beantwortet alle Requests |
-| `worker` | ruft im Takt den Hook `cron.tick` auf |
-| `db` | Postgres, kein Host-Port |
-| `caddy` | TLS und Frontdoor, abschaltbar |
-
-## Plugins schreiben
-
-Ein Plugin ist ein Ordner unter `plugins/` mit diesen Dateien:
-
-```
-plugins/<slug>/
-  plugin.json      Manifest
-  plugin.php       Einstiegspunkt: registriert Hooks und Routen
-  install.php      Tabellen anlegen (idempotent, läuft auch bei Updates)
-  uninstall.php    Tabellen abräumen
-  views/           eigene Vorlagen        (optional)
-  assets/          CSS, JS, Medien        (optional)
-  src/             Klassen unter Overlays\Plugin\<Slug>\  (optional)
-```
-
-`plugins/beispiel/` ist ein vollständig kommentiertes Beispiel und kann
-gelöscht werden.
-
-### Manifest
-
-```json
-{
-  "slug": "throne",
-  "name": "Throne",
-  "version": "1.0.0",
-  "description": "Wunschlisten-Spenden als Alert",
-  "requires": { "core": ">=1.0.0" },
-  "optional": { "alerts": ">=1.0.0" }
-}
-```
-
-`requires` sind harte Abhängigkeiten — fehlt eine, lässt sich das Plugin
-nicht aktivieren, und ein Plugin, von dem andere abhängen, lässt sich nicht
-deaktivieren. `optional` sind weiche: das Plugin läuft auch ohne, kann aber
-mehr, wenn das andere aktiv ist. Der Schlüssel `core` meint die Kernversion.
-
-Bedingungen: `*`, `1.2.3`, `>=1.2.3`, `<2.0.0`, `^1.2.3`, `~1.2.3` und
-Kombinationen mit Leerzeichen (`>=1.0.0 <2.0.0`).
-
-### Hooks
-
-`dispatch` meldet ein Ereignis, `filter` reicht einen Wert durch alle
-Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
-
-| Hook | Art | Zweck |
-| --- | --- | --- |
-| `admin.nav` | filter | Menüpunkte anhängen |
-| `permissions.catalog` | filter | eigene Rechte anmelden |
-| `core.event.stored` | dispatch | auf ein eingegangenes Event reagieren |
-| `core.events.normalize` | filter | eigene Event-Quellen vereinheitlichen |
-| `core.eventsub.subscriptions` | filter | zusätzliche Twitch-Abos anfordern |
-| `core.eventsub.revoked` | dispatch | Twitch hat ein Abo entzogen |
-| `core.twitch.broadcaster_scopes` | filter | zusätzliche Twitch-Rechte anfordern |
-| `core.twitch.bot_scopes` | filter | Twitch-Rechte für den Chat-Account |
-| `core.oauth.callback` | filter | eigenen Login-Flow abschließen |
-| `core.landing` | filter | Startseite übernehmen |
-| `cron.tick` | dispatch | wiederkehrende Aufgaben |
-| `plugin.activated` / `.deactivated` / `.installed` / `.uninstalled` / `.upgraded` | dispatch | Lebenszyklus |
-| `plugins.booted` | dispatch | alle Plugins geladen |
-| `user.login` / `.created` / `.removed` / `.permissions_changed` | dispatch | Benutzerverwaltung |
-
-### Einstellungen und Daten
-
-Jedes Plugin hat einen eigenen Einstellungs-Scope:
-
-```php
-$scope = Settings::pluginScope($plugin->slug);   // "plugin:throne"
-$app->settings->set('ziel', 250, $scope);
-$app->settings->setSecret('api_key', $key, $scope);   // verschlüsselt
-```
-
-Der Scope wird beim Entfernen des Plugins mitgelöscht. Für echte Tabellen
-`install.php` benutzen und die Namen mit dem Slug präfixen.
-
-### Routen
-
-```php
-$router->get('/throne', $handler, [
-    'auth' => true,
-    'permission' => 'Throne.Seite.View',
-]);
-```
-
-Muster kennen `{name}` für ein Segment und `{name*}` für den Rest des
-Pfades. Statische Plugin-Dateien liegen unter
-`/plugin/<slug>/assets/<pfad>`.
-
-## Twitch
-
-Es gibt genau **eine** Redirect-URI für alles: `https://<domain>/auth/callback`.
-Der Zweck des Logins steckt im signierten `state`-Parameter, deshalb muss in
-der Twitch-Konsole nur diese eine Adresse eingetragen werden.
-
-EventSub-Events kommen auf `https://<domain>/hooks/twitch` an und werden per
-HMAC gegen das Webhook-Secret geprüft. Welche Abos gebraucht werden, ergibt
-sich aus Kern plus aktiven Plugins — nach jedem Aktivieren einmal
-*Einstellungen → Abos abgleichen*.
-
-## Sicherheit
-
-- Geheimnisse in der Datenbank sind mit `APP_KEY` verschlüsselt (libsodium).
-  Ein Datenbank-Dump allein reicht nicht, um sie zu lesen.
-- Ändert sich `APP_KEY`, sind alle Geheimnisse unlesbar und müssen neu
-  eingegeben werden. Der Schlüssel gehört ins Backup.
-- Im Session-Cookie steht ein Zufallstoken, in der Datenbank nur sein Hash.
-- Postgres hat keinen Host-Port. `web` lauscht standardmäßig nur auf
-  `127.0.0.1`.
-- Der erste Twitch-Login wird Kanalinhaber. Danach ist die Einrichtung für
-  alle anderen gesperrt, und neue Benutzer brauchen einen Einladungslink.
-
-## Entwicklung
+Genau derselbe Befehl wie bei der Installation. Er erkennt, dass schon
+alles da ist, und aktualisiert nur:
 
 ```bash
-docker compose logs -f web worker     # Logs
-docker compose exec web php -v        # in den Container
-docker compose restart worker         # nach Änderungen an Plugin-Hooks
+curl -fsSL https://raw.githubusercontent.com/ChiroxTreichel/twitch-controller/main/install.sh | sudo bash
 ```
 
-Änderungen am PHP-Code wirken sofort — der Code ist ins Image gemountet, es
-wird nichts kompiliert. Nur der `worker` lädt Plugins einmal beim Start und
-braucht deshalb einen Neustart.
+Deine Einstellungen, Benutzer und Daten bleiben dabei erhalten.
+
+---
+
+## Sicherheitskopie
+
+Zwei Dinge solltest du regelmäßig wegsichern — beides liegt im
+Installationsordner, standardmäßig `/opt/overlays`:
+
+- die Datei **`.env`** — darin steht der Schlüssel, mit dem deine
+  Twitch-Zugangsdaten verschlüsselt sind
+- den Ordner **`pgdata`** — darin liegen deine Einstellungen, Benutzer
+  und Aktivitäten
+
+Ohne die `.env` ist eine Kopie der Daten wertlos, weil sie sich nicht mehr
+entschlüsseln lässt. Am besten sicherst du beides zusammen.
+
+---
+
+## Wenn etwas nicht klappt
+
+**Die Seite lädt nicht.** Zeigt deine Domain wirklich auf den Server? Das
+Installationsskript sagt es dir, wenn nicht. Nach einer Änderung am
+DNS-Eintrag kann es bis zu einer Stunde dauern, bis sie überall ankommt.
+
+**Twitch sagt „redirect URI does not match".** Dann stimmt die Adresse in
+der Twitch-Konsole nicht genau. Sie muss lauten
+`https://deine-domain/auth/callback` — mit `https`, ohne Schrägstrich am
+Ende, ohne Leerzeichen.
+
+**Die Einrichtung meckert bei Schritt 4.** Twitch ruft deine Adresse
+sofort selbst auf, um sie zu prüfen. Das klappt nur, wenn die Seite von
+außen über HTTPS erreichbar ist. Öffne deine Adresse einmal von deinem
+Handy im Mobilfunknetz — wenn es dort nicht geht, geht es für Twitch auch
+nicht.
+
+**Es kommen keine Alerts / keine Aktivitäten.** Schau unter *Konto →
+Einstellungen* und klicke auf **Abos abgleichen**. Das ist auch nach jedem
+neu aktivierten Plugin nötig.
+
+**Irgendwas anderes.** Dieser Befehl zeigt dir, was der Server gerade
+macht:
+
+```bash
+cd /opt/overlays && sudo docker compose logs -f web
+```
+
+Mit `Strg + C` beendest du die Anzeige wieder. Wenn du damit nicht
+weiterkommst, kopiere die letzten Zeilen und frag nach — daran ist
+meistens direkt zu erkennen, was fehlt.
+
+---
+
+## Für Entwickler
+
+Wie der Kern aufgebaut ist und wie man eigene Plugins schreibt, steht in
+[docs/entwicklung.md](docs/entwicklung.md).

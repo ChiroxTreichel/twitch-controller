@@ -13,9 +13,43 @@
 #
 set -euo pipefail
 
-readonly ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly ENV_FILE="$ROOT/.env"
-readonly ENV_EXAMPLE="$ROOT/.env.example"
+# Woher das Projekt geholt wird, wenn das Skript ohne Repository laeuft
+# (also beim Aufruf per curl ... | bash).
+REPO_URL="${OVERLAYS_REPO:-https://github.com/ChiroxTreichel/twitch-controller.git}"
+REPO_REF="${OVERLAYS_REF:-main}"
+DEFAULT_DIR="${OVERLAYS_DIR:-/opt/overlays}"
+
+# Aufrufparameter merken, um sie nach dem Klonen weiterzugeben.
+ORIGINAL_ARGS=("$@")
+
+# Beim Aufruf per Pipe gibt es keine Skriptdatei - dann bleibt ROOT leer
+# und wird nach dem Klonen gesetzt.
+SCRIPT_SOURCE="${BASH_SOURCE[0]:-}"
+if [ -n "$SCRIPT_SOURCE" ] && [ -f "$SCRIPT_SOURCE" ]; then
+    ROOT="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+else
+    ROOT=''
+fi
+
+ENV_FILE=''
+ENV_EXAMPLE=''
+
+set_root() {
+    ROOT="$1"
+    ENV_FILE="$ROOT/.env"
+    ENV_EXAMPLE="$ROOT/.env.example"
+}
+
+# Liegt hier wirklich das Projekt? core/App.php gibt es nur dort.
+is_project_dir() {
+    [ -n "${1:-}" ] && [ -f "$1/core/App.php" ] && [ -f "$1/docker-compose.yaml" ]
+}
+
+# Bewusst als if: mit "set -e" wuerde ein fehlgeschlagenes && als letzter
+# Befehl das Skript beenden - genau im Pipe-Fall, in dem ROOT leer ist.
+if [ -n "$ROOT" ]; then
+    set_root "$ROOT"
+fi
 
 # --- Ausgabe ---------------------------------------------------------------
 
@@ -43,15 +77,25 @@ ASSUME_YES=0
 DO_START=1
 AUTO_INSTALL=0
 
+TARGET_DIR=''
+
 usage() {
-    cat <<'USAGE'
+    cat <<USAGE
 Overlays - Installation
 
-  ./install.sh [Optionen]
+  Direkt aus dem Netz (installiert und aktualisiert):
+    curl -fsSL https://raw.githubusercontent.com/ChiroxTreichel/twitch-controller/main/install.sh | sudo bash
+
+  Oder im schon geklonten Ordner:
+    sudo ./install.sh [Optionen]
 
 Ohne Optionen führt das Skript durch die Einrichtung. Alle Optionen sind
 nur dafür da, die Fragen vorab zu beantworten:
 
+  --dir <pfad>         Wohin installiert wird (Standard: $DEFAULT_DIR)
+  --ref <name>         Branch, Tag oder Commit, der geholt wird
+                       (Standard: $REPO_REF)
+  --repo <url>         Anderes Repository verwenden
   --domain <domain>    Domain, unter der alles läuft
   --proxy <auto|npm>   auto = HTTPS selbst einrichten (Standard)
                        npm  = eigener Reverse Proxy ist schon da
@@ -65,12 +109,16 @@ nur dafür da, die Fragen vorab zu beantworten:
                        --yes nichts installiert.
   --help               Diese Hilfe
 
-Ein zweiter Aufruf überschreibt keine vorhandenen Werte in der .env.
+Ein zweiter Aufruf ist gefahrlos: vorhandene Werte in der .env bleiben
+stehen, ein vorhandener Klon wird nur aktualisiert.
 USAGE
 }
 
 while [ $# -gt 0 ]; do
     case "$1" in
+        --dir)     TARGET_DIR="${2:-}"; shift 2 ;;
+        --ref)     REPO_REF="${2:-}"; shift 2 ;;
+        --repo)    REPO_URL="${2:-}"; shift 2 ;;
         --domain)  DOMAIN="${2:-}"; shift 2 ;;
         --email)   EMAIL="${2:-}"; shift 2 ;;
         --proxy)   PROXY_MODE="${2:-}"; shift 2 ;;
@@ -133,6 +181,14 @@ offer_install() {
         [ "$AUTO_INSTALL" = "1" ]
         return
     fi
+
+    confirm "$1"
+}
+
+confirm_destructive() {
+    # Zustimmung zu etwas, das Daten verwirft. Ohne Terminal immer nein -
+    # ein unbeaufsichtigter Lauf darf nichts loeschen.
+    interactive || return 1
 
     confirm "$1"
 }
@@ -495,6 +551,100 @@ if ! docker info >/dev/null 2>&1; then
     fi
 else
     ok "Docker läuft"
+fi
+
+# --- 1b. Projekt holen, falls es noch nicht da ist -------------------------
+#
+# Beim Aufruf per "curl ... | bash" gibt es hier noch keine Dateien. Dann
+# wird das Repository geklont (oder ein vorhandener Klon aktualisiert) und
+# das Skript von dort neu gestartet.
+
+if ! is_project_dir "$ROOT"; then
+    if [ "${OVERLAYS_BOOTSTRAPPED:-0}" = "1" ]; then
+        die "Das Projekt wurde geholt, ist aber nicht auffindbar. Bitte melden."
+    fi
+
+    step "Projekt herunterladen"
+
+    if [ -z "$TARGET_DIR" ]; then
+        dim "Hierhin wird installiert. Der Ordner darf noch nicht existieren"
+        dim "oder muss ein früherer Klon dieses Projekts sein."
+        TARGET_DIR="$(ask 'Zielordner' "$DEFAULT_DIR")"
+    fi
+
+    case "$TARGET_DIR" in
+        /*) : ;;
+        *) TARGET_DIR="$(pwd)/$TARGET_DIR" ;;
+    esac
+
+    if [ -d "$TARGET_DIR/.git" ]; then
+        # Schon vorhanden: aktualisieren statt neu klonen.
+        info "Vorhandene Installation gefunden - wird aktualisiert."
+
+        git -C "$TARGET_DIR" fetch --depth 1 origin "$REPO_REF" \
+            || die "Konnte $REPO_REF nicht abrufen. Stimmt der Name, und ist das Repo erreichbar?"
+
+        # Lokale Änderungen würden den Wechsel blockieren - wir sagen es
+        # deutlich, statt sie stillschweigend zu überschreiben.
+        if ! git -C "$TARGET_DIR" diff --quiet HEAD 2>/dev/null; then
+            warn "Im Ordner liegen geänderte Dateien."
+            if confirm_destructive "Änderungen verwerfen und auf $REPO_REF setzen?"; then
+                git -C "$TARGET_DIR" reset --hard "FETCH_HEAD" >/dev/null
+            else
+                die "Abgebrochen, damit deine Änderungen erhalten bleiben.
+  Selbst aufräumen und erneut aufrufen, oder mit --dir einen anderen
+  Ordner angeben."
+            fi
+        else
+            git -C "$TARGET_DIR" checkout --quiet --detach FETCH_HEAD \
+                || die "Konnte nicht auf $REPO_REF wechseln."
+        fi
+
+        ok "Auf dem Stand von $REPO_REF"
+    elif [ -e "$TARGET_DIR" ] && [ -n "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
+        die "Der Ordner $TARGET_DIR ist nicht leer und enthält kein Projekt.
+  Bitte einen anderen Ordner wählen:  --dir /pfad/zum/ordner"
+    else
+        info "Hole $REPO_REF von $REPO_URL"
+        git clone --depth 1 --branch "$REPO_REF" "$REPO_URL" "$TARGET_DIR" 2>/dev/null \
+            || git clone "$REPO_URL" "$TARGET_DIR" \
+            || die "Klonen fehlgeschlagen. Ist das Repository öffentlich erreichbar?
+  Getestet werden kann es mit:  git clone $REPO_URL"
+
+        # --branch nimmt keine Commit-IDs; dann nachträglich wechseln.
+        if ! git -C "$TARGET_DIR" rev-parse --verify --quiet "HEAD" >/dev/null; then
+            die "Der Klon ist unbrauchbar."
+        fi
+        git -C "$TARGET_DIR" checkout --quiet "$REPO_REF" 2>/dev/null || true
+
+        ok "Nach $TARGET_DIR geholt"
+    fi
+
+    is_project_dir "$TARGET_DIR" \
+        || die "In $TARGET_DIR fehlen Projektdateien - stimmt --ref \"$REPO_REF\"?"
+
+    step "Einrichtung fortsetzen"
+    info "Weiter geht es mit $TARGET_DIR/install.sh"
+
+    # Die Bootstrap-Argumente sind erledigt und werden nicht weitergegeben:
+    # sie waeren nicht nur ueberfluessig, sondern wuerden auch scheitern,
+    # wenn ein aelterer Stand geholt wurde, der sie noch nicht kennt.
+    FORWARD_ARGS=()
+    skip_next=0
+    for arg in ${ORIGINAL_ARGS[@]+"${ORIGINAL_ARGS[@]}"}; do
+        if [ "$skip_next" = "1" ]; then
+            skip_next=0
+            continue
+        fi
+        case "$arg" in
+            --dir|--ref|--repo) skip_next=1 ;;
+            *) FORWARD_ARGS+=("$arg") ;;
+        esac
+    done
+
+    export OVERLAYS_BOOTSTRAPPED=1
+    cd "$TARGET_DIR"
+    exec bash "$TARGET_DIR/install.sh" ${FORWARD_ARGS[@]+"${FORWARD_ARGS[@]}"}
 fi
 
 [ -f "$ENV_EXAMPLE" ] || die ".env.example fehlt - liegt install.sh im richtigen Ordner?
