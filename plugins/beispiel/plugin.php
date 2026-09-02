@@ -81,6 +81,21 @@ $hooks->on('admin.nav', static function (array $nav): array {
 });
 
 // -------------------------------------------------------------------
+//  2b. Einstellungsseite in der Plugin-Liste verlinken
+// -------------------------------------------------------------------
+// Damit erscheint in "Konto > Plugins" neben diesem Plugin ein Knopf,
+// der hierher fuehrt. Genau der Platz fuer Dinge wie Zugangsdaten -
+// das Spenden-Plugin wuerde hier seine PayPal-Einstellungen anmelden.
+$hooks->on('plugin.settings', static function (array $pages) use ($plugin): array {
+    $pages[$plugin->slug] = [
+        'label' => 'Einstellungen',
+        'href'  => '/beispiel',
+    ];
+
+    return $pages;
+});
+
+// -------------------------------------------------------------------
 //  3. Eigene Seiten
 // -------------------------------------------------------------------
 // Vorlagen liegen im Plugin, benutzen aber das Layout des Kerns.

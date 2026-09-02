@@ -1,0 +1,20 @@
+# Vorhandene Dateien (index.json, pkg/*.zip, img/*) liefert Apache
+# direkt aus, alles andere geht an index.php.
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Verzeichnislisten aus - die Uebersicht macht index.php.
+Options -Indexes
+
+# meta/ enthaelt nur Bauzutaten und muss nicht oeffentlich sein.
+<IfModule mod_authz_core.c>
+    <FilesMatch "\.json$">
+        Require all granted
+    </FilesMatch>
+</IfModule>

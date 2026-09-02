@@ -273,3 +273,63 @@ td.actions { text-align: right; white-space: nowrap; }
     .sidebar-foot { margin-top: 16px; }
     .content { padding: 22px 18px 48px; }
 }
+
+/* --- Reiter -------------------------------------------------------- */
+
+.tabs {
+    display: flex;
+    gap: 4px;
+    margin: 0 0 22px;
+    border-bottom: 1px solid var(--line);
+}
+
+.tab {
+    padding: 9px 14px;
+    border-radius: 9px 9px 0 0;
+    text-decoration: none;
+    color: var(--muted);
+    font-size: 0.93rem;
+    border: 1px solid transparent;
+    border-bottom: none;
+    margin-bottom: -1px;
+}
+
+.tab:hover { color: var(--ink); background: var(--panel); }
+
+.tab.is-active {
+    color: var(--ink);
+    font-weight: 600;
+    background: var(--panel);
+    border-color: var(--line);
+}
+
+/* --- Beschreibungstexte aus dem Katalog ---------------------------- */
+
+.prose p { margin: 0 0 12px; }
+.prose p:last-child { margin-bottom: 0; }
+.prose ul { margin: 0 0 12px; padding-left: 22px; }
+.prose li { margin: 3px 0; }
+.prose code {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1px 5px;
+    font-size: 0.88em;
+}
+
+/* --- Bilder auf der Detailseite ------------------------------------ */
+
+.shots {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+}
+
+.shots img {
+    height: 180px;
+    width: auto;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    display: block;
+}

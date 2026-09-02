@@ -6,6 +6,7 @@ namespace Overlays\Core;
 
 use Overlays\Core\Admin\AccountController;
 use Overlays\Core\Admin\Nav;
+use Overlays\Core\Admin\PluginsController;
 use Overlays\Core\Auth\AuthController;
 use Overlays\Core\Http\Request;
 use Overlays\Core\Http\Response;
@@ -24,6 +25,7 @@ final class Routes
         $auth = new AuthController($app);
         $setup = new SetupController($app);
         $account = new AccountController($app);
+        $plugins = new PluginsController($app);
         $webhook = new WebhookController($app);
 
         // --- Startseite ------------------------------------------------
@@ -76,11 +78,22 @@ final class Routes
             'permission' => 'Konto.Aktivitaeten.View',
         ]);
 
-        $router->get('/konto/plugins', [$account, 'plugins'], [
+        // Plugins: zwei Reiter, eigene Detailseiten
+        $router->get('/konto/plugins', [$plugins, 'installed'], [
             'auth' => true,
             'permission' => 'Konto.Plugins.View',
         ]);
-        $router->post('/konto/plugins', [$account, 'pluginsAction'], ['auth' => true]);
+        $router->post('/konto/plugins', [$plugins, 'action'], ['auth' => true]);
+
+        $router->get('/konto/plugins/finden', [$plugins, 'find'], [
+            'auth' => true,
+            'permission' => 'Konto.Plugins.View',
+        ]);
+        $router->post('/konto/plugins/finden', [$plugins, 'findAction'], ['auth' => true]);
+        $router->get('/konto/plugins/finden/{slug}', [$plugins, 'detail'], [
+            'auth' => true,
+            'permission' => 'Konto.Plugins.View',
+        ]);
 
         $router->get('/konto/einstellungen', [$account, 'settings'], [
             'auth' => true,

@@ -21,14 +21,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
-# sodium ist im offiziellen Image normalerweise schon aktiv. Falls nicht,
-# hier nachinstallieren - ohne sodium laesst sich nichts verschluesseln
-# und die Einrichtung bricht ab.
+# sodium und mbstring sind im offiziellen Image normalerweise schon
+# aktiv. Falls nicht, hier nachinstallieren: ohne sodium laesst sich
+# nichts verschluesseln und die Einrichtung bricht ab, ohne mbstring
+# funktioniert die Plugin-Suche nicht.
 RUN php -m | grep -qi '^sodium$' \
   || ( apt-get update \
        && apt-get install -y --no-install-recommends libsodium-dev \
        && docker-php-ext-install sodium \
        && apt-get clean && rm -rf /var/lib/apt/lists/* )
+
+RUN php -m | grep -qi '^mbstring$' || docker-php-ext-install mbstring
 
 # rewrite  .. alles auf den Front-Controller public/index.php
 # remoteip .. echte Client-IP hinter Caddy/NPM

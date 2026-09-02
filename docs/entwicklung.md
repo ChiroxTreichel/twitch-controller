@@ -141,6 +141,7 @@ Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
 | Hook | Art | Zweck |
 | --- | --- | --- |
 | `admin.nav` | filter | Menüpunkte anhängen |
+| `plugin.settings` | filter | Einstellungsseite in der Plugin-Liste verlinken |
 | `permissions.catalog` | filter | eigene Rechte anmelden |
 | `core.event.stored` | dispatch | auf ein eingegangenes Event reagieren |
 | `core.events.normalize` | filter | eigene Event-Quellen vereinheitlichen |
@@ -205,6 +206,55 @@ $app->view->from($plugin->directory . '/views')->render('seite', [
 
 In der Vorlage stehen `$e` (Escaping), `$url`, `$app` und die übergebenen
 Daten bereit. Ohne dritten Parameter wird das Layout des Kerns benutzt.
+
+---
+
+## Marktplatz
+
+*Konto → Plugins* hat zwei Reiter: **Installierte Plugins** und **Plugins
+finden**. Der zweite holt einen Katalog von `plugins.talutah.de`
+(einstellbar über `registry_url`), sucht darin und zeigt eine eigene
+Detailseite - kein iframe, die Daten werden bei uns gerendert.
+
+Beteiligte Klassen:
+
+| Klasse | Aufgabe |
+| --- | --- |
+| `core/Registry/Client.php` | Katalog holen, zwischenspeichern, durchsuchen |
+| `core/Registry/Installer.php` | Paket herunterladen, prüfen, entpacken, einsetzen |
+| `core/Admin/PluginsController.php` | die beiden Reiter und die Detailseite |
+| `core/Support/Markdown.php` | Beschreibungstexte, escapt vor dem Umwandeln |
+
+Der Katalog wird eine Stunde lang als frisch betrachtet und liegt in der
+Einstellung `registry_cache`. Die Liste der installierten Plugins liest
+bewusst nur den Zwischenspeicher, damit sie nicht auf einen fremden Server
+wartet.
+
+Beim Installieren prüft `Installer` in dieser Reihenfolge: gleicher Host
+wie der Katalog, Größenbegrenzungen, `sha256`, optionale Signatur, Pfade
+im Archiv, Vorhandensein von `plugin.json` und `plugin.php`, und ob der
+Slug im Paket der angeforderte ist. Erst danach werden die Dateien aus
+einem Nebenordner an ihren Platz geschoben; scheitert etwas, kommt der
+alte Stand zurück.
+
+Weil der Webserver als `www-data` läuft, muss `plugins/` ihm gehören -
+`install.sh` setzt das. Ist es nicht beschreibbar, sagt der Reiter das und
+bietet nichts zum Installieren an.
+
+Die Gegenseite samt Format liegt in [registry/README.md](../registry/README.md).
+
+Eigene Einstellungen eines Plugins - etwa PayPal-Zugangsdaten - werden
+über den Hook `plugin.settings` in der Plugin-Liste verlinkt:
+
+```php
+$hooks->on('plugin.settings', function (array $pages) use ($plugin) {
+    $pages[$plugin->slug] = [
+        'label' => 'PayPal einrichten',
+        'href'  => '/spenden/einstellungen',
+    ];
+    return $pages;
+});
+```
 
 ---
 
