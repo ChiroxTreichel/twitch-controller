@@ -271,6 +271,68 @@ final class EventSub
     }
 
     /**
+     * Uebersetzt eine Twitch-Ablehnung in eine Ursache samt Loesungsweg.
+     * Twitch antwortet knapp und technisch; ohne Uebersetzung sucht man
+     * an der falschen Stelle.
+     *
+     * @return array{ursache: string, loesung: string}
+     */
+    public static function explain(string $message): array
+    {
+        $lower = strtolower($message);
+
+        if (str_contains($lower, 'missing proper authorization')
+            || str_contains($lower, 'missing scope')
+        ) {
+            return [
+                'ursache' => 'Der Kanal hat dieser Twitch-App die nötige Berechtigung nicht erteilt.',
+                'loesung' => 'Kanal einmal neu verbinden - dabei fragt Twitch die fehlende '
+                    . 'Berechtigung mit ab.',
+            ];
+        }
+
+        if (str_contains($lower, 'challenge')
+            || str_contains($lower, 'webhook callback verification failed')
+            || str_contains($lower, '10 seconds')
+        ) {
+            return [
+                'ursache' => 'Twitch konnte die Adresse nicht bestätigen. Sie wird beim Anlegen '
+                    . 'sofort aufgerufen und muss von außen über HTTPS erreichbar sein.',
+                'loesung' => 'Adresse einmal von einem anderen Netz aus öffnen, z.B. vom Handy '
+                    . 'im Mobilfunknetz. Klappt es dort nicht, klappt es auch für Twitch nicht.',
+            ];
+        }
+
+        if (str_contains($lower, 'subscription already exists')) {
+            return [
+                'ursache' => 'Dieses Abo besteht bereits.',
+                'loesung' => 'Nichts zu tun - beim nächsten Abgleich verschwindet die Meldung.',
+            ];
+        }
+
+        if (str_contains($lower, 'exceeds the number of subscriptions')
+            || str_contains($lower, 'too many requests')
+        ) {
+            return [
+                'ursache' => 'Twitch hat ein Mengenlimit erreicht.',
+                'loesung' => 'Ein paar Minuten warten und erneut abgleichen.',
+            ];
+        }
+
+        if (str_contains($lower, 'must use https') || str_contains($lower, 'https')) {
+            return [
+                'ursache' => 'Twitch akzeptiert nur HTTPS-Adressen.',
+                'loesung' => 'APP_URL in der .env muss mit https:// beginnen.',
+            ];
+        }
+
+        return [
+            'ursache' => $message,
+            'loesung' => '',
+        ];
+    }
+
+    /**
      * @param array<string, string> $condition
      */
     private static function key(string $type, string $version, array $condition): string

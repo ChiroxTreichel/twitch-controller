@@ -280,10 +280,22 @@ final class AccountController
                     $report = $this->app->twitch->eventSub()->sync();
 
                     if ($report['failed'] !== []) {
+                        // Ursachen zusammenfassen statt jede Ablehnung
+                        // einzeln aufzuzaehlen - meist ist es dieselbe.
+                        $ursachen = [];
+                        foreach ($report['failed'] as $message) {
+                            $erklaerung = \Overlays\Core\Twitch\EventSub::explain((string) $message);
+                            $text = $erklaerung['ursache'];
+                            if ($erklaerung['loesung'] !== '') {
+                                $text .= ' ' . $erklaerung['loesung'];
+                            }
+                            $ursachen[$text] = true;
+                        }
+
                         return $this->back(
                             '/konto/einstellungen',
                             null,
-                            'Twitch hat abgelehnt: ' . implode(' | ', $report['failed'])
+                            implode(' ', array_keys($ursachen))
                         );
                     }
 

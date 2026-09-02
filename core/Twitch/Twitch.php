@@ -103,11 +103,20 @@ final class Twitch
      */
     public function broadcasterScopes(): array
     {
+        // Jeder EventSub-Typ, den der Kern abonniert, braucht den Scope, den
+        // Twitch dafuer verlangt - sonst lehnt Twitch das Abo mit
+        // "subscription missing proper authorization" ab. Die Zuordnung:
+        //
+        //   channel.follow (v2)      -> moderator:read:followers
+        //   channel.subscribe        -> channel:read:subscriptions
+        //   channel.subscription.*   -> channel:read:subscriptions
+        //   channel.cheer            -> bits:read
+        //   channel.raid             -> kein Scope
+        //   stream.online / .offline -> kein Scope
         $base = [
-            // Follows lesen (EventSub channel.follow v2) und Follower-Liste
             'moderator:read:followers',
-            // Abos lesen
             'channel:read:subscriptions',
+            'bits:read',
         ];
 
         $scopes = $this->app->hooks->filter('core.twitch.broadcaster_scopes', $base);

@@ -19,16 +19,41 @@
 <?php endif; ?>
 
 <?php if ($report !== null && $report['failed'] !== []): ?>
-    <div class="note note-error">
-        <strong>Twitch hat einige Abos abgelehnt.</strong>
-        Häufigste Ursache: die Adresse <span class="mono"><?= $e($callback) ?></span> ist von außen nicht
-        über HTTPS erreichbar &mdash; Twitch ruft sie zur Bestätigung sofort auf.
-        <ul style="margin:10px 0 0;padding-left:20px;">
-            <?php foreach ($report['failed'] as $type => $message): ?>
-                <li><span class="mono"><?= $e((string) $type) ?></span>: <?= $e($message) ?></li>
-            <?php endforeach; ?>
-        </ul>
-    </div>
+    <?php
+    // Gleiche Ursachen zusammenfassen: bei fehlenden Berechtigungen sind
+    // sonst schnell fuenf Zeilen mit derselben Aussage untereinander.
+    $gruppen = [];
+    $brauchtNeuVerbinden = false;
+    foreach ($report['failed'] as $type => $message) {
+        $erklaerung = \Overlays\Core\Twitch\EventSub::explain((string) $message);
+        $schluessel = $erklaerung['ursache'];
+        $gruppen[$schluessel]['loesung'] = $erklaerung['loesung'];
+        $gruppen[$schluessel]['typen'][] = (string) $type;
+
+        if (str_contains($erklaerung['loesung'], 'neu verbinden')) {
+            $brauchtNeuVerbinden = true;
+        }
+    }
+    ?>
+
+    <?php foreach ($gruppen as $ursache => $gruppe): ?>
+        <div class="note note-error">
+            <strong><?= $e((string) $ursache) ?></strong>
+            <?php if ($gruppe['loesung'] !== ''): ?>
+                <div style="margin-top:6px;"><?= $e($gruppe['loesung']) ?></div>
+            <?php endif; ?>
+            <div class="hint" style="margin-top:8px;">
+                Betrifft: <span class="mono"><?= $e(implode(', ', $gruppe['typen'])) ?></span>
+            </div>
+        </div>
+    <?php endforeach; ?>
+
+    <?php if ($brauchtNeuVerbinden): ?>
+        <a class="btn" href="<?= $e($url('/setup/kanal')) ?>">Kanal neu verbinden</a>
+        <p class="hint" style="margin-top:10px;">
+            Danach landest du wieder hier und klickst noch einmal auf &bdquo;Abos anlegen&ldquo;.
+        </p>
+    <?php endif; ?>
 <?php endif; ?>
 
 <?php if ($report !== null && $report['failed'] === []): ?>
