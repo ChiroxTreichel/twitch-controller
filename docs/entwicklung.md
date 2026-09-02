@@ -232,6 +232,44 @@ unsere Callback-URL zeigt, aber nicht mehr gebraucht wird.
 
 ---
 
+## Updates
+
+`core/Update/Updater.php`, sichtbar unter *Konto → Einstellungen → System*.
+
+Der Ablauf ist absichtlich zweistufig:
+
+1. Die Oberfläche schreibt `update_requested_at` in die Einstellungen.
+2. Der `worker` sieht das beim nächsten Takt, spult den Checkout per
+   `git merge --ff-only` vor, ruft `installCore()` sowie
+   `upgradeIfNeeded()` für jedes installierte Plugin auf und beendet sich.
+   Docker startet ihn wegen `restart: always` neu — nötig, damit er die
+   neuen Plugin-Dateien lädt.
+3. Das Ergebnis landet in `update_last_result` und wird angezeigt.
+
+Grund für die Zweistufigkeit: Apache antwortet als `www-data` und darf im
+Projektordner (gehört root) nicht schreiben. Der Worker läuft als root.
+
+Der Webcontainer bekommt **keinen** Zugriff auf den Docker-Socket. Damit
+kann er weder Images bauen noch Container neu starten — das ist Absicht,
+denn sonst wäre ein übernommener Admin-Zugang gleichbedeutend mit dem
+ganzen Server. Ändert ein Update etwas an
+
+```
+docker/  docker-compose.yaml  docker-compose.npm.yaml  install.sh
+```
+
+setzt `check()` das Kennzeichen `update_needs_shell`, und die Oberfläche
+verlangt stattdessen `sudo ./install.sh` auf dem Server. Die Liste steht
+in `Updater::SHELL_PATHS`.
+
+`git` läuft mit `-c safe.directory=<root>`, weil der Ordner root gehört
+und git sonst „dubious ownership" meldet.
+
+Nur vorspulen, nie `reset --hard`: liegen im Ordner eigene Änderungen,
+schlägt das Update mit einer Meldung fehl statt sie zu überschreiben.
+
+---
+
 ## Betrieb und Entwicklung
 
 ```bash

@@ -151,14 +151,24 @@ Adresse kennt.
 
 ## Auf dem neuesten Stand bleiben
 
-Genau derselbe Befehl wie bei der Installation. Er erkennt, dass schon
-alles da ist, und aktualisiert nur:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/ChiroxTreichel/twitch-controller/main/install.sh | sudo bash
-```
+Das geht aus der Oberfläche heraus: unter *Konto → Einstellungen* findest
+du oben die Karte **System**. Dort steht deine Version, und ein Klick auf
+**Nach Updates sehen** prüft, ob es etwas Neueres gibt. Wenn ja, erscheint
+**Jetzt aktualisieren** — das läuft im Hintergrund und ist meist in unter
+einer Minute durch. Danach die Seite neu laden.
 
 Deine Einstellungen, Benutzer und Daten bleiben dabei erhalten.
+
+**Manche Updates brauchen doch die Konsole.** Wenn sich am Server selbst
+etwas ändert, sagt dir die Oberfläche das und zeigt den passenden Befehl
+an. Er sieht so aus:
+
+```bash
+cd /opt/overlays && sudo ./install.sh
+```
+
+Denselben Befehl kannst du auch sonst jederzeit benutzen — er holt den
+neuen Stand und startet alles einmal durch.
 
 ---
 

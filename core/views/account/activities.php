@@ -10,21 +10,9 @@
  * @var int $total
  */
 
-/** Aus "twitch.channel.subscription.gift" wird "Sub verschenkt". */
-$label = static function (string $eventType): string {
-    return match ($eventType) {
-        'twitch.channel.follow'               => 'Follow',
-        'twitch.channel.subscribe'            => 'Abo',
-        'twitch.channel.subscription.message' => 'Wieder-Abo',
-        'twitch.channel.subscription.gift'    => 'Abo verschenkt',
-        'twitch.channel.subscription.end'     => 'Abo beendet',
-        'twitch.channel.cheer'                => 'Bits',
-        'twitch.channel.raid'                 => 'Raid',
-        'twitch.stream.online'                => 'Stream an',
-        'twitch.stream.offline'               => 'Stream aus',
-        default => $eventType,
-    };
-};
+/** Verstaendlicher Name eines Event-Typs, siehe core/Events/Labels.php. */
+$label = static fn (string $eventType): string
+    => \Overlays\Core\Events\Labels::of($eventType, $app->hooks);
 
 $amount = static function (array $event): string {
     $value = $event['amount'] ?? null;

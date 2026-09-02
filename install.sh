@@ -76,6 +76,8 @@ PROXY_NET=''
 ASSUME_YES=0
 DO_START=1
 AUTO_INSTALL=0
+NO_PULL=0
+REPO_UPDATED=0
 
 TARGET_DIR=''
 
@@ -101,6 +103,7 @@ nur dafür da, die Fragen vorab zu beantworten:
                        npm  = eigener Reverse Proxy ist schon da
   --network <name>     Docker-Netz des eigenen Proxys (wird sonst erkannt)
   --email <adresse>    Kontakt für Let's Encrypt (optional)
+  --no-pull            Nicht nach Updates sehen
   --no-start           Nur vorbereiten, nicht starten
   --yes                Keine Rückfragen, Vorgaben verwenden
   --install-deps       Fehlende Pakete (git, Docker, Compose) ohne
@@ -123,6 +126,7 @@ while [ $# -gt 0 ]; do
         --email)   EMAIL="${2:-}"; shift 2 ;;
         --proxy)   PROXY_MODE="${2:-}"; shift 2 ;;
         --network) PROXY_NET="${2:-}"; shift 2 ;;
+        --no-pull)  NO_PULL=1; shift ;;
         --no-start) DO_START=0; shift ;;
         --install-deps) AUTO_INSTALL=1; shift ;;
         --yes|-y)  ASSUME_YES=1; shift ;;
@@ -282,6 +286,77 @@ port_in_use() {
 
 version_of() {
     printf '%s' "$1" | grep -oE '[0-9]+(\.[0-9]+)+' | head -n1
+}
+
+sync_repo() {
+    # sync_repo <ordner>
+    #
+    # Holt den Stand von REPO_REF in einen vorhandenen Klon. Wird sowohl
+    # beim Aktualisieren einer bestehenden Installation benutzt als auch
+    # direkt nach dem Klonen.
+    #
+    # Rueckgabe: 0 = auf dem neuesten Stand (auch wenn nichts zu tun war),
+    #            1 = uebersprungen oder nicht moeglich
+    local dir="$1"
+
+    [ -d "$dir/.git" ] || return 1
+
+    if ! git -C "$dir" remote get-url origin >/dev/null 2>&1; then
+        dim "Kein Repository hinterlegt - Aktualisieren übersprungen."
+        return 1
+    fi
+
+    if ! git -C "$dir" fetch --quiet origin "$REPO_REF" 2>/dev/null; then
+        warn "Konnte nicht nach Updates sehen (keine Verbindung zu GitHub?)."
+        dim "Die Einrichtung läuft mit dem vorhandenen Stand weiter."
+        return 1
+    fi
+
+    local here there
+    here="$(git -C "$dir" rev-parse HEAD 2>/dev/null || true)"
+    there="$(git -C "$dir" rev-parse FETCH_HEAD 2>/dev/null || true)"
+
+    if [ -z "$there" ]; then
+        warn "Konnte $REPO_REF nicht lesen."
+        return 1
+    fi
+
+    if [ "$here" = "$there" ]; then
+        ok "Schon auf dem neuesten Stand"
+        return 0
+    fi
+
+    # Was kommt dazu? Kurz zeigen, damit man weiss, was passiert.
+    local anzahl
+    anzahl="$(git -C "$dir" rev-list --count HEAD..FETCH_HEAD 2>/dev/null || echo '?')"
+    info "Es gibt eine neuere Version (${anzahl} Änderungen)."
+    git -C "$dir" log --oneline --no-decorate HEAD..FETCH_HEAD 2>/dev/null \
+        | head -n 5 | while read -r zeile; do dim "  $zeile"; done
+
+    # Eigene Änderungen nicht stillschweigend wegwerfen.
+    if ! git -C "$dir" diff --quiet HEAD 2>/dev/null; then
+        warn "Im Ordner liegen geänderte Dateien."
+        if confirm_destructive "Änderungen verwerfen und aktualisieren?"; then
+            git -C "$dir" reset --hard FETCH_HEAD >/dev/null 2>&1 \
+                || { warn "Aktualisieren fehlgeschlagen."; return 1; }
+            REPO_UPDATED=1
+            ok "Aktualisiert auf $REPO_REF"
+            return 0
+        fi
+
+        warn "Nicht aktualisiert - deine Änderungen bleiben erhalten."
+        return 1
+    fi
+
+    if git -C "$dir" merge --ff-only FETCH_HEAD >/dev/null 2>&1 \
+       || git -C "$dir" checkout --quiet --detach FETCH_HEAD >/dev/null 2>&1; then
+        REPO_UPDATED=1
+        ok "Aktualisiert auf $REPO_REF"
+        return 0
+    fi
+
+    warn "Aktualisieren fehlgeschlagen. Von Hand:  git -C $dir pull"
+    return 1
 }
 
 version_at_least() {
@@ -579,28 +654,8 @@ if ! is_project_dir "$ROOT"; then
 
     if [ -d "$TARGET_DIR/.git" ]; then
         # Schon vorhanden: aktualisieren statt neu klonen.
-        info "Vorhandene Installation gefunden - wird aktualisiert."
-
-        git -C "$TARGET_DIR" fetch --depth 1 origin "$REPO_REF" \
-            || die "Konnte $REPO_REF nicht abrufen. Stimmt der Name, und ist das Repo erreichbar?"
-
-        # Lokale Änderungen würden den Wechsel blockieren - wir sagen es
-        # deutlich, statt sie stillschweigend zu überschreiben.
-        if ! git -C "$TARGET_DIR" diff --quiet HEAD 2>/dev/null; then
-            warn "Im Ordner liegen geänderte Dateien."
-            if confirm_destructive "Änderungen verwerfen und auf $REPO_REF setzen?"; then
-                git -C "$TARGET_DIR" reset --hard "FETCH_HEAD" >/dev/null
-            else
-                die "Abgebrochen, damit deine Änderungen erhalten bleiben.
-  Selbst aufräumen und erneut aufrufen, oder mit --dir einen anderen
-  Ordner angeben."
-            fi
-        else
-            git -C "$TARGET_DIR" checkout --quiet --detach FETCH_HEAD \
-                || die "Konnte nicht auf $REPO_REF wechseln."
-        fi
-
-        ok "Auf dem Stand von $REPO_REF"
+        info "Vorhandene Installation in $TARGET_DIR gefunden."
+        sync_repo "$TARGET_DIR" || true
     elif [ -e "$TARGET_DIR" ] && [ -n "$(ls -A "$TARGET_DIR" 2>/dev/null)" ]; then
         die "Der Ordner $TARGET_DIR ist nicht leer und enthält kein Projekt.
   Bitte einen anderen Ordner wählen:  --dir /pfad/zum/ordner"
@@ -645,6 +700,28 @@ if ! is_project_dir "$ROOT"; then
     export OVERLAYS_BOOTSTRAPPED=1
     cd "$TARGET_DIR"
     exec bash "$TARGET_DIR/install.sh" ${FORWARD_ARGS[@]+"${FORWARD_ARGS[@]}"}
+fi
+
+# --- 1c. Vorhandene Installation aktualisieren -----------------------------
+#
+# Wir laufen hier bereits im Projektordner. Ohne diesen Schritt waere ein
+# erneuter Aufruf von install.sh wirkungslos - es wuerde nur die
+# Konfiguration pruefen und die Container neu starten, aber keinen neuen
+# Code holen.
+
+if [ "$NO_PULL" = "0" ] && [ -d "$ROOT/.git" ]; then
+    step "Nach Updates sehen"
+    sync_repo "$ROOT" || true
+
+    # Nach dem Aktualisieren mit der neuen Fassung weiterarbeiten - sonst
+    # laeuft die alte Datei weiter und spaetere Schritte passen womoeglich
+    # nicht zum neuen Stand.
+    if [ "$REPO_UPDATED" = "1" ] && [ "${OVERLAYS_RELOADED:-0}" != "1" ]; then
+        info "Starte mit der neuen Fassung neu."
+
+        export OVERLAYS_RELOADED=1
+        exec bash "$ROOT/install.sh" --no-pull ${ORIGINAL_ARGS[@]+"${ORIGINAL_ARGS[@]}"}
+    fi
 fi
 
 [ -f "$ENV_EXAMPLE" ] || die ".env.example fehlt - liegt install.sh im richtigen Ordner?

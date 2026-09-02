@@ -202,6 +202,7 @@ final class AccountController
     public function settings(Request $request): Response
     {
         $tokens = $this->app->twitch->tokens();
+        $updater = new \Overlays\Core\Update\Updater($this->app);
         $missingScopes = [];
 
         try {
@@ -234,6 +235,9 @@ final class AccountController
             'missingScopes'    => $missingScopes,
             'desired'          => $this->app->twitch->eventSub()->desired(),
             'report'           => null,
+            'update'           => $updater->status(),
+            'updateVersion'    => $updater->currentVersion(),
+            'updatePossible'   => $updater->isGitCheckout() && $updater->gitAvailable(),
         ]));
     }
 
@@ -310,6 +314,24 @@ final class AccountController
                     $this->app->twitch->tokens()->delete(TokenStore::BROADCASTER);
 
                     return $this->back('/konto/einstellungen', 'Kanal-Verbindung getrennt.');
+
+                case 'update_check':
+                    $check = (new \Overlays\Core\Update\Updater($this->app))->check();
+
+                    return $check['ok']
+                        ? $this->back('/konto/einstellungen', $check['message'])
+                        : $this->back('/konto/einstellungen', null, $check['message']);
+
+                case 'update_apply':
+                    // Ausgefuehrt wird das im worker-Container, weil der
+                    // Webserver im Projektordner nicht schreiben darf.
+                    (new \Overlays\Core\Update\Updater($this->app))->request();
+
+                    return $this->back(
+                        '/konto/einstellungen',
+                        'Update ist beauftragt. Es läuft im Hintergrund an und dauert meist '
+                        . 'weniger als eine Minute - diese Seite danach neu laden.'
+                    );
             }
         } catch (Throwable $e) {
             return $this->back('/konto/einstellungen', null, $e->getMessage());

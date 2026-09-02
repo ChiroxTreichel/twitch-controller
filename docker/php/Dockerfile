@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       libicu-dev \
       libonig-dev \
       ca-certificates \
+      git \
   && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
   && docker-php-ext-install -j"$(nproc)" gd intl zip opcache pdo_pgsql pgsql \
   && apt-get clean \

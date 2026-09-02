@@ -52,6 +52,28 @@ while ($running) {
             continue;
         }
 
+        // Zwischenspeicher zuerst leeren: sonst sieht dieser Durchlauf
+        // noch die Einstellungen vom vorigen und bekaeme einen gerade
+        // erteilten Update-Auftrag nicht mit.
+        $app->settings->flush();
+
+        // Hat jemand in der Oberflaeche ein Update beauftragt? Der Worker
+        // laeuft als root und darf im Projektordner schreiben, der
+        // Webserver nicht - deshalb passiert es hier.
+        $updater = new Overlays\Core\Update\Updater($app);
+        if ($updater->isRequested()) {
+            fwrite(STDOUT, "[worker] Update wird eingespielt...\n");
+
+            if ($updater->applyIfRequested()) {
+                // Beenden, damit Docker uns mit dem neuen Code neu
+                // startet - sonst liefen die alten Plugin-Dateien weiter.
+                fwrite(STDOUT, "[worker] Update fertig, starte neu.\n");
+                exit(0);
+            }
+
+            fwrite(STDERR, "[worker] Update fehlgeschlagen, Einzelheiten stehen in den Einstellungen.\n");
+        }
+
         // Plugins erst laden, wenn eingerichtet ist. Danach einmal - der
         // Prozess wird bei Aenderungen neu gestartet.
         if (!$booted) {
@@ -61,7 +83,6 @@ while ($running) {
                 . (implode(', ', $app->plugins->bootedSlugs()) ?: 'keine') . "\n");
         }
 
-        $app->settings->flush();
         $app->hooks->dispatch('cron.tick');
     } catch (Throwable $e) {
         fwrite(STDERR, '[worker] Fehler: ' . $e->getMessage() . "\n");

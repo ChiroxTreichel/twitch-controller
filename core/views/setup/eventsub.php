@@ -43,7 +43,12 @@
                 <div style="margin-top:6px;"><?= $e($gruppe['loesung']) ?></div>
             <?php endif; ?>
             <div class="hint" style="margin-top:8px;">
-                Betrifft: <span class="mono"><?= $e(implode(', ', $gruppe['typen'])) ?></span>
+                Betrifft:
+                <?php $namen = array_map(
+                    static fn (string $t): string => \Overlays\Core\Events\Labels::of($t, $app->hooks),
+                    $gruppe['typen']
+                ); ?>
+                <?= $e(implode(', ', $namen)) ?>
             </div>
         </div>
     <?php endforeach; ?>
@@ -72,8 +77,8 @@
         <tbody>
         <?php foreach ($desired as $subscription): ?>
             <tr>
-                <td class="mono"><?= $e($subscription['type']) ?></td>
-                <td class="actions hint">v<?= $e($subscription['version']) ?></td>
+                <td><?= $e(\Overlays\Core\Events\Labels::of($subscription['type'], $app->hooks)) ?></td>
+                <td class="actions hint mono"><?= $e($subscription['type']) ?></td>
             </tr>
         <?php endforeach; ?>
         </tbody>

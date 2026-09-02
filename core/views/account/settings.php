@@ -21,7 +21,106 @@
  */
 ?>
 <h1>Einstellungen</h1>
-<p class="lead">Twitch-Anbindung dieser Installation.</p>
+<p class="lead">Twitch-Anbindung und Stand dieser Installation.</p>
+
+<div class="card">
+    <div class="card-head">
+        <h2>System</h2>
+        <?php if (!$updatePossible): ?>
+            <span class="badge badge-off">Updates von Hand</span>
+        <?php elseif ($update['requested_at'] > 0): ?>
+            <span class="badge badge-warn">Update läuft</span>
+        <?php elseif ($update['available']): ?>
+            <span class="badge badge-warn">Update verfügbar</span>
+        <?php elseif ($update['checked_at'] > 0): ?>
+            <span class="badge badge-ok">aktuell</span>
+        <?php endif; ?>
+    </div>
+
+    <table>
+        <tbody>
+        <tr>
+            <td>Installierte Version</td>
+            <td class="actions mono"><?= $e($updateVersion) ?></td>
+        </tr>
+        <?php if ($update['checked_at'] > 0): ?>
+            <tr>
+                <td>Zuletzt nachgesehen</td>
+                <td class="actions hint">
+                    <?= $e(date('d.m.Y H:i', $update['checked_at'])) ?>
+                </td>
+            </tr>
+        <?php endif; ?>
+        </tbody>
+    </table>
+
+    <?php if (!$updatePossible): ?>
+        <p class="hint" style="margin-top:12px;">
+            Diese Installation kann sich nicht selbst aktualisieren &mdash; entweder ist sie keine
+            Git-Kopie, oder im Container fehlt <span class="mono">git</span>. Einmal
+            <span class="mono">sudo ./install.sh</span> auf dem Server behebt beides.
+        </p>
+    <?php else: ?>
+
+        <?php if ($update['requested_at'] > 0): ?>
+            <div class="note note-warn" style="margin:14px 0 0;">
+                Das Update ist beauftragt und läuft im Hintergrund.
+                Seite in einer Minute neu laden.
+            </div>
+        <?php elseif ($update['available']): ?>
+            <div class="note note-warn" style="margin:14px 0 0;">
+                <strong>Es gibt eine neuere Version.</strong>
+                <?php if ($update['subject'] !== ''): ?>
+                    <div class="hint" style="margin-top:6px;">
+                        Neueste Änderung: <?= $e($update['subject']) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($update['needs_shell']): ?>
+                    <p style="margin:10px 0 0;">
+                        Dieses Update ändert auch Dinge am Server selbst. Es lässt sich deshalb
+                        nicht von hier aus einspielen &mdash; dafür braucht es einen Befehl auf
+                        dem Server:
+                    </p>
+                    <p class="mono" style="background:var(--bg);padding:10px 12px;border-radius:9px;border:1px solid var(--line);margin:8px 0 0;">
+                        cd /opt/overlays &amp;&amp; sudo ./install.sh
+                    </p>
+                    <p class="hint" style="margin:8px 0 0;">
+                        Liegt die Installation woanders, dort denselben Befehl ausführen.
+                    </p>
+                <?php elseif ($canManage): ?>
+                    <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>"
+                          style="margin-top:12px;">
+                        <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
+                        <input type="hidden" name="action" value="update_apply">
+                        <button class="btn btn-small" type="submit">Jetzt aktualisieren</button>
+                    </form>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($update['last_result'] !== []): ?>
+            <?php $letztes = $update['last_result']; ?>
+            <div class="note <?= !empty($letztes['ok']) ? 'note-ok' : 'note-error' ?>" style="margin:14px 0 0;">
+                <strong><?= !empty($letztes['ok']) ? 'Letztes Update erfolgreich.' : 'Letztes Update fehlgeschlagen.' ?></strong>
+                <div class="hint" style="margin-top:4px;">
+                    <?= $e((string) ($letztes['message'] ?? '')) ?>
+                    <?php if (!empty($letztes['at'])): ?>
+                        &middot; <?= $e(date('d.m.Y H:i', strtotime((string) $letztes['at']))) ?>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($canManage && $update['requested_at'] === 0): ?>
+            <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>" style="margin-top:14px;">
+                <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
+                <input type="hidden" name="action" value="update_check">
+                <button class="btn btn-ghost btn-small" type="submit">Nach Updates sehen</button>
+            </form>
+        <?php endif; ?>
+    <?php endif; ?>
+</div>
 
 <?php if ($notice !== ''): ?>
     <div class="note note-ok"><?= $e($notice) ?></div>
@@ -59,9 +158,16 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>Berechtigungen</td>
-                    <td class="actions hint mono">
-                        <?= $e($broadcasterToken['scopes'] === [] ? '—' : implode(' ', $broadcasterToken['scopes'])) ?>
+                    <td>Erteilte Rechte</td>
+                    <td class="actions hint">
+                        <?php $erteilt = \Overlays\Core\Twitch\Scopes::describe($broadcasterToken['scopes'], $app->hooks); ?>
+                        <?php if ($erteilt === []): ?>
+                            &mdash;
+                        <?php else: ?>
+                            <?php foreach ($erteilt as $recht): ?>
+                                <div title="<?= $e($recht['scope']) ?>"><?= $e($recht['label']) ?></div>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </td>
                 </tr>
             <?php endif; ?>
@@ -73,10 +179,36 @@
 
     <?php if ($missingScopes !== []): ?>
         <div class="note note-warn" style="margin:14px 0 0;">
-            <strong>Berechtigungen fehlen.</strong>
-            Wahrscheinlich wurde nach dem Verbinden ein Plugin aktiviert, das mehr braucht:
-            <span class="mono"><?= $e(implode(' ', $missingScopes)) ?></span>.
-            Einmal neu verbinden genügt.
+            <strong>Es fehlen Rechte auf deinem Kanal.</strong>
+            <p style="margin:8px 0 0;">
+                Twitch erlaubt uns diese Dinge noch nicht &mdash; solange bleiben die zugehörigen
+                Meldungen im Stream aus:
+            </p>
+            <ul style="margin:8px 0 0;padding-left:20px;">
+                <?php foreach (\Overlays\Core\Twitch\Scopes::describe($missingScopes, $app->hooks) as $recht): ?>
+                    <li>
+                        <strong><?= $e($recht['label']) ?></strong>
+                        <?php if ($recht['reason'] !== ''): ?>
+                            &ndash; <?= $e($recht['reason']) ?>
+                        <?php endif; ?>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+            <p style="margin:10px 0 0;">
+                Das passiert, wenn ein Update oder ein neues Plugin mehr braucht als beim
+                letzten Verbinden erlaubt wurde. Einmal neu verbinden reicht &mdash; Twitch
+                fragt dann nach den fehlenden Rechten.
+            </p>
+            <?php if ($canManage): ?>
+                <p style="margin:12px 0 0;">
+                    <a class="btn btn-small" href="<?= $e($url('/konto/einstellungen/kanal')) ?>">
+                        Kanal neu verbinden
+                    </a>
+                </p>
+                <p class="hint" style="margin:8px 0 0;">
+                    Danach unten auf &bdquo;Abos jetzt abgleichen&ldquo; klicken.
+                </p>
+            <?php endif; ?>
         </div>
     <?php endif; ?>
 
