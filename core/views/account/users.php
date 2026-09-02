@@ -55,7 +55,7 @@
                         <?= $e((string) count((array) $user['permissions'])) ?>
                     <?php endif; ?>
                 </td>
-                <td class="hint"><?= $e(substr((string) $user['last_seen_at'], 0, 16)) ?></td>
+                <td class="hint"><?= $e(\Overlays\Core\Support\Dates::long($user['last_seen_at'])) ?></td>
                 <td class="actions">
                     <?php if ($canManage && $user['role'] !== 'superadmin'): ?>
                         <a class="btn btn-ghost btn-small"
@@ -148,7 +148,7 @@ foreach ($users as $candidate) {
                 <?php foreach ($invites as $invite): ?>
                     <tr>
                         <td class="mono"><?= $e($url('/login?invite=' . $invite['code'])) ?></td>
-                        <td class="hint"><?= $e(substr((string) $invite['expires_at'], 0, 16)) ?></td>
+                        <td class="hint"><?= $e(\Overlays\Core\Support\Dates::long($invite['expires_at'])) ?></td>
                         <td class="actions">
                             <form method="post" action="<?= $e($url('/konto/benutzer')) ?>">
                                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">

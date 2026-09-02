@@ -144,7 +144,12 @@ Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
 | `plugin.settings` | filter | Einstellungsseite in der Plugin-Liste verlinken |
 | `permissions.catalog` | filter | eigene Rechte anmelden |
 | `core.event.stored` | dispatch | auf ein eingegangenes Event reagieren |
-| `core.events.normalize` | filter | eigene Event-Quellen vereinheitlichen |
+| `core.events.normalize` | filter | eigene Event-Qüllen vereinheitlichen |
+| `core.events.labels` | filter | Klarnamen für eigene Event-Typen |
+| `core.obs.present` | filter | eigene Ereignisse im Feed darstellen (null blendet aus) |
+| `core.obs.badges` | filter | eigene Badges samt Standardfarben anmelden |
+| `core.obs.filters` | filter | eigene Filtergruppen im Feed |
+| `core.twitch.scope_labels` | filter | Klartext für eigene Twitch-Berechtigungen |
 | `core.eventsub.subscriptions` | filter | zusätzliche Twitch-Abos anfordern |
 | `core.eventsub.revoked` | dispatch | Twitch hat ein Abo entzogen |
 | `core.twitch.broadcaster_scopes` | filter | zusätzliche Twitch-Rechte anfordern |
@@ -206,6 +211,85 @@ $app->view->from($plugin->directory . '/views')->render('seite', [
 
 In der Vorlage stehen `$e` (Escaping), `$url`, `$app` und die übergebenen
 Daten bereit. Ohne dritten Parameter wird das Layout des Kerns benutzt.
+
+---
+
+## Aktivitaeten-Feed
+
+Zwei Seiten:
+
+| Adresse | Zweck |
+| --- | --- |
+| `/konto/aktivitaeten` | Einstellungen: Badge-Farben, Takt, Zeitzone |
+| `/aktivitaeten` | der Feed selbst, gedacht als Browser-Dock in OBS |
+
+Der Feed ist angemeldet-only (`Konto.Aktivitaeten.View`). Das ist kein
+Widerspruch zur Nutzung in OBS: ein **eigenes Browser-Dock** teilt die
+Cookies mit dem Browser, eine Browserquelle nicht. Als Quelle im Stream
+ist der Feed auch nicht gedacht.
+
+Beteiligte Klassen:
+
+| Klasse | Aufgabe |
+| --- | --- |
+| `core/Obs/Presenter.php` | Event-Zeile -> Badge, Name, Nachricht, Filterschluessel |
+| `core/Obs/Badges.php` | Badge-Katalog und Farben |
+| `core/Obs/Filters.php` | Filtergruppen und Zeitraeume |
+| `core/Obs/Payload.php` | Lesehilfen fuer den Event-Payload (Stufe, Prime, anonym) |
+| `core/Obs/FeedController.php` | die Seite und das Nachladen |
+
+Gefiltert wird **nach** dem Aufbereiten, weil sich der Filterschluessel
+erst aus dem Payload ergibt (eine Abostufe steht nicht als Spalte in der
+Datenbank). Bei aktiver Auswahl liest der Controller deshalb ein
+groesseres Fenster und schneidet danach zu.
+
+Nachgeladen wird ueber `/aktivitaeten/neu?since_id=…`, das nur die neuen
+Ereignisse als JSON zurueckgibt; die Seite haengt sie oben an.
+
+Ein Plugin mit eigener Ereignisart braucht drei Hooks:
+
+```php
+// 1. Wie es im Feed aussieht
+$hooks->on('core.obs.present', function (?array $view, array $row, array $payload) {
+    if (($row['event_type'] ?? '') !== 'paypal.send_money') {
+        return $view;                    // nicht meins - unveraendert weiter
+    }
+    return [
+        'badge'  => 'EUR ' . number_format((float) $row['amount'], 2, ',', '.'),
+        'style'  => 'paypal',            // Schluessel aus core.obs.badges
+        'title'  => $row['actor_name'] ?? 'Anonym',
+        'filter' => 'paypal.named',      // Schluessel aus core.obs.filters
+    ];
+});
+
+// 2. Welche Farbe das Badge hat
+$hooks->on('core.obs.badges', function (array $badges) {
+    $badges['paypal'] = ['label' => 'PayPal', 'bg' => '#0070ba', 'text' => '#ffffff'];
+    return $badges;
+});
+
+// 3. Wo es im Filter auftaucht
+$hooks->on('core.obs.filters', function (array $groups) {
+    $groups['spenden'] = [
+        'label' => 'Spenden',
+        'order' => 30,
+        'items' => ['paypal.named' => 'Mit Namen', 'paypal.anonymous' => 'Anonym'],
+    ];
+    return $groups;
+});
+```
+
+`core.obs.present` darf `null` zurueckgeben - dann erscheint das
+Ereignis nicht im Feed. So blendet man Zwischenmeldungen aus, etwa den
+Fortschritt eines Hype-Trains.
+
+### Zeitzone
+
+Zeitstempel aus Postgres kommen mit Offset, und `format()` uebernimmt
+diesen Offset - `date_default_timezone_set()` allein bringt also nichts.
+Deshalb laufen alle Anzeigen ueber `core/Support/Dates.php`, das
+ausdruecklich in die eingestellte Zone umrechnet. Wer neue Datumsanzeigen
+baut, nimmt bitte diese Klasse und nicht `substr()` auf den Rohwert.
 
 ---
 

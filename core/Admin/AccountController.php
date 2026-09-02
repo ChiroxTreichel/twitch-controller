@@ -85,34 +85,6 @@ final class AccountController
     }
 
     // -----------------------------------------------------------------
-    //  Aktivitaeten
-    // -----------------------------------------------------------------
-
-    public function activities(Request $request): Response
-    {
-        $perPage = 50;
-        $page = max(1, (int) ($request->get('seite') ?: '1'));
-
-        $filters = [
-            'event_type' => $request->get('typ'),
-            'actor'      => $request->get('wer'),
-        ];
-
-        $total = $this->app->events->count($filters);
-
-        return Response::html($this->app->view->render('account/activities', [
-            'title'   => 'Aktivitäten',
-            'active'  => 'konto/aktivitaeten',
-            'events'  => $this->app->events->recent($perPage, ($page - 1) * $perPage, $filters),
-            'types'   => $this->app->events->knownTypes(),
-            'filters' => $filters,
-            'page'    => $page,
-            'pages'   => max(1, (int) ceil($total / $perPage)),
-            'total'   => $total,
-        ]));
-    }
-
-    // -----------------------------------------------------------------
     //  Einstellungen
     // -----------------------------------------------------------------
 

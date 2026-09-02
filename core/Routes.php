@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Overlays\Core;
 
 use Overlays\Core\Admin\AccountController;
+use Overlays\Core\Admin\ActivityController;
 use Overlays\Core\Admin\Nav;
 use Overlays\Core\Admin\PluginsController;
+use Overlays\Core\Obs\FeedController;
 use Overlays\Core\Auth\AuthController;
 use Overlays\Core\Http\Request;
 use Overlays\Core\Http\Response;
@@ -26,6 +28,8 @@ final class Routes
         $setup = new SetupController($app);
         $account = new AccountController($app);
         $plugins = new PluginsController($app);
+        $activity = new ActivityController($app);
+        $feed = new FeedController($app);
         $webhook = new WebhookController($app);
 
         // --- Startseite ------------------------------------------------
@@ -73,7 +77,19 @@ final class Routes
         ]);
         $router->post('/konto/benutzer', [$account, 'usersAction'], ['auth' => true]);
 
-        $router->get('/konto/aktivitaeten', [$account, 'activities'], [
+        // Aktivitäten: Einstellungen im Konto, der Feed selbst daneben
+        // unter /aktivitaeten (gedacht als Browser-Dock in OBS).
+        $router->get('/konto/aktivitaeten', [$activity, 'show'], [
+            'auth' => true,
+            'permission' => 'Konto.Aktivitaeten.View',
+        ]);
+        $router->post('/konto/aktivitaeten', [$activity, 'save'], ['auth' => true]);
+
+        $router->get('/aktivitaeten', [$feed, 'show'], [
+            'auth' => true,
+            'permission' => 'Konto.Aktivitaeten.View',
+        ]);
+        $router->get('/aktivitaeten/neu', [$feed, 'updates'], [
             'auth' => true,
             'permission' => 'Konto.Aktivitaeten.View',
         ]);

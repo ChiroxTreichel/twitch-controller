@@ -90,7 +90,7 @@ final class EventStore
     /**
      * Neueste Events zuerst - fuer die Aktivitaetenliste.
      *
-     * @param array{source?: string, event_type?: string, actor?: string} $filters
+     * @param array{source?: string, event_type?: string, actor?: string, interval?: ?string, min_id?: int} $filters
      * @return list<array<string, mixed>>
      */
     public function recent(int $limit = 50, int $offset = 0, array $filters = []): array
@@ -111,7 +111,7 @@ final class EventStore
     }
 
     /**
-     * @param array{source?: string, event_type?: string, actor?: string} $filters
+     * @param array{source?: string, event_type?: string, actor?: string, interval?: ?string, min_id?: int} $filters
      */
     public function count(array $filters = []): int
     {
@@ -168,7 +168,7 @@ final class EventStore
     }
 
     /**
-     * @param array{source?: string, event_type?: string, actor?: string} $filters
+     * @param array<string, mixed> $filters
      * @return array{0: string, 1: array<string, mixed>}
      */
     private static function filterClause(array $filters): array
@@ -189,6 +189,19 @@ final class EventStore
         if (($filters['actor'] ?? '') !== '') {
             $conditions[] = 'actor_name ILIKE :actor';
             $params['actor'] = '%' . $filters['actor'] . '%';
+        }
+
+        // Zeitraum als Postgres-Intervall, z.B. "7 days". Null bedeutet
+        // "ohne Begrenzung".
+        if (($filters['interval'] ?? null) !== null && $filters['interval'] !== '') {
+            $conditions[] = 'occurred_at >= now() - (:interval)::interval';
+            $params['interval'] = (string) $filters['interval'];
+        }
+
+        // Nur Neueres als eine bekannte ID - fuer das Nachladen im Feed.
+        if ((int) ($filters['min_id'] ?? 0) > 0) {
+            $conditions[] = 'id > :min_id';
+            $params['min_id'] = (int) $filters['min_id'];
         }
 
         return [$conditions === [] ? '' : 'WHERE ' . implode(' AND ', $conditions), $params];

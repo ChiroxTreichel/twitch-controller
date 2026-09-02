@@ -26,6 +26,8 @@ Autoloader::register($root);
 
 $app = App::boot($root);
 
+$app->applyTimezone();
+
 $interval = max(5, (int) ($app->env->int('WORKER_INTERVAL', 15)));
 
 fwrite(STDOUT, "[worker] Start, Takt {$interval}s\n");

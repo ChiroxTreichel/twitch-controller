@@ -1,8 +1,23 @@
-# Shell-Skripte brauchen Unix-Zeilenenden, sonst scheitert die Ausfuehrung
-# auf dem Server mit "bad interpreter" oder "\r: command not found".
-*.sh   text eol=lf
-*.php  text eol=lf
-*.yaml text eol=lf
-*.conf text eol=lf
-Dockerfile text eol=lf
-Caddyfile  text eol=lf
+# Alles mit Unix-Zeilenenden auschecken, unabhaengig von core.autocrlf.
+#
+# Grund: install.sh scheitert mit Windows-Zeilenenden sofort
+# ("set -o pipefail\r: Ungueltiger Optionsname"), und dasselbe gilt fuer
+# jedes andere Skript, das mal dazukommt. Lieber einmal pauschal
+# festlegen als es pro Dateityp zu jagen.
+* text=auto eol=lf
+
+# Ausnahmen: Binaerdateien nicht anfassen.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.mp3  binary
+*.mp4  binary
+*.webm binary
+*.ogg  binary
+*.woff  binary
+*.woff2 binary
+*.zip  binary
+*.gz   binary

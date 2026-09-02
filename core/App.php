@@ -102,6 +102,38 @@ final class App
         $this->settings->set('core_version', self::VERSION);
     }
 
+    /**
+     * Zeitzone fuer alle Anzeigen. Der Container laeuft in UTC, ein
+     * Streamer denkt aber in seiner Ortszeit - ohne das stehen im Feed
+     * Zeiten, die zwei Stunden neben der Wirklichkeit liegen.
+     *
+     * Reihenfolge: Einstellung, dann TZ aus der Umgebung, dann Berlin.
+     */
+    public function timezone(): string
+    {
+        $timezone = '';
+
+        try {
+            $timezone = $this->settings->string('timezone');
+        } catch (Throwable) {
+            // Datenbank noch nicht da - dann eben aus der Umgebung.
+        }
+
+        if ($timezone === '') {
+            $timezone = (string) $this->env->get('TZ', 'Europe/Berlin');
+        }
+
+        return in_array($timezone, timezone_identifiers_list(), true) ? $timezone : 'Europe/Berlin';
+    }
+
+    /**
+     * Wird von den Einstiegspunkten einmal aufgerufen.
+     */
+    public function applyTimezone(): void
+    {
+        date_default_timezone_set($this->timezone());
+    }
+
     public function url(string $path = ''): string
     {
         return $this->env->url($path);

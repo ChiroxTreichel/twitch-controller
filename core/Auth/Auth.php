@@ -393,7 +393,8 @@ final class Auth
                 'permissions' => [
                     'Konto.Benutzer.View'   => 'darf die Benutzerliste sehen.',
                     'Konto.Benutzer.Manage' => 'darf Benutzer einladen, Rechte setzen und entfernen.',
-                    'Konto.Aktivitaeten.View' => 'darf die Aktivitaeten des Kanals sehen.',
+                    'Konto.Aktivitaeten.View'   => 'darf den Aktivitäten-Feed des Kanals sehen.',
+                    'Konto.Aktivitaeten.Manage' => 'darf Farben und Anzeige des Feeds ändern.',
                     'Konto.Plugins.View'    => 'darf die Plugin-Liste sehen.',
                     'Konto.Plugins.Manage'  => 'darf Plugins installieren, aktivieren und entfernen.',
                     'Konto.Einstellungen.View'   => 'darf die Einstellungen sehen.',
