@@ -192,6 +192,14 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .hint { color: var(--muted); font-size: 0.86rem; }
 .stack { display: flex; flex-direction: column; gap: 14px; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+
+/*
+ * Steht eine Zeile direkt vor einer Karte - etwa ein
+ * "Zurueck"-Knopf - klebte die Karte bisher daran. .card hat nur
+ * Abstand nach unten; das hier ergaenzt ihn nach oben, aber nur dort,
+ * wo er fehlt.
+ */
+.row + .card { margin-top: 16px; }
 .grow { flex: 1; }
 .right { margin-left: auto; }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86rem; }
@@ -517,31 +525,50 @@ td.actions { text-align: right; white-space: nowrap; }
 
 /* --- Reiter -------------------------------------------------------- */
 
+/*
+ * Reiter als Schalterleiste in einem eigenen Kasten.
+ *
+ * Vorher waren es Ordner-Reiter: oben abgerundet, ohne Unterkante, um
+ * einen Pixel nach unten geschoben - gedacht, um auf der Linie zu
+ * sitzen und in den Inhalt darunter uebergehen. Darunter standen aber
+ * 22px Abstand, und damit hing die offene Unterkante in der Luft.
+ *
+ * Ein eigener Kasten braucht diesen Trick nicht: er darf Abstand nach
+ * unten haben, ohne dass etwas unfertig aussieht.
+ */
 .tabs {
-    display: flex;
-    gap: 4px;
-    margin: 0 0 22px;
-    border-bottom: 1px solid var(--line);
+    display: inline-flex;
+    gap: 3px;
+    margin: 0 0 20px;
+    padding: 4px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+
+    /* Bei vielen Reitern - die Alert-Seite hat sechs - umbrechen statt
+       ueber den Rand hinauslaufen. */
+    flex-wrap: wrap;
 }
 
 .tab {
-    padding: 9px 14px;
-    border-radius: 9px 9px 0 0;
+    padding: 7px 15px;
+    border-radius: 999px;
     text-decoration: none;
     color: var(--muted);
-    font-size: 0.93rem;
-    border: 1px solid transparent;
-    border-bottom: none;
-    margin-bottom: -1px;
+    font-size: 0.9rem;
+    white-space: nowrap;
 }
 
-.tab:hover { color: var(--ink); background: var(--panel); }
+.tab:hover { color: var(--ink); }
 
 .tab.is-active {
     color: var(--ink);
     font-weight: 600;
     background: var(--panel);
-    border-color: var(--line);
+
+    /* Ein Hauch Tiefe, damit der aktive Reiter aus der Leiste
+       heraussteht und nicht nur heller ist. */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 
 /* --- Beschreibungstexte aus dem Katalog ---------------------------- */
