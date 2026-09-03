@@ -414,12 +414,6 @@ td.actions { text-align: right; white-space: nowrap; }
     min-width: 0;
 }
 
-/* Kleine Ausfuehrung fuer die Seitenleiste - der grosse Schalter
-   wuerde dort den Platz sprengen. */
-.switch-small .switch-track { width: 34px; height: 19px; }
-.switch-small .switch-knob { width: 15px; height: 15px; top: 2px; left: 2px; }
-.switch-small.is-on .switch-knob { transform: translateX(15px); }
-
 /*
  * Zweite Bauform: ein Schalter, der zu einem Formular gehoert und erst
  * beim Speichern wirkt. Innen eine gewoehnliche Checkbox - sie schickt
@@ -645,6 +639,15 @@ td.actions { text-align: right; white-space: nowrap; }
     border-radius: 999px;
     background: var(--line);
     transition: background 160ms ease-out;
+
+    /*
+     * Sicherheitsnetz: eine falsch berechnete Verschiebung des Knopfes
+     * bleibt damit ein Schoenheitsfehler und wird nicht zum
+     * Layoutfehler. Eine Verschiebung erzeugt Ueberlauf, und der
+     * schlug bis in die Seitenleiste durch - als waagerechter
+     * Scrollbalken.
+     */
+    overflow: hidden;
 }
 
 .switch-knob {
@@ -666,6 +669,21 @@ td.actions { text-align: right; white-space: nowrap; }
 .switch.is-on .switch-knob {
     transform: translateX(24px);
 }
+
+/*
+ * Kleine Ausfuehrung fuer die Seitenleiste - der grosse Schalter
+ * wuerde dort den Platz sprengen.
+ *
+ * Muss NACH den Grundregeln stehen: ".switch-small.is-on .switch-knob"
+ * und ".switch.is-on .switch-knob" haben dieselbe Spezifitaet, also
+ * gewinnt die spaetere. Stand sie davor, bekam der kleine Knopf die
+ * Verschiebung des grossen - 24px auf einer 34px-Schiene. Er ragte
+ * heraus, und weil eine Verschiebung Ueberlauf erzeugt, bekam die
+ * Seitenleiste davon einen waagerechten Scrollbalken.
+ */
+.switch-small .switch-track { width: 34px; height: 19px; }
+.switch-small .switch-knob { width: 15px; height: 15px; top: 2px; left: 2px; }
+.switch-small.is-on .switch-knob { transform: translateX(15px); }
 
 .switch:hover .switch-track {
     /* Nur ein Hauch - der Schalter soll nicht blinken, wenn die Maus
