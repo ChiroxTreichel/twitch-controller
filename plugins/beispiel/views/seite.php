@@ -17,36 +17,36 @@
 ?>
 <link rel="stylesheet" href="<?= $e($asset('/plugin/beispiel/assets/beispiel.css')) ?>">
 
-<h1>Beispiel</h1>
-<p class="lead">Ein Plugin ohne Nutzen, dafür mit Kommentaren.</p>
+<h1><?= $e(translate('example.name')) ?></h1>
+<p class="lead"><?= $e(translate('example.lead')) ?></p>
 
 <?php if ($notice !== ''): ?>
     <div class="note note-ok"><?= $e($notice) ?></div>
 <?php endif; ?>
 
 <div class="card">
-    <h2>Eigene Einstellung</h2>
+    <h2><?= $e(translate('example.own_setting')) ?></h2>
     <p class="hint">
-        Liegt im Scope <span class="mono">plugin:beispiel</span> und verschwindet mit dem Plugin.
+        <?= translate('example.scope_hint', ['scope' => '<span class="mono">plugin:beispiel</span>']) ?>
     </p>
 
     <?php if ($canManage): ?>
         <form method="post" action="<?= $e($url('/beispiel')) ?>">
             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
             <div class="field">
-                <label for="gruss">Grußwort</label>
+                <label for="gruss"><?= $e(translate('example.greeting')) ?></label>
                 <input class="input" id="gruss" name="gruss" value="<?= $e($gruss) ?>">
             </div>
-            <button class="btn" type="submit">Speichern</button>
+            <button class="btn" type="submit"><?= $e(translate('common.save')) ?></button>
         </form>
     <?php else: ?>
         <p><?= $e($gruss) ?></p>
-        <p class="hint">Zum Ändern fehlt dir <span class="mono">Beispiel.Seite.Manage</span>.</p>
+        <p class="hint"><?= translate('common.missing_permission', ['permission' => '<span class="mono">Beispiel.Seite.Manage</span>']) ?></p>
     <?php endif; ?>
 </div>
 
 <div class="card">
-    <h2>Reaktion auf Events</h2>
+    <h2><?= $e(translate('example.events_title')) ?></h2>
     <p class="beispiel-hinweis">
         Dieser Absatz ist über eine eigene CSS-Datei des Plugins gestaltet
         (<span class="mono">assets/beispiel.css</span>).

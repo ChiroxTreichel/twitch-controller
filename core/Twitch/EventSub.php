@@ -312,7 +312,12 @@ final class EventSub
      * Twitch antwortet knapp und technisch; ohne Uebersetzung sucht man
      * an der falschen Stelle.
      *
-     * @return array{ursache: string, loesung: string}
+     * "neu_verbinden" sagt der Oberflaeche, ob sie einen Knopf zum
+     * Neuverbinden anbieten soll. Bewusst ein Kennzeichen und keine
+     * Textsuche im Loesungssatz - der ist uebersetzbar und wuerde beim
+     * Sprachwechsel stillschweigend nicht mehr passen.
+     *
+     * @return array{ursache: string, loesung: string, neu_verbinden: bool}
      */
     public static function explain(string $message): array
     {
@@ -322,9 +327,9 @@ final class EventSub
             || str_contains($lower, 'missing scope')
         ) {
             return [
-                'ursache' => 'Der Kanal hat dieser Twitch-App die nötige Berechtigung nicht erteilt.',
-                'loesung' => 'Kanal einmal neu verbinden - dabei fragt Twitch die fehlende '
-                    . 'Berechtigung mit ab.',
+                'ursache' => translate('twitch.eventsub.no_authorization'),
+                'loesung' => translate('twitch.eventsub.no_authorization_fix'),
+                'neu_verbinden' => true,
             ];
         }
 
@@ -333,17 +338,17 @@ final class EventSub
             || str_contains($lower, '10 seconds')
         ) {
             return [
-                'ursache' => 'Twitch konnte die Adresse nicht bestätigen. Sie wird beim Anlegen '
-                    . 'sofort aufgerufen und muss von außen über HTTPS erreichbar sein.',
-                'loesung' => 'Adresse einmal von einem anderen Netz aus öffnen, z.B. vom Handy '
-                    . 'im Mobilfunknetz. Klappt es dort nicht, klappt es auch für Twitch nicht.',
+                'ursache' => translate('twitch.eventsub.callback_failed'),
+                'loesung' => translate('twitch.eventsub.callback_failed_fix'),
+                'neu_verbinden' => false,
             ];
         }
 
         if (str_contains($lower, 'subscription already exists')) {
             return [
-                'ursache' => 'Dieses Abo besteht bereits.',
-                'loesung' => 'Nichts zu tun - beim nächsten Abgleich verschwindet die Meldung.',
+                'ursache' => translate('twitch.eventsub.already_exists'),
+                'loesung' => translate('twitch.eventsub.already_exists_fix'),
+                'neu_verbinden' => false,
             ];
         }
 
@@ -351,21 +356,24 @@ final class EventSub
             || str_contains($lower, 'too many requests')
         ) {
             return [
-                'ursache' => 'Twitch hat ein Mengenlimit erreicht.',
-                'loesung' => 'Ein paar Minuten warten und erneut abgleichen.',
+                'ursache' => translate('twitch.eventsub.limit'),
+                'loesung' => translate('twitch.eventsub.limit_fix'),
+                'neu_verbinden' => false,
             ];
         }
 
         if (str_contains($lower, 'must use https') || str_contains($lower, 'https')) {
             return [
-                'ursache' => 'Twitch akzeptiert nur HTTPS-Adressen.',
-                'loesung' => 'APP_URL in der .env muss mit https:// beginnen.',
+                'ursache' => translate('twitch.eventsub.https'),
+                'loesung' => translate('twitch.eventsub.https_fix'),
+                'neu_verbinden' => false,
             ];
         }
 
         return [
             'ursache' => $message,
             'loesung' => '',
+            'neu_verbinden' => false,
         ];
     }
 

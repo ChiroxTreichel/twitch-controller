@@ -13,22 +13,32 @@ if (!function_exists('translate')) {
     /**
      * Uebersetzt einen Text. Schluessel ist der deutsche Text selbst:
      *
-     *   translate('Benutzer')
-     *   translate('%d Farben gespeichert.', $anzahl)
-     *   translate('%s wurde entfernt.', $name)
+     *   translate('nav.users')
+     *   translate('account.activity.kinds', ['count' => $anzahl])
+     *   translate('account.users.confirm_remove', [$name])
+     *   translate('setup.step_of', ['step' => 2, 'total' => 4])
      *
      * Fehlt die Uebersetzung, kommt der Text unveraendert zurueck.
      *
      * In Vorlagen immer zusammen mit dem Escaping benutzen:
      *
-     *   <?= $e(translate('Speichern')) ?>
+     *   <?= $e(translate('common.save')) ?>
      *
      * Zusaetzliche Argumente laufen durch sprintf(). Die Platzhalter
      * muessen in jeder Sprachdatei dieselben bleiben - stimmen sie
-     * nicht, wird der Originaltext ausgegeben statt einer Fehlermeldung.
+     * nicht, wird der unformatierte Text ausgegeben statt einer
+     * Fehlermeldung mitten in der Seite.
      */
-    function translate(string $text, mixed ...$args): string
+    function translate(string $key, mixed ...$args): string
     {
-        return Translator::instance()->translate($text, $args);
+        // Beide Schreibweisen erlaubt:
+        //   translate('key', $a, $b)      der Reihe nach
+        //   translate('key', [$a, $b])    dasselbe, nur ausdruecklich
+        //   translate('key', ['n' => 3])  benannt, siehe Translator
+        if (count($args) === 1 && is_array($args[0])) {
+            $args = $args[0];
+        }
+
+        return Translator::instance()->translate($key, $args);
     }
 }

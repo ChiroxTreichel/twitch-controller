@@ -17,6 +17,8 @@
  * @var bool $coreOk
  */
 
+use Overlays\Core\Support\Dates;
+
 $neuer = $state !== null
     && version_compare((string) $state['version'], (string) $plugin['version'], '<');
 ?>
@@ -26,7 +28,7 @@ $neuer = $state !== null
 <?= $view->render('account/_plugin_tabs', ['tab' => $tab], null) ?>
 
 <p style="margin:-6px 0 18px;">
-    <a class="hint" href="<?= $e($url('/konto/plugins/finden')) ?>">&larr; Zurück zum Katalog</a>
+    <a class="hint" href="<?= $e($url('/konto/plugins/finden')) ?>">&larr; <?= $e(translate('market.back')) ?></a>
 </p>
 
 <?php if ($notice !== ''): ?>
@@ -45,26 +47,26 @@ $neuer = $state !== null
             <?php endif; ?>
             <div>
                 <div style="font-size:1.05rem;font-weight:600;">
-                    Version <?= $e($plugin['version']) ?>
+                    <?= $e(translate('common.version', ['version' => $plugin['version']])) ?>
                     <?php if ($state === null): ?>
-                        <span class="badge">nicht installiert</span>
+                        <span class="badge"><?= $e(translate('common.not_installed')) ?></span>
                     <?php elseif ($neuer): ?>
-                        <span class="badge badge-warn">installiert: <?= $e((string) $state['version']) ?></span>
+                        <span class="badge badge-warn"><?= $e(translate('market.installed_version', ['version' => (string) $state['version']])) ?></span>
                     <?php elseif ($state['enabled']): ?>
-                        <span class="badge badge-ok">aktiv</span>
+                        <span class="badge badge-ok"><?= $e(translate('common.active')) ?></span>
                     <?php else: ?>
-                        <span class="badge badge-off">installiert, aus</span>
+                        <span class="badge badge-off"><?= $e(translate('common.installed_off')) ?></span>
                     <?php endif; ?>
                 </div>
                 <div class="hint">
                     <?php if ($plugin['author'] !== ''): ?>
-                        von <?= $e($plugin['author']) ?>
+                        <?= $e(translate('market.by', ['author' => $plugin['author']])) ?>
                     <?php endif; ?>
                     <?php if ($plugin['updated_at'] !== ''): ?>
-                        &middot; aktualisiert <?= $e(date('d.m.Y', strtotime($plugin['updated_at']) ?: time())) ?>
+                        &middot; <?= $e(translate('market.updated', ['date' => Dates::day($plugin['updated_at'])])) ?>
                     <?php endif; ?>
                     <?php if ($plugin['size'] > 0): ?>
-                        &middot; <?= $e((string) (int) round($plugin['size'] / 1024)) ?> KB
+                        &middot; <?= $e(translate('market.size_kb', ['size' => (int) round($plugin['size'] / 1024)])) ?>
                     <?php endif; ?>
                 </div>
             </div>
@@ -72,27 +74,30 @@ $neuer = $state !== null
 
         <div class="row">
             <?php if (!$coreOk): ?>
-                <span class="badge badge-error">braucht neueren Kern</span>
+                <span class="badge badge-error"><?= $e(translate('market.needs_newer_core')) ?></span>
             <?php elseif ($canManage && $canWrite && ($state === null || $neuer)): ?>
                 <form method="post" action="<?= $e($url('/konto/plugins/finden')) ?>">
                     <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                     <input type="hidden" name="action" value="install">
                     <input type="hidden" name="slug" value="<?= $e($plugin['slug']) ?>">
                     <button class="btn" type="submit">
-                        <?= $neuer ? 'Aktualisieren' : 'Installieren' ?>
+                        <?= $e($neuer ? translate('common.update') : translate('common.install')) ?>
                     </button>
                 </form>
             <?php elseif ($state !== null): ?>
-                <a class="btn btn-ghost btn-small" href="<?= $e($url('/konto/plugins')) ?>">Verwalten</a>
+                <a class="btn btn-ghost btn-small" href="<?= $e($url('/konto/plugins')) ?>"><?= $e(translate('common.manage')) ?></a>
             <?php endif; ?>
         </div>
     </div>
 
     <?php if (!$coreOk): ?>
         <div class="note note-warn" style="margin:0 0 14px;">
-            Dieses Plugin verlangt eine neuere Kernversion
-            (<span class="mono"><?= $e((string) ($plugin['requires']['core'] ?? '?')) ?></span>).
-            Erst das System aktualisieren: <em>Konto &rarr; Einstellungen &rarr; System</em>.
+            <?php // Ohne $e: die Platzhalter sind eigenes Markup. ?>
+            <?= translate('market.needs_newer_core_hint', [
+                'version' => '<span class="mono">'
+                    . $e((string) ($plugin['requires']['core'] ?? '?')) . '</span>',
+                'path'    => '<em>' . $e(translate('market.settings_system_path')) . '</em>',
+            ]) ?>
         </div>
     <?php endif; ?>
 
@@ -101,13 +106,13 @@ $neuer = $state !== null
             <?= \Overlays\Core\Support\Markdown::render((string) $plugin['description']) ?>
         </div>
     <?php else: ?>
-        <p class="hint">Keine ausführliche Beschreibung hinterlegt.</p>
+        <p class="hint"><?= $e(translate('market.no_description')) ?></p>
     <?php endif; ?>
 </div>
 
 <?php if ($plugin['screenshots'] !== []): ?>
     <div class="card">
-        <h2>Bilder</h2>
+        <h2><?= $e(translate('market.screenshots')) ?></h2>
         <div class="shots">
             <?php foreach ($plugin['screenshots'] as $shot): ?>
                 <a href="<?= $e($shot) ?>" target="_blank" rel="noreferrer noopener">
@@ -119,20 +124,20 @@ $neuer = $state !== null
 <?php endif; ?>
 
 <div class="card">
-    <h2>Angaben</h2>
+    <h2><?= $e(translate('market.details')) ?></h2>
     <table>
         <tbody>
         <tr>
-            <td>Kennung</td>
+            <td><?= $e(translate('market.slug')) ?></td>
             <td class="actions mono"><?= $e($plugin['slug']) ?></td>
         </tr>
         <?php if ($plugin['requires'] !== []): ?>
             <tr>
-                <td>Setzt voraus</td>
+                <td><?= $e(translate('market.requires')) ?></td>
                 <td class="actions hint">
                     <?php foreach ($plugin['requires'] as $name => $constraint): ?>
                         <div>
-                            <?= $e($name === 'core' ? 'Kern' : (string) $name) ?>
+                            <?= $e($name === 'core' ? translate('common.core') : (string) $name) ?>
                             <span class="mono"><?= $e((string) $constraint) ?></span>
                         </div>
                     <?php endforeach; ?>
@@ -141,11 +146,11 @@ $neuer = $state !== null
         <?php endif; ?>
         <?php if ($plugin['optional'] !== []): ?>
             <tr>
-                <td>Kann mehr mit</td>
+                <td><?= $e(translate('market.optional')) ?></td>
                 <td class="actions hint">
                     <?php foreach ($plugin['optional'] as $name => $constraint): ?>
                         <div>
-                            <?= $e($name === 'core' ? 'Kern' : (string) $name) ?>
+                            <?= $e($name === 'core' ? translate('common.core') : (string) $name) ?>
                             <span class="mono"><?= $e((string) $constraint) ?></span>
                         </div>
                     <?php endforeach; ?>
@@ -154,7 +159,7 @@ $neuer = $state !== null
         <?php endif; ?>
         <?php if ($plugin['homepage'] !== ''): ?>
             <tr>
-                <td>Mehr dazu</td>
+                <td><?= $e(translate('market.homepage')) ?></td>
                 <td class="actions">
                     <a href="<?= $e($plugin['homepage']) ?>" target="_blank"
                        rel="noreferrer noopener"><?= $e($plugin['homepage']) ?></a>
@@ -162,9 +167,9 @@ $neuer = $state !== null
             </tr>
         <?php endif; ?>
         <tr>
-            <td>Prüfsumme</td>
+            <td><?= $e(translate('market.checksum')) ?></td>
             <td class="actions hint mono" style="word-break:break-all;">
-                <?= $e($plugin['sha256'] !== '' ? $plugin['sha256'] : 'fehlt – wird nicht installiert') ?>
+                <?= $e($plugin['sha256'] !== '' ? $plugin['sha256'] : translate('market.checksum_missing')) ?>
             </td>
         </tr>
         </tbody>

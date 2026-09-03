@@ -20,8 +20,8 @@
  * @var array<string, array{installed: bool, enabled: bool, version: ?string}> $states
  */
 ?>
-<h1>Plugins finden</h1>
-<p class="lead">Erweiterungen aus dem Katalog installieren.</p>
+<h1><?= $e(translate('account.plugins.tab_find')) ?></h1>
+<p class="lead"><?= $e(translate('market.lead')) ?></p>
 
 <?= $view->render('account/_plugin_tabs', ['tab' => $tab], null) ?>
 
@@ -30,32 +30,30 @@
 <?php endif; ?>
 <?php if ($error !== ''): ?>
     <div class="note note-error">
-        <strong>Der Katalog ist nicht erreichbar.</strong>
+        <strong><?= $e(translate('market.unreachable')) ?></strong>
         <div class="hint" style="margin-top:6px;"><?= $e($error) ?></div>
         <div class="hint" style="margin-top:6px;">
-            Quelle: <span class="mono"><?= $e($registry) ?></span>
+            <?= translate('market.source', ['url' => '<span class="mono">' . $e($registry) . '</span>']) ?>
         </div>
     </div>
 <?php endif; ?>
 
 <?php if (!$canWrite): ?>
     <div class="note note-warn">
-        Das Verzeichnis <span class="mono">plugins/</span> ist für den Webserver nicht beschreibbar &mdash;
-        installieren geht deshalb nicht. Einmal <span class="mono">sudo ./install.sh</span> auf dem
-        Server behebt das.
+        <?= translate('market.not_writable', ['directory' => '<span class="mono">plugins/</span>', 'command' => '<span class="mono">sudo ./install.sh</span>']) ?>
     </div>
 <?php endif; ?>
 
 <div class="card">
     <form method="get" action="<?= $e($url('/konto/plugins/finden')) ?>" class="row">
-        <input class="input grow" type="search" name="q" placeholder="Suchen, z.B. Alerts oder Spenden"
+        <input class="input grow" type="search" name="q" placeholder="<?= $e(translate('market.search_placeholder')) ?>"
                value="<?= $e($query) ?>">
         <?php if ($tag !== ''): ?>
             <input type="hidden" name="tag" value="<?= $e($tag) ?>">
         <?php endif; ?>
-        <button class="btn btn-small" type="submit">Suchen</button>
+        <button class="btn btn-small" type="submit"><?= $e(translate('common.search')) ?></button>
         <?php if ($query !== '' || $tag !== ''): ?>
-            <a class="btn btn-ghost btn-small" href="<?= $e($url('/konto/plugins/finden')) ?>">Alles zeigen</a>
+            <a class="btn btn-ghost btn-small" href="<?= $e($url('/konto/plugins/finden')) ?>"><?= $e(translate('market.show_all')) ?></a>
         <?php endif; ?>
     </form>
 
@@ -74,16 +72,16 @@
     <div class="row" style="margin-top:12px;">
         <span class="hint grow">
             <?php if ($fetchedAt > 0): ?>
-                Katalog von <?= $e(date('d.m.Y H:i', $fetchedAt)) ?>
+                <?= $e(translate('market.catalog_from', ['date' => \Overlays\Core\Support\Dates::long(date('c', $fetchedAt))])) ?>
             <?php else: ?>
-                Katalog noch nicht geladen
+                <?= $e(translate('market.catalog_not_loaded')) ?>
             <?php endif; ?>
         </span>
         <?php if ($canManage): ?>
             <form method="post" action="<?= $e($url('/konto/plugins/finden')) ?>">
                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                 <input type="hidden" name="action" value="refresh">
-                <button class="btn btn-ghost btn-small" type="submit">Katalog neu laden</button>
+                <button class="btn btn-ghost btn-small" type="submit"><?= $e(translate('market.reload')) ?></button>
             </form>
         <?php endif; ?>
     </div>
@@ -93,10 +91,10 @@
     <div class="card">
         <div class="empty">
             <?php if ($query !== '' || $tag !== ''): ?>
-                Nichts gefunden.<br>
-                <span class="hint">Andere Suchbegriffe probieren oder die Filter zurücksetzen.</span>
+                <?= $e(translate('market.nothing_found')) ?><br>
+                <span class="hint"><?= $e(translate('market.try_other')) ?></span>
             <?php else: ?>
-                Der Katalog ist leer.
+                <?= $e(translate('market.empty')) ?>
             <?php endif; ?>
         </div>
     </div>
@@ -119,17 +117,17 @@
                     <h2 style="margin:0;">
                         <a href="<?= $e($detailUrl) ?>" style="text-decoration:none;"><?= $e($plugin['name']) ?></a>
                         <?php if ($state === null): ?>
-                            <span class="badge">nicht installiert</span>
+                            <span class="badge"><?= $e(translate('common.not_installed')) ?></span>
                         <?php elseif ($neuer): ?>
-                            <span class="badge badge-warn">Update verfügbar</span>
+                            <span class="badge badge-warn"><?= $e(translate('market.update_available')) ?></span>
                         <?php elseif ($state['enabled']): ?>
-                            <span class="badge badge-ok">aktiv</span>
+                            <span class="badge badge-ok"><?= $e(translate('common.active')) ?></span>
                         <?php else: ?>
-                            <span class="badge badge-off">installiert, aus</span>
+                            <span class="badge badge-off"><?= $e(translate('common.installed_off')) ?></span>
                         <?php endif; ?>
                     </h2>
                     <div class="hint">
-                        Version <?= $e($plugin['version']) ?>
+                        <?= $e(translate('common.version', ['version' => $plugin['version']])) ?>
                         <?php if ($plugin['author'] !== ''): ?>
                             &middot; <?= $e($plugin['author']) ?>
                         <?php endif; ?>
@@ -138,14 +136,14 @@
             </div>
 
             <div class="row">
-                <a class="btn btn-ghost btn-small" href="<?= $e($detailUrl) ?>">Ansehen</a>
+                <a class="btn btn-ghost btn-small" href="<?= $e($detailUrl) ?>"><?= $e(translate('common.view')) ?></a>
                 <?php if ($canManage && $canWrite && ($state === null || $neuer)): ?>
                     <form method="post" action="<?= $e($url('/konto/plugins/finden')) ?>">
                         <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                         <input type="hidden" name="action" value="install">
                         <input type="hidden" name="slug" value="<?= $e($plugin['slug']) ?>">
                         <button class="btn btn-small" type="submit">
-                            <?= $neuer ? 'Aktualisieren' : 'Installieren' ?>
+                            <?= $e($neuer ? translate('common.update') : translate('common.install')) ?>
                         </button>
                     </form>
                 <?php endif; ?>

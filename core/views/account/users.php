@@ -13,8 +13,8 @@
  * @var string $editing
  */
 ?>
-<h1>Benutzer</h1>
-<p class="lead">Wer darf mit an dieses Kontrollpult.</p>
+<h1><?= $e(translate('nav.users')) ?></h1>
+<p class="lead"><?= $e(translate('account.users.lead')) ?></p>
 
 <?php if ($notice !== ''): ?>
     <div class="note note-ok"><?= $e($notice) ?></div>
@@ -27,10 +27,10 @@
     <table>
         <thead>
         <tr>
-            <th>Account</th>
-            <th>Rolle</th>
-            <th>Rechte</th>
-            <th>Zuletzt gesehen</th>
+            <th><?= $e(translate('account.users.account')) ?></th>
+            <th><?= $e(translate('account.users.role')) ?></th>
+            <th><?= $e(translate('account.users.permissions')) ?></th>
+            <th><?= $e(translate('account.users.last_seen')) ?></th>
             <th></th>
         </tr>
         </thead>
@@ -43,14 +43,14 @@
                 </td>
                 <td>
                     <?php if ($user['role'] === 'superadmin'): ?>
-                        <span class="badge badge-ok">Kanalinhaber</span>
+                        <span class="badge badge-ok"><?= $e(translate('nav.owner')) ?></span>
                     <?php else: ?>
-                        <span class="badge">Team</span>
+                        <span class="badge"><?= $e(translate('nav.team')) ?></span>
                     <?php endif; ?>
                 </td>
                 <td class="hint">
                     <?php if ($user['role'] === 'superadmin'): ?>
-                        alle
+                        <?= $e(translate('account.users.all')) ?>
                     <?php else: ?>
                         <?= $e((string) count((array) $user['permissions'])) ?>
                     <?php endif; ?>
@@ -59,13 +59,13 @@
                 <td class="actions">
                     <?php if ($canManage && $user['role'] !== 'superadmin'): ?>
                         <a class="btn btn-ghost btn-small"
-                           href="<?= $e($url('/konto/benutzer?bearbeiten=' . rawurlencode((string) $user['twitch_id']))) ?>">Rechte</a>
+                           href="<?= $e($url('/konto/benutzer?bearbeiten=' . rawurlencode((string) $user['twitch_id']))) ?>"><?= $e(translate('account.users.permissions')) ?></a>
                         <form method="post" action="<?= $e($url('/konto/benutzer')) ?>" style="display:inline;"
-                              onsubmit="return confirm('<?= $e($user['display_name']) ?> wirklich entfernen?');">
+                              onsubmit="return confirm('<?= $e(translate('account.users.confirm_remove', ['name' => $user['display_name']])) ?>');">
                             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                             <input type="hidden" name="action" value="remove">
                             <input type="hidden" name="twitch_id" value="<?= $e($user['twitch_id']) ?>">
-                            <button class="btn btn-danger btn-small" type="submit">Entfernen</button>
+                            <button class="btn btn-danger btn-small" type="submit"><?= $e(translate('common.remove')) ?></button>
                         </form>
                     <?php endif; ?>
                 </td>
@@ -87,8 +87,8 @@ foreach ($users as $candidate) {
 <?php if ($canManage && $editUser !== null): ?>
     <div class="card">
         <div class="card-head">
-            <h2>Rechte für <?= $e($editUser['display_name']) ?></h2>
-            <a class="btn btn-ghost btn-small" href="<?= $e($url('/konto/benutzer')) ?>">Abbrechen</a>
+            <h2><?= $e(translate('account.users.permissions_for', ['name' => $editUser['display_name']])) ?></h2>
+            <a class="btn btn-ghost btn-small" href="<?= $e($url('/konto/benutzer')) ?>"><?= $e(translate('common.cancel')) ?></a>
         </div>
 
         <form method="post" action="<?= $e($url('/konto/benutzer')) ?>">
@@ -112,7 +112,7 @@ foreach ($users as $candidate) {
                 </div>
             <?php endforeach; ?>
 
-            <button class="btn" type="submit">Rechte speichern</button>
+            <button class="btn" type="submit"><?= $e(translate('account.users.save_permissions')) ?></button>
         </form>
     </div>
 <?php endif; ?>
@@ -120,27 +120,27 @@ foreach ($users as $candidate) {
 <?php if ($canManage): ?>
     <div class="card">
         <div class="card-head">
-            <h2>Einladungen</h2>
+            <h2><?= $e(translate('account.users.invites')) ?></h2>
             <form method="post" action="<?= $e($url('/konto/benutzer')) ?>" class="row">
                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                 <input type="hidden" name="action" value="invite">
                 <select name="hours" class="input" style="width:auto;">
-                    <option value="24">24 Stunden gültig</option>
-                    <option value="72" selected>3 Tage gültig</option>
-                    <option value="168">7 Tage gültig</option>
+                    <option value="24"><?= $e(translate('account.users.invite_24h')) ?></option>
+                    <option value="72" selected><?= $e(translate('account.users.invite_3d')) ?></option>
+                    <option value="168"><?= $e(translate('account.users.invite_7d')) ?></option>
                 </select>
-                <button class="btn btn-small" type="submit">Link erstellen</button>
+                <button class="btn btn-small" type="submit"><?= $e(translate('account.users.create_link')) ?></button>
             </form>
         </div>
 
         <?php if ($invites === []): ?>
-            <div class="empty">Keine offenen Einladungen.</div>
+            <div class="empty"><?= $e(translate('account.users.no_invites')) ?></div>
         <?php else: ?>
             <table>
                 <thead>
                 <tr>
-                    <th>Link</th>
-                    <th>Läuft ab</th>
+                    <th><?= $e(translate('account.users.link')) ?></th>
+                    <th><?= $e(translate('account.users.expires')) ?></th>
                     <th></th>
                 </tr>
                 </thead>
@@ -154,7 +154,7 @@ foreach ($users as $candidate) {
                                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                                 <input type="hidden" name="action" value="revoke_invite">
                                 <input type="hidden" name="code" value="<?= $e($invite['code']) ?>">
-                                <button class="btn btn-ghost btn-small" type="submit">Zurückziehen</button>
+                                <button class="btn btn-ghost btn-small" type="submit"><?= $e(translate('account.users.revoke')) ?></button>
                             </form>
                         </td>
                     </tr>

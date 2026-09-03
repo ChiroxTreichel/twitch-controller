@@ -86,9 +86,9 @@ try {
                 <input type="hidden" name="csrf" value="<?= $e($app->auth->csrfToken()) ?>">
                 <div class="who">
                     <strong><?= $e($user['display_name']) ?></strong>
-                    <small><?= $e($user['role'] === 'superadmin' ? translate('Kanalinhaber') : translate('Team')) ?></small>
+                    <small><?= $e($user['role'] === 'superadmin' ? translate('nav.owner') : translate('nav.team')) ?></small>
                 </div>
-                <button class="btn btn-ghost" type="submit"><?= $e(translate('Abmelden')) ?></button>
+                <button class="btn btn-ghost" type="submit"><?= $e(translate('nav.sign_out')) ?></button>
             </form>
         <?php endif; ?>
     </aside>

@@ -8,4 +8,4 @@
 ?>
 <h1><?= $e($heading) ?></h1>
 <p class="lead"><?= $e($message) ?></p>
-<a class="btn btn-ghost" href="<?= $e($url('/')) ?>">Zurück</a>
+<a class="btn btn-ghost" href="<?= $e($url('/')) ?>"><?= $e(translate('common.back')) ?></a>

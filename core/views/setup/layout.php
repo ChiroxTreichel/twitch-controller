@@ -14,10 +14,10 @@
 use Overlays\Core\Setup\SetupController;
 
 $order = [
-    SetupController::STEP_CHECK       => 'System',
-    SetupController::STEP_CREDENTIALS => 'Twitch-App',
-    SetupController::STEP_CHANNEL     => 'Kanal',
-    SetupController::STEP_EVENTSUB    => 'Events',
+    SetupController::STEP_CHECK       => translate('setup.step.system'),
+    SetupController::STEP_CREDENTIALS => translate('setup.step.app'),
+    SetupController::STEP_CHANNEL     => translate('setup.step.channel'),
+    SetupController::STEP_EVENTSUB    => translate('setup.step.events'),
 ];
 
 $keys = array_keys($order);
@@ -29,7 +29,7 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= $e($title !== '' ? $title : 'Einrichtung') ?></title>
+    <title><?= $e($title !== '' ? $title : translate('setup.title')) ?></title>
     <link rel="stylesheet" href="<?= $e($asset('/assets/admin.css')) ?>">
 </head>
 <body>
@@ -41,8 +41,7 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
             <?php endforeach; ?>
         </div>
         <p class="hint" style="margin-top:-14px;margin-bottom:22px;">
-            Schritt <?= $e((string) ($currentIndex + 1)) ?> von <?= $e((string) count($keys)) ?>
-            &middot; <?= $e($order[$keys[$currentIndex]]) ?>
+            <?= $e(translate('setup.step_of', ['step' => $currentIndex + 1, 'total' => count($keys), 'name' => $order[$keys[$currentIndex]]])) ?>
         </p>
 
         <?= $content ?>

@@ -6,10 +6,9 @@
  * @var list<string> $scopes
  */
 ?>
-<h1>Kanal verbinden</h1>
+<h1><?= $e(translate('setup.channel.title')) ?></h1>
 <p class="lead">
-    Jetzt einmal mit dem Twitch-Account anmelden, um dessen Kanal es geht.
-    Dieser Account wird gleichzeitig zum Kanalinhaber dieser Installation.
+    <?= $e(translate('setup.channel.lead')) ?>
 </p>
 
 <?php if ($error !== null): ?>
@@ -17,11 +16,10 @@
 <?php endif; ?>
 
 <div class="card">
-    <h2>Wofür die Berechtigungen sind</h2>
+    <h2><?= $e(translate('setup.channel.scopes_title')) ?></h2>
     <?php if ($scopes === []): ?>
         <p class="hint">
-            Aktuell werden keine zusätzlichen Berechtigungen gebraucht &mdash; nur die Anmeldung selbst.
-            Plugins können später weitere anfordern.
+            <?= $e(translate('setup.channel.no_scopes')) ?>
         </p>
     <?php else: ?>
         <ul class="hint" style="margin:0;padding-left:20px;">
@@ -30,14 +28,14 @@
             <?php endforeach; ?>
         </ul>
         <p class="hint">
-            Wenn du später Plugins installierst, die mehr brauchen, wirst du gefragt, den Kanal erneut zu verbinden.
+            <?= $e(translate('setup.channel.more_later')) ?>
         </p>
     <?php endif; ?>
 </div>
 
 <div class="note note-warn">
-    <strong>Wichtig:</strong> Melde dich bei Twitch mit dem Kanal-Account an, nicht mit einem Bot- oder Zweitaccount.
-    Twitch fragt gleich, welcher Account verwendet werden soll.
+    <strong><?= $e(translate('setup.channel.important')) ?></strong>
+    <?= $e(translate('setup.channel.use_channel_account')) ?>
 </div>
 
-<a class="btn" href="<?= $e($url('/setup/kanal')) ?>">Mit Twitch anmelden</a>
+<a class="btn" href="<?= $e($url('/setup/kanal')) ?>"><?= $e(translate('common.sign_in_twitch')) ?></a>

@@ -1,5 +1,6 @@
 <?php
 /**
+ * @var \Overlays\Core\App $app
  * @var callable $e
  * @var callable $url
  * @var array{created: list<string>, deleted: list<string>, kept: list<string>, failed: array<string, string>}|null $report
@@ -9,9 +10,9 @@
  * @var string $csrf
  */
 ?>
-<h1>Events einrichten</h1>
+<h1><?= $e(translate('setup.events.title')) ?></h1>
 <p class="lead">
-    Zum Schluss wird bei Twitch bestellt, worüber wir benachrichtigt werden wollen.
+    <?= $e(translate('setup.events.lead')) ?>
 </p>
 
 <?php if ($error !== null): ?>
@@ -30,7 +31,7 @@
         $gruppen[$schluessel]['loesung'] = $erklaerung['loesung'];
         $gruppen[$schluessel]['typen'][] = (string) $type;
 
-        if (str_contains($erklaerung['loesung'], 'neu verbinden')) {
+        if ($erklaerung['neu_verbinden']) {
             $brauchtNeuVerbinden = true;
         }
     }
@@ -43,32 +44,31 @@
                 <div style="margin-top:6px;"><?= $e($gruppe['loesung']) ?></div>
             <?php endif; ?>
             <div class="hint" style="margin-top:8px;">
-                Betrifft:
                 <?php $namen = array_map(
                     static fn (string $t): string => \Overlays\Core\Events\Labels::of($t, $app->hooks),
                     $gruppe['typen']
                 ); ?>
-                <?= $e(implode(', ', $namen)) ?>
+                <?= $e(translate('setup.events.affects', ['types' => implode(', ', $namen)])) ?>
             </div>
         </div>
     <?php endforeach; ?>
 
     <?php if ($brauchtNeuVerbinden): ?>
-        <a class="btn" href="<?= $e($url('/setup/kanal')) ?>">Kanal neu verbinden</a>
+        <a class="btn" href="<?= $e($url('/setup/kanal')) ?>">
+            <?= $e(translate('common.reconnect_channel')) ?>
+        </a>
         <p class="hint" style="margin-top:10px;">
-            Danach landest du wieder hier und klickst noch einmal auf &bdquo;Abos anlegen&ldquo;.
+            <?= $e(translate('setup.events.after_reconnect')) ?>
         </p>
     <?php endif; ?>
 <?php endif; ?>
 
 <?php if ($report !== null && $report['failed'] === []): ?>
     <div class="note note-ok">
-        <?= $e((string) count($report['created'])) ?> angelegt,
-        <?= $e((string) count($report['kept'])) ?> bestanden schon.
+        <?= $e(translate('setup.events.created_kept', ['created' => count($report['created']), 'kept' => count($report['kept'])])) ?>
         <?php if ($report['deleted'] !== []): ?>
             <div class="hint" style="margin-top:6px;">
-                <?= $e((string) count($report['deleted'])) ?> alte Abos entfernt &mdash; sie stammten
-                aus einer früheren Installation und hätten keine gültigen Meldungen mehr geliefert.
+                <?= $e(translate('setup.events.removed_old', ['count' => count($report['deleted'])])) ?>
             </div>
         <?php endif; ?>
     </div>
@@ -76,8 +76,8 @@
 
 <div class="card">
     <div class="card-head">
-        <h2>Was abonniert wird</h2>
-        <span class="badge"><?= $e((string) count($desired)) ?> Abos</span>
+        <h2><?= $e(translate('setup.events.what')) ?></h2>
+        <span class="badge"><?= $e(translate('setup.events.count', ['count' => count($desired)])) ?></span>
     </div>
     <table>
         <tbody>
@@ -90,17 +90,20 @@
         </tbody>
     </table>
     <p class="hint">
-        Das ist die Grundausstattung für die Aktivitätenliste. Plugins melden später weitere Abos an
-        (Ziele, Hype-Train, Kanalpunkte) &mdash; die werden dann automatisch nachbestellt.
+        <?= $e(translate('setup.events.basics')) ?>
     </p>
 </div>
 
 <form method="post" action="<?= $e($url('/setup/events')) ?>" class="row">
     <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-    <button class="btn" type="submit">Abos anlegen und fertigstellen</button>
+    <button class="btn" type="submit">
+        <?= $e(translate('setup.events.create')) ?>
+    </button>
 </form>
 
 <form method="post" action="<?= $e($url('/setup/fertig')) ?>" style="margin-top:12px;">
     <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-    <button class="btn btn-ghost btn-small" type="submit">Überspringen, später einrichten</button>
+    <button class="btn btn-ghost btn-small" type="submit">
+        <?= $e(translate('setup.events.skip')) ?>
+    </button>
 </form>

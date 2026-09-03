@@ -7,27 +7,31 @@ namespace Overlays\Core\I18n;
 /**
  * Uebersetzungen.
  *
- * Der Schluessel ist der deutsche Text selbst - Deutsch ist die
- * Quellsprache:
+ * Im Code stehen englische Schluessel, nie fertige Texte:
  *
- *   translate('Benutzer')                  -> "Users"   (bei en)
- *   translate('%d Farben gespeichert', 3)  -> sprintf danach
+ *   translate('account.users.title')            -> "Benutzer" / "Users"
+ *   translate('plugins.count', 3)               -> sprintf danach
  *
- * Fehlt eine Uebersetzung, kommt der Text unveraendert zurueck. Damit
- * funktioniert die Oberflaeche immer, auch bei halb gefuellter
- * Sprachdatei - kein leerer Knopf, keine Platzhalter im Text.
+ * Vorteil gegenueber Texten als Schluessel: eine Umformulierung im
+ * Deutschen macht nicht alle anderen Sprachen ungueltig.
+ *
+ * Geladen wird immer zweistufig:
+ *
+ *   1. de.json  - die Grundlage, sie enthaelt jeden Schluessel
+ *   2. <code>.json - die aktive Sprache, legt sich darueber
+ *
+ * Fehlt ein Schluessel in der aktiven Sprache, erscheint also der
+ * deutsche Text und nicht der nackte Schluessel. Fehlt er auch dort,
+ * kommt der Schluessel selbst zurueck - dann sieht man sofort, wo etwas
+ * nachzutragen ist.
  *
  * Dateien:
  *   lang/<code>.json                    Kern
  *   plugins/<slug>/lang/<code>.json     je Plugin, beim Laden ergaenzt
  *
- * Format ist flach, Text auf Text:
+ * Format ist flach, Schluessel auf Text:
  *
- *   { "Benutzer": "Users", "Speichern": "Save" }
- *
- * lang/de.json ist deshalb normalerweise leer - es gibt nichts zu
- * uebersetzen. Sie ist der Ort fuer Faelle, in denen man einzelne
- * Formulierungen nachtraeglich aendern will, ohne den Code anzufassen.
+ *   { "account.users.title": "Benutzer" }
  */
 final class Translator
 {
@@ -43,19 +47,12 @@ final class Translator
     }
 
     /**
-     * Wird einmal beim Start gesetzt. Ohne Aufruf arbeitet translate()
-     * als Durchreiche - so scheitert nichts, wenn die Sprache (noch)
-     * nicht bekannt ist, etwa waehrend der Ersteinrichtung.
+     * Wird einmal beim Start gesetzt.
      */
     public static function boot(string $language, string $coreLangDir): self
     {
-        $language = self::normalize($language);
-
-        self::$instance = new self($language);
-
-        if ($language !== self::DEFAULT_LANGUAGE || is_file($coreLangDir . '/' . $language . '.json')) {
-            self::$instance->loadFile($coreLangDir . '/' . $language . '.json');
-        }
+        self::$instance = new self(self::normalize($language));
+        self::$instance->loadDirectory($coreLangDir);
 
         return self::$instance;
     }
@@ -71,9 +68,21 @@ final class Translator
     }
 
     /**
-     * Ergaenzt Uebersetzungen, etwa aus einem Plugin. Spaeter geladene
-     * gewinnen - ein Plugin darf also auch einen Kerntext umformulieren.
+     * Laedt ein Sprachverzeichnis: zuerst die deutsche Grundlage, dann
+     * die aktive Sprache darueber. Mehrfach aufrufbar - Plugins
+     * ergaenzen so ihre eigenen Verzeichnisse.
      */
+    public function loadDirectory(string $directory): void
+    {
+        $directory = rtrim($directory, '/');
+
+        $this->loadFile($directory . '/' . self::DEFAULT_LANGUAGE . '.json');
+
+        if ($this->language !== self::DEFAULT_LANGUAGE) {
+            $this->loadFile($directory . '/' . $this->language . '.json');
+        }
+    }
+
     public function loadFile(string $file): void
     {
         if (!is_file($file)) {
@@ -86,6 +95,8 @@ final class Translator
         }
 
         foreach ($decoded as $key => $value) {
+            // Leere Werte ueberspringen: in einer halb gefuellten
+            // Sprachdatei soll die deutsche Grundlage stehen bleiben.
             if (is_string($key) && is_string($value) && $value !== '') {
                 $this->strings[$key] = $value;
             }
@@ -93,40 +104,49 @@ final class Translator
     }
 
     /**
-     * Laedt die Sprachdatei eines Verzeichnisses fuer die aktive Sprache.
+     * Zwei Sorten Platzhalter:
+     *
+     *   benannt      "%{name} hat %{count} Abos"   mit ['name' => …, 'count' => …]
+     *   der Reihe    "%s hat %d Abos"              mit [$name, $anzahl]
+     *
+     * Benannt ist fuer Uebersetzer die bessere Wahl: die Wortstellung
+     * ist je Sprache anders, und bei mehreren Werten muss niemand
+     * mitzaehlen, welcher wo hingehoert.
+     *
+     * @param array<string|int, mixed> $args
      */
-    public function loadDirectory(string $directory): void
+    public function translate(string $key, array $args = []): string
     {
-        $this->loadFile(rtrim($directory, '/') . '/' . $this->language . '.json');
-    }
-
-    /**
-     * @param list<mixed> $args
-     */
-    public function translate(string $text, array $args = []): string
-    {
-        $translated = $this->strings[$text] ?? $text;
+        $text = $this->strings[$key] ?? $key;
 
         if ($args === []) {
-            return $translated;
+            return $text;
+        }
+
+        // Zeichenketten als Schluessel bedeuten: benannte Platzhalter.
+        $benannt = [];
+        foreach (array_keys($args) as $schluessel) {
+            if (is_string($schluessel)) {
+                $benannt['%{' . $schluessel . '}'] = (string) $args[$schluessel];
+            }
+        }
+
+        if ($benannt !== []) {
+            return strtr($text, $benannt);
         }
 
         // Bei kaputten Platzhaltern in einer Uebersetzung lieber den
-        // Originaltext ausgeben als eine Fehlermeldung in der Seite.
-        $formatted = @vsprintf($translated, $args);
+        // unformatierten Text ausgeben als eine Fehlermeldung in der Seite.
+        $formatted = @vsprintf($text, array_values($args));
 
-        return is_string($formatted) ? $formatted : $translated;
+        return is_string($formatted) ? $formatted : $text;
     }
 
-    public function has(string $text): bool
+    public function has(string $key): bool
     {
-        return isset($this->strings[$text]);
+        return isset($this->strings[$key]);
     }
 
-    /**
-     * Wie viele Texte sind uebersetzt? Fuer die Anzeige in den
-     * Einstellungen.
-     */
     public function count(): int
     {
         return count($this->strings);
@@ -143,7 +163,7 @@ final class Translator
 
         foreach (glob(rtrim($directory, '/') . '/*.json') ?: [] as $file) {
             $code = self::normalize(basename($file, '.json'));
-            if ($code !== '' && !in_array($code, $codes, true)) {
+            if (!in_array($code, $codes, true)) {
                 $codes[] = $code;
             }
         }

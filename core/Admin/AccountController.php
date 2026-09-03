@@ -231,7 +231,7 @@ final class AccountController
 
                     return $this->back(
                         '/konto/einstellungen',
-                        translate('Sprache gespeichert: %s', \Overlays\Core\I18n\Translator::label($language))
+                        translate('account.settings.language_saved', ['language' => \Overlays\Core\I18n\Translator::label($language)])
                     );
 
                 case 'update_check':

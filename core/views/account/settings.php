@@ -22,35 +22,37 @@
  * @var list<string> $languages
  * @var list<array{type: string, version: string, condition: array<string, string>}> $desired
  */
+
+use Overlays\Core\Support\Dates;
 ?>
-<h1>Einstellungen</h1>
-<p class="lead">Twitch-Anbindung und Stand dieser Installation.</p>
+<h1><?= $e(translate('nav.settings')) ?></h1>
+<p class="lead"><?= $e(translate('settings.lead')) ?></p>
 
 <div class="card">
     <div class="card-head">
-        <h2>System</h2>
+        <h2><?= $e(translate('settings.system.title')) ?></h2>
         <?php if (!$updatePossible): ?>
-            <span class="badge badge-off">Updates von Hand</span>
+            <span class="badge badge-off"><?= $e(translate('settings.system.manual')) ?></span>
         <?php elseif ($update['requested_at'] > 0): ?>
-            <span class="badge badge-warn">Update läuft</span>
+            <span class="badge badge-warn"><?= $e(translate('settings.system.running')) ?></span>
         <?php elseif ($update['available']): ?>
-            <span class="badge badge-warn">Update verfügbar</span>
+            <span class="badge badge-warn"><?= $e(translate('market.update_available')) ?></span>
         <?php elseif ($update['checked_at'] > 0): ?>
-            <span class="badge badge-ok">aktuell</span>
+            <span class="badge badge-ok"><?= $e(translate('settings.system.current')) ?></span>
         <?php endif; ?>
     </div>
 
     <table>
         <tbody>
         <tr>
-            <td>Installierte Version</td>
+            <td><?= $e(translate('settings.system.installed_version')) ?></td>
             <td class="actions mono"><?= $e($updateVersion) ?></td>
         </tr>
         <?php if ($update['checked_at'] > 0): ?>
             <tr>
-                <td>Zuletzt nachgesehen</td>
+                <td><?= $e(translate('settings.system.last_checked')) ?></td>
                 <td class="actions hint">
-                    <?= $e(date('d.m.Y H:i', $update['checked_at'])) ?>
+                    <?= $e(Dates::long(date('c', $update['checked_at']))) ?>
                 </td>
             </tr>
         <?php endif; ?>
@@ -59,31 +61,30 @@
 
     <?php if (!$updatePossible): ?>
         <p class="hint" style="margin-top:12px;">
-            Diese Installation kann sich nicht selbst aktualisieren &mdash; entweder ist sie keine
-            Git-Kopie, oder im Container fehlt <span class="mono">git</span>. Einmal
-            <span class="mono">sudo ./install.sh</span> auf dem Server behebt beides.
+            <?php // Ohne $e: die Platzhalter sind eigenes Markup. ?>
+            <?= translate('settings.system.cannot_update', [
+                'git'     => '<span class="mono">git</span>',
+                'command' => '<span class="mono">sudo ./install.sh</span>',
+            ]) ?>
         </p>
     <?php else: ?>
 
         <?php if ($update['requested_at'] > 0): ?>
             <div class="note note-warn" style="margin:14px 0 0;">
-                Das Update ist beauftragt und läuft im Hintergrund.
-                Seite in einer Minute neu laden.
+                <?= $e(translate('settings.system.queued')) ?>
             </div>
         <?php elseif ($update['available']): ?>
             <div class="note note-warn" style="margin:14px 0 0;">
-                <strong>Es gibt eine neuere Version.</strong>
+                <strong><?= $e(translate('settings.system.newer')) ?></strong>
                 <?php if ($update['subject'] !== ''): ?>
                     <div class="hint" style="margin-top:6px;">
-                        Neueste Änderung: <?= $e($update['subject']) ?>
+                        <?= $e(translate('settings.system.latest_change', ['subject' => $update['subject']])) ?>
                     </div>
                 <?php endif; ?>
 
                 <?php if ($update['needs_shell']): ?>
                     <p style="margin:10px 0 0;">
-                        Dieses Update ändert auch Dinge am Server selbst. Es lässt sich deshalb
-                        nicht von hier aus einspielen &mdash; dafür braucht es einen Befehl auf
-                        dem Server:
+                        <?= $e(translate('settings.system.needs_shell')) ?>
                     </p>
                     <p class="mono" style="background:var(--bg);padding:10px 12px;border-radius:9px;border:1px solid var(--line);margin:8px 0 0;">
                         cd <?= $e($installPath) ?> &amp;&amp; sudo ./install.sh
@@ -93,7 +94,7 @@
                           style="margin-top:12px;">
                         <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                         <input type="hidden" name="action" value="update_apply">
-                        <button class="btn btn-small" type="submit">Jetzt aktualisieren</button>
+                        <button class="btn btn-small" type="submit"><?= $e(translate('settings.system.update_now')) ?></button>
                     </form>
                 <?php endif; ?>
             </div>
@@ -102,11 +103,13 @@
         <?php if ($update['last_result'] !== []): ?>
             <?php $letztes = $update['last_result']; ?>
             <div class="note <?= !empty($letztes['ok']) ? 'note-ok' : 'note-error' ?>" style="margin:14px 0 0;">
-                <strong><?= !empty($letztes['ok']) ? 'Letztes Update erfolgreich.' : 'Letztes Update fehlgeschlagen.' ?></strong>
+                <strong><?= $e(!empty($letztes['ok'])
+                    ? translate('settings.system.last_ok')
+                    : translate('settings.system.last_failed')) ?></strong>
                 <div class="hint" style="margin-top:4px;">
                     <?= $e((string) ($letztes['message'] ?? '')) ?>
                     <?php if (!empty($letztes['at'])): ?>
-                        &middot; <?= $e(date('d.m.Y H:i', strtotime((string) $letztes['at']))) ?>
+                        &middot; <?= $e(Dates::long((string) $letztes['at'])) ?>
                     <?php endif; ?>
                 </div>
             </div>
@@ -116,7 +119,7 @@
             <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>" style="margin-top:14px;">
                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                 <input type="hidden" name="action" value="update_check">
-                <button class="btn btn-ghost btn-small" type="submit">Nach Updates sehen</button>
+                <button class="btn btn-ghost btn-small" type="submit"><?= $e(translate('settings.system.check')) ?></button>
             </form>
         <?php endif; ?>
     <?php endif; ?>
@@ -126,7 +129,7 @@
               style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);">
             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
             <input type="hidden" name="action" value="timezone">
-            <label for="timezone" style="margin:0;">Zeitzone</label>
+            <label for="timezone" style="margin:0;"><?= $e(translate('settings.timezone')) ?></label>
             <select class="input" id="timezone" name="timezone" style="width:auto;">
                 <?php foreach ($timezones as $zone): ?>
                     <option value="<?= $e($zone) ?>" <?= $timezone === $zone ? 'selected' : '' ?>>
@@ -141,7 +144,7 @@
               style="margin-top:10px;">
             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
             <input type="hidden" name="action" value="language">
-            <label for="language" style="margin:0;">Sprache</label>
+            <label for="language" style="margin:0;"><?= $e(translate('settings.language')) ?></label>
             <select class="input" id="language" name="language" style="width:auto;">
                 <?php foreach ($languages as $code): ?>
                     <option value="<?= $e($code) ?>" <?= $language === $code ? 'selected' : '' ?>>
@@ -152,13 +155,11 @@
             <button class="btn btn-ghost btn-small" type="submit">Übernehmen</button>
         </form>
         <p class="hint" style="margin-top:8px;">
-            Weitere Sprachen kommen dazu, indem eine Datei
-            <span class="mono">lang/&lt;code&gt;.json</span> angelegt wird.
+            <?= translate('settings.language_hint', ['file' => '<span class="mono">lang/&lt;code&gt;.json</span>']) ?>
         </p>
 
         <p class="hint" style="margin-top:8px;">
-            Bestimmt, welche Uhrzeiten überall angezeigt werden. Der Server rechnet intern in
-            UTC &mdash; ohne die richtige Zone stehen im Feed Zeiten, die daneben liegen.
+            <?= $e(translate('settings.timezone_hint')) ?>
         </p>
     <?php endif; ?>
 </div>
@@ -172,11 +173,11 @@
 
 <div class="card">
     <div class="card-head">
-        <h2>Kanal</h2>
+        <h2><?= $e(translate('settings.channel.title')) ?></h2>
         <?php if ($broadcasterToken !== null): ?>
-            <span class="badge badge-ok">verbunden</span>
+            <span class="badge badge-ok"><?= $e(translate('settings.channel.connected')) ?></span>
         <?php else: ?>
-            <span class="badge badge-error">nicht verbunden</span>
+            <span class="badge badge-error"><?= $e(translate('settings.channel.not_connected')) ?></span>
         <?php endif; ?>
     </div>
 
@@ -184,7 +185,7 @@
         <table>
             <tbody>
             <tr>
-                <td>Kanal</td>
+                <td><?= $e(translate('settings.channel.title')) ?></td>
                 <td class="actions">
                     <strong><?= $e($channel['name'] !== '' ? $channel['name'] : $channel['login']) ?></strong>
                     <span class="hint mono">(<?= $e($channel['id']) ?>)</span>
@@ -192,14 +193,7 @@
             </tr>
             <?php if ($broadcasterToken !== null): ?>
                 <tr>
-                    <td>Token gültig noch</td>
-                    <td class="actions hint">
-                        <?= $e((string) (int) round($broadcasterToken['expires_in'] / 60)) ?> Minuten
-                        <span class="hint">(wird automatisch erneuert)</span>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Erteilte Rechte</td>
+                    <td><?= $e(translate('settings.channel.granted')) ?></td>
                     <td class="actions hint">
                         <?php $erteilt = \Overlays\Core\Twitch\Scopes::describe($broadcasterToken['scopes'], $app->hooks); ?>
                         <?php if ($erteilt === []): ?>
@@ -215,15 +209,14 @@
             </tbody>
         </table>
     <?php else: ?>
-        <div class="empty">Noch kein Kanal verbunden.</div>
+        <div class="empty"><?= $e(translate('settings.channel.none')) ?></div>
     <?php endif; ?>
 
     <?php if ($missingScopes !== []): ?>
         <div class="note note-warn" style="margin:14px 0 0;">
-            <strong>Es fehlen Rechte auf deinem Kanal.</strong>
+            <strong><?= $e(translate('settings.channel.missing')) ?></strong>
             <p style="margin:8px 0 0;">
-                Twitch erlaubt uns diese Dinge noch nicht &mdash; solange bleiben die zugehörigen
-                Meldungen im Stream aus:
+                <?= $e(translate('settings.channel.missing_hint')) ?>
             </p>
             <ul style="margin:8px 0 0;padding-left:20px;">
                 <?php foreach (\Overlays\Core\Twitch\Scopes::describe($missingScopes, $app->hooks) as $recht): ?>
@@ -236,18 +229,16 @@
                 <?php endforeach; ?>
             </ul>
             <p style="margin:10px 0 0;">
-                Das passiert, wenn ein Update oder ein neues Plugin mehr braucht als beim
-                letzten Verbinden erlaubt wurde. Einmal neu verbinden reicht &mdash; Twitch
-                fragt dann nach den fehlenden Rechten.
+                <?= $e(translate('settings.channel.missing_why')) ?>
             </p>
             <?php if ($canManage): ?>
                 <p style="margin:12px 0 0;">
                     <a class="btn btn-small" href="<?= $e($url('/konto/einstellungen/kanal')) ?>">
-                        Kanal neu verbinden
+                        <?= $e(translate('common.reconnect_channel')) ?>
                     </a>
                 </p>
                 <p class="hint" style="margin:8px 0 0;">
-                    Danach unten auf &bdquo;Abos jetzt abgleichen&ldquo; klicken.
+                    <?= $e(translate('settings.channel.then_sync')) ?>
                 </p>
             <?php endif; ?>
         </div>
@@ -256,14 +247,16 @@
     <?php if ($canManage): ?>
         <div class="row" style="margin-top:14px;">
             <a class="btn btn-small" href="<?= $e($url('/konto/einstellungen/kanal')) ?>">
-                <?= $broadcasterToken === null ? 'Kanal verbinden' : 'Neu verbinden' ?>
+                <?= $e($broadcasterToken === null
+                    ? translate('settings.channel.connect')
+                    : translate('settings.channel.reconnect')) ?>
             </a>
             <?php if ($broadcasterToken !== null): ?>
                 <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>"
-                      onsubmit="return confirm('Verbindung trennen? Events und Plugins, die Twitch-Daten brauchen, funktionieren dann nicht mehr.');">
+                      onsubmit="return confirm('<?= $e(translate('settings.channel.confirm_disconnect')) ?>');">
                     <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                     <input type="hidden" name="action" value="disconnect_channel">
-                    <button class="btn btn-danger btn-small" type="submit">Trennen</button>
+                    <button class="btn btn-danger btn-small" type="submit"><?= $e(translate('settings.channel.disconnect')) ?></button>
                 </form>
             <?php endif; ?>
         </div>
@@ -272,37 +265,34 @@
 
 <div class="card">
     <div class="card-head">
-        <h2>Event-Abos</h2>
-        <span class="badge"><?= $e((string) count($desired)) ?> gebraucht</span>
+        <h2><?= $e(translate('settings.events.title')) ?></h2>
+        <span class="badge"><?= $e(translate('settings.events.needed', [count($desired)])) ?></span>
     </div>
     <p class="hint">
-        Twitch schickt Events an <span class="mono"><?= $e($callbackUrl) ?></span>.
-        Welche Abos gebraucht werden, ergibt sich aus dem Kern plus den aktiven Plugins &mdash;
-        nach jedem Aktivieren oder Deaktivieren einmal abgleichen.
+        <?= translate('settings.events.hint', ['url' => '<span class="mono">' . $e($callbackUrl) . '</span>']) ?>
     </p>
 
     <?php if ($canManage): ?>
         <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>">
             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
             <input type="hidden" name="action" value="eventsub">
-            <button class="btn btn-small" type="submit">Abos jetzt abgleichen</button>
+            <button class="btn btn-small" type="submit"><?= $e(translate('settings.events.sync')) ?></button>
         </form>
     <?php endif; ?>
 </div>
 
 <div class="card">
     <div class="card-head">
-        <h2>Twitch-App</h2>
+        <h2><?= $e(translate('setup.step.app')) ?></h2>
         <?php if ($hasSecret && $hasWebhook): ?>
-            <span class="badge badge-ok">vollständig</span>
+            <span class="badge badge-ok"><?= $e(translate('settings.app.complete')) ?></span>
         <?php else: ?>
-            <span class="badge badge-warn">unvollständig</span>
+            <span class="badge badge-warn"><?= $e(translate('settings.app.incomplete')) ?></span>
         <?php endif; ?>
     </div>
 
     <p class="hint">
-        Redirect-URL in der Twitch-Konsole muss sein:
-        <span class="mono"><?= $e($redirectUri) ?></span>
+        <?= translate('settings.app.redirect', ['url' => '<span class="mono">' . $e($redirectUri) . '</span>']) ?>
     </p>
 
     <?php if ($canManage): ?>
@@ -311,32 +301,35 @@
             <input type="hidden" name="action" value="credentials">
 
             <div class="field">
-                <label for="client_id">Client-ID</label>
+                <label for="client_id"><?= $e(translate('setup.credentials.client_id')) ?></label>
                 <input class="input mono" id="client_id" name="client_id"
                        value="<?= $e($clientId) ?>" autocomplete="off" spellcheck="false">
             </div>
 
             <div class="field">
-                <label for="client_secret">Client-Secret</label>
+                <label for="client_secret"><?= $e(translate('setup.credentials.client_secret')) ?></label>
                 <input class="input mono" id="client_secret" name="client_secret" type="password"
-                       placeholder="<?= $hasSecret ? 'gesetzt – leer lassen, um es zu behalten' : 'noch nicht gesetzt' ?>"
+                       placeholder="<?= $e($hasSecret
+                           ? translate('settings.app.secret_set')
+                           : translate('settings.app.secret_unset')) ?>"
                        autocomplete="off">
             </div>
 
             <div class="field">
-                <label for="webhook_secret">Webhook-Secret</label>
+                <label for="webhook_secret"><?= $e(translate('setup.credentials.webhook_secret')) ?></label>
                 <input class="input mono" id="webhook_secret" name="webhook_secret" type="password"
-                       placeholder="<?= $hasWebhook ? 'gesetzt – leer lassen, um es zu behalten' : 'noch nicht gesetzt' ?>"
+                       placeholder="<?= $e($hasWebhook
+                           ? translate('settings.app.secret_set')
+                           : translate('settings.app.secret_unset')) ?>"
                        autocomplete="off">
                 <p class="hint">
-                    Nach einer Änderung müssen die Abos neu angelegt werden &mdash; das Secret wird beim
-                    Anlegen mitgegeben und lässt sich nachträglich nicht ändern.
+                    <?= $e(translate('settings.app.webhook_hint')) ?>
                 </p>
             </div>
 
-            <button class="btn" type="submit">Speichern</button>
+            <button class="btn" type="submit"><?= $e(translate('common.save')) ?></button>
         </form>
     <?php else: ?>
-        <p class="hint">Nur der Kanalinhaber darf die Zugangsdaten sehen und ändern.</p>
+        <p class="hint"><?= $e(translate('settings.app.owner_only')) ?></p>
     <?php endif; ?>
 </div>

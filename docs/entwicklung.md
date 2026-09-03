@@ -204,58 +204,70 @@ Verzeichniswechsel).
 
 ### Uebersetzungen
 
-Jeder Text, den ein Mensch liest, laeuft durch `translate()`. Der
-Schluessel ist der deutsche Text selbst - Deutsch ist die Quellsprache:
+Im Code stehen **englische Schluessel**, nie fertige Texte:
 
 ```php
-translate('Benutzer')
-translate('%d Farben gespeichert.', $anzahl)
+translate('account.users.title')
+translate('account.activity.kinds', ['count' => $anzahl])
+translate('settings.events.hint', ['url' => $callbackUrl])
 ```
+
+Vorteil gegenueber Texten als Schluessel: eine Umformulierung im
+Deutschen macht nicht alle anderen Sprachen ungueltig.
 
 In Vorlagen immer zusammen mit dem Escaping:
 
 ```php
-<?= $e(translate('Speichern')) ?>
+<?= $e(translate('common.save')) ?>
 ```
 
-Fehlt eine Uebersetzung, kommt der Text unveraendert zurueck. Die
-Oberflaeche funktioniert also auch bei halb gefuellter Sprachdatei -
-kein leerer Knopf, kein Platzhalter im Text.
+Platzhalter sind **benannt** (`%{name}`) und werden als Array
+uebergeben. Positionelle (`%s`, `%d`) funktionieren auch, sind aber
+schlechter: die Wortstellung ist je Sprache anders, und bei mehreren
+Werten muss ein Uebersetzer mitzaehlen.
 
-Dateien:
+```json
+{ "settings.events.hint": "Twitch schickt Events an %{url}. …" }
+```
+
+Steckt im Platzhalter eigenes Markup, wird die Ausgabe bewusst **nicht**
+escaped - dann aber nur mit selbst gebauten Werten und mit Kommentar:
+
+```php
+<?php // Ohne $e: der Platzhalter ist eigenes Markup. ?>
+<?= translate('settings.app.redirect', [
+    'url' => '<span class="mono">' . $e($redirectUri) . '</span>',
+]) ?>
+```
+
+Geladen wird zweistufig: zuerst `de.json` als Grundlage, dann die aktive
+Sprache darueber. Fehlt ein Schluessel in der Uebersetzung, erscheint
+also der deutsche Text und nicht der nackte Schluessel. Fehlt er auch in
+`de.json`, kommt der Schluessel selbst - dann sieht man sofort, wo etwas
+nachzutragen ist.
 
 | Ort | Inhalt |
 | --- | --- |
 | `lang/<code>.json` | Kern |
 | `plugins/<slug>/lang/<code>.json` | je Plugin, beim Laden ergaenzt |
 
-Format ist flach, Text auf Text:
+Ein Plugin darf Kern-Schluessel mitbenutzen (`common.save`,
+`nav.settings`) - die Kerndatei ist beim Laden schon da.
 
-```json
-{ "Benutzer": "Users", "Speichern": "Save" }
-```
-
-`lang/de.json` enthaelt nur leere Werte - es gibt nichts zu uebersetzen.
-Die Datei ist der Ort fuer Faelle, in denen man eine Formulierung
-aendern will, ohne den Code anzufassen.
-
-Sprachdateien nicht von Hand pflegen, sondern einsammeln lassen:
+Nicht von Hand pflegen, sondern pruefen lassen:
 
 ```bash
-php bin/lang.php en                    # lang/en.json
-php bin/lang.php en --plugin throne    # plugins/throne/lang/en.json
-php bin/lang.php --check               # nur auflisten
+php bin/lang.php --all                 # Kern und alle Plugins
+php bin/lang.php --plugin throne       # nur ein Plugin
+php bin/lang.php --all --fix           # fehlende Schluessel leer anlegen
 ```
 
-Vorhandene Uebersetzungen bleiben, neue Texte kommen mit leerem Wert
-dazu. Was aus dem Code verschwunden ist, sammelt sich unter
-`_unbenutzt` statt geloescht zu werden - bei einer Umformulierung will
-man die alte Uebersetzung noch sehen.
-
-Der Extraktor liest die PHP-Tokens, nicht per Regex. Ein `translate()`
-im Kommentar wird also nicht mitgezaehlt, und Anfuehrungszeichen im
-Text machen keinen Aerger. Aufrufe mit einer Variablen als erstem
-Argument kann er nicht sehen - dort den Text also ausschreiben.
+Gemeldet wird, was im Code benutzt wird aber in `de.json` fehlt (das
+waere ein sichtbarer Schluessel in der Oberflaeche), was in `de.json`
+steht aber nirgends benutzt wird, und wie viel je Uebersetzung noch
+offen ist. Der Prueflauf liest die PHP-Tokens, ein `translate()` im
+Kommentar zaehlt also nicht mit. Schluessel aus einer Variablen kann er
+nicht sehen - im Code deshalb immer ausschreiben.
 
 Die Sprache kommt aus der Einstellung `language`, sonst aus `APP_LANG`,
 sonst Deutsch. Umgestellt wird sie unter *Konto > Einstellungen*.

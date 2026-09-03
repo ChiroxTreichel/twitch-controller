@@ -13,9 +13,9 @@
  * @var string $error
  */
 ?>
-<h1>Aktivitäten</h1>
+<h1><?= $e(translate('nav.activity')) ?></h1>
 <p class="lead">
-    Der Feed zeigt, was im Kanal passiert. Hier stellst du seine Farben ein.
+    <?= $e(translate('account.activity.lead')) ?>
 </p>
 
 <?php if ($notice !== ''): ?>
@@ -27,8 +27,8 @@
 
 <div class="card">
     <div class="card-head">
-        <h2>Link zum Feed</h2>
-        <a class="btn btn-small" href="<?= $e($feedUrl) ?>" target="_blank" rel="noreferrer">Öffnen</a>
+        <h2><?= $e(translate('account.activity.link_title')) ?></h2>
+        <a class="btn btn-small" href="<?= $e($feedUrl) ?>" target="_blank" rel="noreferrer"><?= $e(translate('common.open')) ?></a>
     </div>
 
     <div class="field">
@@ -37,13 +37,11 @@
     </div>
 
     <p class="hint">
-        Am besten direkt in OBS einbinden: <strong>Ansicht &rarr; Docks &rarr; Eigenes Browser-Dock</strong>,
-        dort diese Adresse eintragen. Ein solches Dock teilt die Anmeldung mit deinem Browser,
-        du bist also gleich eingeloggt.
+        <?php // Ohne $e: der Platzhalter ist eigenes Markup. ?>
+        <?= translate('account.activity.obs_hint', ['menu' => '<strong>' . $e(translate('account.activity.obs_menu')) . '</strong>']) ?>
     </p>
     <p class="hint">
-        Als <em>Browserquelle</em> im Stream ist der Feed nicht gedacht &mdash; er ist für dich,
-        nicht für die Zuschauer.
+        <?= translate('account.activity.not_for_viewers', ['source' => '<em>' . $e(translate('account.activity.browser_source')) . '</em>']) ?>
     </p>
 </div>
 
@@ -52,22 +50,21 @@
 
     <div class="card">
         <div class="card-head">
-            <h2>Farben der Badges</h2>
-            <span class="badge"><?= $e((string) count($badges)) ?> Arten</span>
+            <h2><?= $e(translate('account.activity.colors_title')) ?></h2>
+            <span class="badge"><?= $e(translate('account.activity.kinds', ['count' => count($badges)])) ?></span>
         </div>
 
         <p class="hint" style="margin-top:-6px;">
-            Jede Art von Ereignis hat ihre eigene Farbe. Neue Arten kommen dazu, sobald du ein
-            Plugin aktivierst, das eigene mitbringt.
+            <?= $e(translate('account.activity.colors_hint')) ?>
         </p>
 
         <table>
             <thead>
             <tr>
-                <th>Ereignis</th>
-                <th>Hintergrund</th>
-                <th>Schrift</th>
-                <th>Vorschau</th>
+                <th><?= $e(translate('account.activity.event')) ?></th>
+                <th><?= $e(translate('account.activity.background')) ?></th>
+                <th><?= $e(translate('account.activity.text')) ?></th>
+                <th><?= $e(translate('account.activity.preview')) ?></th>
             </tr>
             </thead>
             <tbody>
@@ -100,14 +97,16 @@
 
     <?php if ($canManage): ?>
         <div class="row">
-            <button class="btn" type="submit">Speichern</button>
+            <button class="btn" type="submit"><?= $e(translate('common.save')) ?></button>
             <button class="btn btn-ghost btn-small" type="submit" name="action" value="reset"
-                    onclick="return confirm('Alle Farben auf die Vorgaben zurücksetzen?');">
-                Farben zurücksetzen
+                    onclick="return confirm('<?= $e(translate('account.activity.confirm_reset')) ?>');">
+                <?= $e(translate('account.activity.reset_colors')) ?>
             </button>
         </div>
     <?php else: ?>
-        <p class="hint">Zum Ändern fehlt dir <span class="mono">Konto.Aktivitaeten.Manage</span>.</p>
+        <p class="hint">
+            <?= translate('common.missing_permission', ['permission' => '<span class="mono">Konto.Aktivitaeten.Manage</span>']) ?>
+        </p>
     <?php endif; ?>
 </form>
 

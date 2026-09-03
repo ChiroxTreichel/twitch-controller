@@ -7,9 +7,9 @@
  * @var string|null $error
  */
 ?>
-<h1>Willkommen</h1>
+<h1><?= $e(translate('setup.check.title')) ?></h1>
 <p class="lead">
-    Bevor es losgeht, prüfen wir, ob der Server alles mitbringt.
+    <?= $e(translate('setup.check.lead')) ?>
 </p>
 
 <?php if ($error !== null): ?>
@@ -26,11 +26,11 @@
             </td>
             <td class="actions">
                 <?php if ($check['ok']): ?>
-                    <span class="badge badge-ok">in Ordnung</span>
+                    <span class="badge badge-ok"><?= $e(translate('common.ok')) ?></span>
                 <?php elseif ($check['required']): ?>
-                    <span class="badge badge-error">fehlt</span>
+                    <span class="badge badge-error"><?= $e(translate('common.missing')) ?></span>
                 <?php else: ?>
-                    <span class="badge badge-warn">Hinweis</span>
+                    <span class="badge badge-warn"><?= $e(translate('common.notice')) ?></span>
                 <?php endif; ?>
             </td>
         </tr>
@@ -40,12 +40,12 @@
 
 <?php if ($ready): ?>
     <form method="post" action="<?= $e($url('/setup/datenbank')) ?>" style="margin-top:22px;">
-        <button class="btn" type="submit">Datenbank einrichten und weiter</button>
+        <button class="btn" type="submit"><?= $e(translate('setup.check.continue')) ?></button>
     </form>
 <?php else: ?>
     <div class="note note-warn" style="margin-top:22px;">
-        Bitte die rot markierten Punkte in der <span class="mono">.env</span> beheben und die Seite neu laden.
-        Als Vorlage dient <span class="mono">.env.example</span>.
+        <?php // Absichtlich ohne $e: die Platzhalter sind eigenes Markup. ?>
+        <?= translate('setup.check.fix_env', ['env' => '<span class="mono">.env</span>', 'example' => '<span class="mono">.env.example</span>']) ?>
     </div>
-    <a class="btn btn-ghost" href="<?= $e($url('/setup')) ?>">Erneut prüfen</a>
+    <a class="btn btn-ghost" href="<?= $e($url('/setup')) ?>"><?= $e(translate('setup.check.recheck')) ?></a>
 <?php endif; ?>

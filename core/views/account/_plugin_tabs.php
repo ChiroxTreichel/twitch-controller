@@ -10,7 +10,7 @@
 ?>
 <div class="tabs">
     <a class="tab<?= $tab === 'installiert' ? ' is-active' : '' ?>"
-       href="<?= $e($url('/konto/plugins')) ?>">Installierte Plugins</a>
+       href="<?= $e($url('/konto/plugins')) ?>"><?= $e(translate('account.plugins.tab_installed')) ?></a>
     <a class="tab<?= $tab === 'finden' ? ' is-active' : '' ?>"
-       href="<?= $e($url('/konto/plugins/finden')) ?>">Plugins finden</a>
+       href="<?= $e($url('/konto/plugins/finden')) ?>"><?= $e(translate('account.plugins.tab_find')) ?></a>
 </div>

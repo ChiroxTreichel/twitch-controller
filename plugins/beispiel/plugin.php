@@ -50,10 +50,10 @@ $scope = \Overlays\Core\Config\Settings::pluginScope($plugin->slug);
 // die auf ".View" enden, bekommen neu eingeladene Benutzer automatisch.
 $hooks->on('permissions.catalog', static function (array $catalog): array {
     $catalog['Beispiel'] = [
-        'label' => translate('Beispiel'),
+        'label' => translate('example.name'),
         'permissions' => [
-            'Beispiel.Seite.View'   => translate('darf die Beispielseite öffnen.'),
-            'Beispiel.Seite.Manage' => translate('darf die Beispieleinstellung ändern.'),
+            'Beispiel.Seite.View'   => translate('example.permissions.view'),
+            'Beispiel.Seite.Manage' => translate('example.permissions.manage'),
         ],
     ];
 
@@ -67,11 +67,11 @@ $hooks->on('permissions.catalog', static function (array $catalog): array {
 // alles darueber landet dahinter.
 $hooks->on('admin.nav', static function (array $nav): array {
     $nav['beispiel'] = [
-        'label' => translate('Beispiel'),
+        'label' => translate('example.name'),
         'order' => 90,
         'items' => [
             [
-                'label'      => translate('Beispielseite'),
+                'label'      => translate('example.page'),
                 'href'       => '/beispiel',
                 'permission' => 'Beispiel.Seite.View',
             ],
@@ -92,7 +92,7 @@ $hooks->on('plugin.settings', static function (array $pages) use ($plugin): arra
         // Auch Plugin-Texte laufen ueber translate(). Die Sprachdatei
         // liegt in plugins/beispiel/lang/<code>.json und wird beim
         // Laden des Plugins ergaenzt.
-        'label' => translate('Einstellungen'),
+        'label' => translate('nav.settings'),
         'href'  => '/beispiel',
     ];
 

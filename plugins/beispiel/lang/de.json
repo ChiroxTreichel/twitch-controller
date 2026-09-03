@@ -1,7 +1,11 @@
 {
-    "Beispiel": "",
-    "Beispielseite": "",
-    "darf die Beispieleinstellung ändern.": "",
-    "darf die Beispielseite öffnen.": "",
-    "Einstellungen": ""
+    "example.events_title": "Reaktion auf Events",
+    "example.greeting": "Grußwort",
+    "example.lead": "Ein Plugin ohne Nutzen, dafür mit Kommentaren.",
+    "example.name": "Beispiel",
+    "example.own_setting": "Eigene Einstellung",
+    "example.page": "Beispielseite",
+    "example.permissions.manage": "darf die Beispieleinstellung ändern.",
+    "example.permissions.view": "darf die Beispielseite öffnen.",
+    "example.scope_hint": "Liegt im Scope %{scope} und verschwindet mit dem Plugin."
 }
