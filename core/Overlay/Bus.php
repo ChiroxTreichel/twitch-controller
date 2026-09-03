@@ -146,7 +146,7 @@ final class Bus
      * Groesse. Was darin passiert, macht das Plugin selbst per
      * JavaScript - das Overlay stellt nur den Kasten.
      *
-     * @return array<string, array{label: string, position: string, width: string, height: string, z: int}>
+     * @return array<string, array{label: string, position: string, width: string, height: string, z: int, vars: array<string, string>}>
      */
     public static function slots(App $app): array
     {
@@ -181,6 +181,7 @@ final class Bus
                 'width'    => self::normalizeLength((string) ($slot['width'] ?? '')),
                 'height'   => self::normalizeLength((string) ($slot['height'] ?? '')),
                 'z'        => (int) ($slot['z'] ?? 10),
+                'vars'     => self::normalizeVars($slot['vars'] ?? []),
             ];
         }
 
@@ -219,6 +220,47 @@ final class Bus
             'css' => $nurEigene($assets['css'] ?? []),
             'js'  => $nurEigene($assets['js'] ?? []),
         ];
+    }
+
+    /**
+     * Eigene CSS-Variablen eines Platzes.
+     *
+     * Damit kann ein Plugin einstellbare Werte ins Overlay bringen -
+     * Abstand, Mediengroesse - ohne dafuer JavaScript zu brauchen. Der
+     * Wert landet in einem style-Attribut, also wird beides eng
+     * geprueft: Name wie eine CSS-Variable, Wert eine Laengenangabe
+     * oder eines von wenigen Schluesselwoertern.
+     *
+     * @return array<string, string>
+     */
+    private static function normalizeVars(mixed $vars): array
+    {
+        if (!is_array($vars)) {
+            return [];
+        }
+
+        $sauber = [];
+
+        foreach ($vars as $name => $wert) {
+            $name = trim((string) $name);
+            if (preg_match('/^--[a-z][a-z0-9-]{0,40}$/', $name) !== 1) {
+                continue;
+            }
+
+            $wert = trim((string) $wert);
+
+            if (in_array($wert, ['auto', 'none', 'inherit', 'initial'], true)) {
+                $sauber[$name] = $wert;
+                continue;
+            }
+
+            $laenge = self::normalizeLength($wert);
+            if ($laenge !== '') {
+                $sauber[$name] = $laenge;
+            }
+        }
+
+        return $sauber;
     }
 
     /**

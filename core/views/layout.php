@@ -41,6 +41,10 @@ try {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= $e($title !== '' ? $title . ' · ' . \TwitchController\Core\App::NAME : \TwitchController\Core\App::NAME) ?></title>
     <link rel="stylesheet" href="<?= $e($asset('/assets/admin.css')) ?>">
+    <?php $pluginAssets = $view->adminAssets(); ?>
+    <?php foreach ($pluginAssets['css'] as $css): ?>
+        <link rel="stylesheet" href="<?= $e($css) ?>">
+    <?php endforeach ?>
 </head>
 <body>
 <div class="shell">
@@ -139,5 +143,8 @@ try {
     });
 }());
 </script>
+<?php foreach ($pluginAssets['js'] as $js): ?>
+    <script src="<?= $e($js) ?>"></script>
+<?php endforeach ?>
 </body>
 </html>

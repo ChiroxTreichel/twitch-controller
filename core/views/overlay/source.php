@@ -9,7 +9,7 @@
  * @var callable $e
  * @var int $width
  * @var int $height
- * @var array<string, array{label: string, position: string, width: string, height: string, z: int}> $slots
+ * @var array<string, array{label: string, position: string, width: string, height: string, z: int, vars: array<string, string>}> $slots
  * @var array{css: list<string>, js: list<string>} $assets
  * @var string $stream    Adresse der SSE-Leitung
  * @var bool $debug       Verbindungsanzeige einblenden
@@ -87,6 +87,11 @@
              style="z-index: <?= (int) $slot['z'] ?>;<?php
                  echo $slot['width'] !== '' ? ' width: ' . $e($slot['width']) . ';' : '';
                  echo $slot['height'] !== '' ? ' height: ' . $e($slot['height']) . ';' : '';
+                 // Eigene CSS-Variablen des Plugins. Name und Wert sind
+                 // in Bus::normalizeVars() geprueft.
+                 foreach ($slot['vars'] as $name => $wert) {
+                     echo ' ' . $e($name) . ': ' . $e($wert) . ';';
+                 }
              ?>"></div>
     <?php endforeach ?>
 </div>

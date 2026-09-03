@@ -67,6 +67,44 @@ final class View
     }
 
     /**
+     * Eigene CSS- und JS-Dateien der Plugins fuer die
+     * Verwaltungsseiten.
+     *
+     * Gegenstueck zu overlay.assets: ein Plugin bringt eigene Seiten
+     * mit und muss sie gestalten koennen, ohne das Stylesheet des
+     * Kerns anzufassen.
+     *
+     * Nur eigene Adressen - alles, was nicht mit "/" beginnt, wird
+     * verworfen. Ein Plugin soll nicht ungefragt Code von einem
+     * fremden Server in die Verwaltung holen.
+     *
+     * @return array{css: list<string>, js: list<string>}
+     */
+    public function adminAssets(): array
+    {
+        $assets = $this->app->hooks->filter('admin.assets', ['css' => [], 'js' => []]);
+        if (!is_array($assets)) {
+            $assets = [];
+        }
+
+        $nurEigene = static function (mixed $liste): array {
+            if (!is_array($liste)) {
+                return [];
+            }
+
+            return array_values(array_filter(
+                array_map('strval', $liste),
+                static fn (string $url): bool => $url !== '' && str_starts_with($url, '/')
+            ));
+        };
+
+        return [
+            'css' => $nurEigene($assets['css'] ?? []),
+            'js'  => $nurEigene($assets['js'] ?? []),
+        ];
+    }
+
+    /**
      * @param array<string, mixed> $data
      */
     private function capture(string $template, array $data): string
