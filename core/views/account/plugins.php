@@ -10,6 +10,8 @@
  * @var list<string> $missing
  * @var bool $canManage
  * @var bool $canWrite   Ist plugins/ beschreibbar? Ohne das kein Loeschen
+ * @var int $updates      Wie viele Plugins liessen sich aktualisieren
+ * @var string $catalogError  Warum der Katalog nicht erreichbar war
  * @var string $csrf
  * @var string $notice
  * @var string $error
@@ -20,6 +22,35 @@
 <p class="lead"><?= $e(translate('account.plugins.lead')) ?></p>
 
 <?= $view->render('account/_plugin_tabs', ['tab' => $tab], null) ?>
+
+<?php if (($catalogError ?? '') !== ''): ?>
+    <?php /*
+        Der Katalog war nicht erreichbar. Das ist kein Grund, die
+        Verwaltung zu verweigern - nur Updates lassen sich dann nicht
+        finden. Deshalb ein Hinweis und keine Fehlerseite.
+    */ ?>
+    <div class="note note-warn">
+        <?= $e(translate('account.plugins.catalog_unreachable', ['reason' => $catalogError])) ?>
+    </div>
+<?php endif ?>
+
+<?php if ($canManage && ($updates ?? 0) > 0): ?>
+    <div class="card">
+        <div class="card-head">
+            <h2><?= $e(translate('account.plugins.updates_available', ['count' => $updates])) ?></h2>
+            <?= $view->render('_confirm', [
+                'label'    => translate('account.plugins.update_all'),
+                'question' => translate('account.plugins.confirm_update_all', ['count' => $updates]),
+                'confirm'  => translate('account.plugins.confirm_update_all_yes'),
+                'action'   => $url('/account/plugins'),
+                'fields'   => ['csrf' => $csrf, 'action' => 'update_all'],
+                'danger'   => false,
+                'right'    => true,
+            ], null) ?>
+        </div>
+        <p class="hint"><?= $e(translate('account.plugins.update_all_hint')) ?></p>
+    </div>
+<?php endif ?>
 
 <?php if ($welcome): ?>
     <div class="note note-ok">

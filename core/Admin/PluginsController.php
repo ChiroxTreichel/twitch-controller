@@ -11,6 +11,7 @@ use TwitchController\Core\Plugin\Manifest;
 use TwitchController\Core\Registry\Client;
 use TwitchController\Core\Registry\Dependencies;
 use TwitchController\Core\Registry\Installer;
+use RuntimeException;
 use Throwable;
 
 /**
@@ -37,12 +38,23 @@ final class PluginsController
         $settingsPages = $this->settingsPages();
         $rows = [];
 
+        // Den Katalog einmal frisch holen. Vorher wurde nur der
+        // Zwischenspeicher gelesen - war der Marktplatz noch nie offen,
+        // stand dort nichts, und die Liste zeigte kein Update an,
+        // obwohl eines dalag.
+        //
+        // Scheitert es, geht es weiter: der Katalogserver darf nicht
+        // darueber entscheiden, ob man seine Plugins verwalten kann.
+        $catalogError = '';
+        try {
+            $registry->all();
+        } catch (Throwable $e) {
+            $catalogError = $e->getMessage();
+        }
+
         foreach ($this->app->plugins->discover(true) as $manifest) {
             $installedVersion = $this->app->plugins->installedVersion($manifest->slug);
 
-            // Neuere Version im Katalog? Absichtlich nur aus dem
-            // Zwischenspeicher - diese Seite soll nicht auf einen fremden
-            // Server warten.
             $catalogEntry = $registry->cachedEntry($manifest->slug);
             $catalogVersion = $catalogEntry === null ? null : (string) $catalogEntry['version'];
 
@@ -63,9 +75,21 @@ final class PluginsController
             ];
         }
 
+        // Was liesse sich jetzt aktualisieren? Fuer den Knopf "Alle
+        // aktualisieren" - und damit er verschwindet, wenn es nichts
+        // zu tun gibt.
+        $updates = 0;
+        foreach ($rows as $row) {
+            if ($row['catalog'] !== null || $row['updatable']) {
+                $updates++;
+            }
+        }
+
         return Response::html($this->app->view->render('account/plugins', [
             'title'     => 'Plugins',
             'active'    => 'account/plugins',
+            'updates'   => $updates,
+            'catalogError' => $catalogError,
             'tab'       => 'installiert',
             'rows'      => $rows,
             'missing'   => $this->app->plugins->missing(),
@@ -113,6 +137,9 @@ final class PluginsController
 
                 case 'download_update':
                     return $this->installFromRegistry($slug, '/account/plugins');
+
+                case 'update_all':
+                    return $this->updateAll();
 
                 case 'remove':
                     // Ein Schritt, nicht zwei: Daten abraeumen UND
@@ -296,6 +323,115 @@ final class PluginsController
     }
 
     // -----------------------------------------------------------------
+
+    /**
+     * Alle Plugins auf den neuesten Stand bringen.
+     *
+     * Zwei Arten von Update, und beide gehoeren hierher:
+     *
+     *   Katalog   im Katalog liegt eine neuere Fassung - Dateien holen
+     *             und danach install.php nachziehen.
+     *   Dateien   die Dateien sind schon neuer als der Stand in der
+     *             Datenbank, etwa nach einem Update von Hand. Dann
+     *             fehlt nur noch install.php.
+     *
+     * Ein gescheitertes Plugin haelt die uebrigen nicht auf: sonst
+     * bliebe nach dem ersten Fehler alles andere alt, und man muesste
+     * herausfinden, welches der Uebeltaeter war.
+     */
+    private function updateAll(): Response
+    {
+        $registry = new Client($this->app);
+
+        try {
+            $registry->all();
+        } catch (Throwable $e) {
+            return $this->back('/account/plugins', null, $e->getMessage());
+        }
+
+        $gemacht = [];
+        $gescheitert = [];
+
+        // Voraussetzung zuerst. Alphabetisch stimmt das zufaellig fuer
+        // "alerts" vor "twitch-alerts", allgemein nicht - und ein
+        // Plugin, dessen Voraussetzung noch alt ist, kann bei seinem
+        // install.php ueber eine fehlende Klasse fallen.
+        $vorhanden = $this->app->plugins->discover(true);
+        $reihenfolge = $this->app->plugins->resolveOrder(array_keys($vorhanden));
+
+        foreach ($reihenfolge as $slug) {
+            $manifest = $vorhanden[$slug] ?? null;
+            if ($manifest === null) {
+                continue;
+            }
+
+            $installiert = $this->app->plugins->installedVersion($slug);
+
+            if ($installiert === null) {
+                continue;
+            }
+
+            $eintrag = $registry->cachedEntry($slug);
+            $imKatalog = $eintrag === null ? null : (string) $eintrag['version'];
+
+            $neueDateien = $imKatalog !== null
+                && version_compare($manifest->version, $imKatalog, '<');
+            $nurSchema = version_compare($installiert, $manifest->version, '<');
+
+            if (!$neueDateien && !$nurSchema) {
+                continue;
+            }
+
+            try {
+                if ($neueDateien) {
+                    $eintrag = $registry->find($slug);
+                    if ($eintrag === null) {
+                        throw new RuntimeException(translate('market.not_in_catalog'));
+                    }
+
+                    (new Installer($this->app))->fetch($eintrag);
+                    $this->app->plugins->discover(true);
+
+                    $frisch = $this->app->plugins->manifest($slug);
+                    if ($frisch === null) {
+                        throw new RuntimeException(translate('market.manifest_broken'));
+                    }
+
+                    $this->app->plugins->upgradeIfNeeded($frisch);
+                    $gemacht[] = $frisch->name . ' ' . $frisch->version;
+
+                    continue;
+                }
+
+                $this->app->plugins->upgradeIfNeeded($manifest);
+                $gemacht[] = $manifest->name . ' ' . $manifest->version;
+            } catch (Throwable $e) {
+                // Weitermachen. Ein kaputtes Plugin darf die anderen
+                // nicht alt lassen.
+                $gescheitert[] = $manifest->name . ': ' . $e->getMessage();
+            }
+        }
+
+        if ($gemacht === [] && $gescheitert === []) {
+            return $this->back('/account/plugins', translate('account.plugins.all_current'));
+        }
+
+        if ($gescheitert !== []) {
+            return $this->back(
+                '/account/plugins',
+                $gemacht === [] ? null : translate('account.plugins.updated_some', [
+                    'plugins' => implode(', ', $gemacht),
+                ]),
+                translate('account.plugins.update_failed', [
+                    'reasons' => implode(' / ', $gescheitert),
+                ])
+            );
+        }
+
+        return $this->back('/account/plugins', translate('account.plugins.updated_all', [
+            'plugins' => implode(', ', $gemacht),
+        ]));
+    }
 
     /**
      * Ein Plugin aus dem Katalog installieren - samt allem, was es

@@ -688,6 +688,31 @@ Weil der Webserver als `www-data` läuft, muss `plugins/` ihm gehören -
 `install.sh` setzt das. Ist es nicht beschreibbar, sagt der Reiter das und
 bietet nichts zum Installieren an.
 
+### Aktualisieren
+
+Zwei Arten, und die Liste unterscheidet sie:
+
+| | wann | was passiert |
+| --- | --- | --- |
+| **Katalog** | im Katalog liegt eine neuere Fassung | Dateien holen, danach `install.php` nachziehen |
+| **Dateien** | die Dateien sind neuer als der Stand in der Datenbank | nur `install.php` nachziehen |
+
+Der zweite Fall tritt nach einem Update von Hand auf — Dateien
+hineinkopiert, aber das Schema fehlt noch.
+
+Die Liste holt den Katalog dafür **live**. Vorher las sie nur den
+Zwischenspeicher: war der Marktplatz noch nie offen, stand dort nichts,
+und ein vorhandenes Update war unsichtbar. Ist der Katalogserver nicht
+erreichbar, gibt es einen Hinweis und keine Fehlerseite — er darf nicht
+darüber entscheiden, ob man seine Plugins verwalten kann.
+
+**«Alle aktualisieren»** geht dieselben zwei Fälle durch, in
+Abhängigkeitsreihenfolge (`resolveOrder()`): ein Plugin, dessen
+Voraussetzung noch alt ist, kann bei seinem `install.php` über eine
+fehlende Klasse fallen. Ein gescheitertes Plugin hält die übrigen nicht
+auf — sonst bliebe nach dem ersten Fehler alles andere alt, und man
+müsste erst herausfinden, welches der Übeltäter war.
+
 ### Entfernen
 
 **Ein** Knopf, drei Schritte: ausschalten, Daten abräumen, Dateien
