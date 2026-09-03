@@ -15,6 +15,11 @@ namespace TwitchController\Core\Hook;
  *   filter()    "hier ist ein Wert, gib ihn veraendert zurueck".
  *               Beispiel: admin.nav, permissions.catalog, overlay.widgets
  *
+ * Ein Zuhoerer, der eine Exception wirft, wird gemeldet und
+ * uebersprungen - bei filter() bleibt der Wert dann unveraendert.
+ * Sonst nimmt ein einziges kaputtes Plugin jede Seite mit, auf der
+ * sein Hook laeuft.
+ *
  * Kleinere Prioritaet laeuft frueher; gleiche Prioritaet in
  * Registrierungsreihenfolge. Plugins werden alphabetisch nach Slug
  * geladen, deshalb darf sich kein Plugin auf die Reihenfolge eines
@@ -56,20 +61,72 @@ final class Hooks
         ];
     }
 
+    /**
+     * Wohin gemeldet wird, wenn ein Zuhoerer scheitert. Wird von App
+     * gesetzt; ohne das geht es an error_log.
+     */
+    private mixed $logger = null;
+
+    public function setLogger(callable $logger): void
+    {
+        $this->logger = $logger;
+    }
+
     public function dispatch(string $hook, mixed ...$args): void
     {
         foreach ($this->sorted($hook) as $listener) {
-            ($listener['fn'])(...$args);
+            try {
+                ($listener['fn'])(...$args);
+            } catch (\Throwable $e) {
+                $this->melde($hook, $listener['source'], $e);
+            }
         }
     }
 
     public function filter(string $hook, mixed $value, mixed ...$args): mixed
     {
         foreach ($this->sorted($hook) as $listener) {
-            $value = ($listener['fn'])($value, ...$args);
+            try {
+                $value = ($listener['fn'])($value, ...$args);
+            } catch (\Throwable $e) {
+                // Der Wert bleibt, wie er war - dieser Zuhoerer hat
+                // eben nichts beigetragen.
+                $this->melde($hook, $listener['source'], $e);
+            }
         }
 
         return $value;
+    }
+
+    /**
+     * Ein Fehler in einem Plugin darf die Verwaltung nicht unbenutzbar
+     * machen. Deshalb wird er gemeldet und uebersprungen, nicht
+     * weitergeworfen.
+     *
+     * Das ist bewusst keine stille Unterdrueckung: die Meldung nennt
+     * Hook, Plugin und Ursache - genau die drei Angaben, mit denen man
+     * es findet. Ohne diese Isolierung reisst ein einziges kaputtes
+     * Plugin jede Seite mit, auf der sein Hook laeuft, und man kommt
+     * nicht mehr dorthin, wo man es abschalten koennte.
+     */
+    private function melde(string $hook, string $source, \Throwable $e): void
+    {
+        $text = sprintf(
+            'Hook "%s": %s ist gescheitert - %s in %s:%d',
+            $hook,
+            $source === 'core' ? 'der Kern' : 'Plugin "' . $source . '"',
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine()
+        );
+
+        if (is_callable($this->logger)) {
+            ($this->logger)($text);
+
+            return;
+        }
+
+        error_log('[twitch-controller] ' . $text);
     }
 
     public function has(string $hook): bool

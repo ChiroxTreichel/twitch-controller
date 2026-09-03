@@ -95,15 +95,18 @@ $darfVerwalten = permission('Konto.Benutzer.Manage');
                         <?php /* Der Superadmin bleibt: ohne ihn koennte niemand mehr
                                 Rechte vergeben. */ ?>
                         <?php if (!$istSuper): ?>
-                            <form method="post" action="<?= $e($url('/account/users')) ?>"
-                                  onsubmit="return confirm('<?= $e(translate('account.users.confirm_remove', ['name' => $user['display_name']])) ?>');">
-                                <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-                                <input type="hidden" name="action" value="remove">
-                                <input type="hidden" name="twitch_id" value="<?= $e($user['twitch_id']) ?>">
-                                <button class="btn btn-danger btn-small" type="submit">
-                                    <?= $e(translate('common.remove')) ?>
-                                </button>
-                            </form>
+                            <?= $view->render('_confirm', [
+                                'label'    => translate('common.remove'),
+                                'question' => translate('account.users.confirm_remove', ['name' => $user['display_name']]),
+                                'confirm'  => translate('account.users.confirm_remove_yes'),
+                                'action'   => $url('/account/users'),
+                                'fields'   => [
+                                    'csrf'      => $csrf,
+                                    'action'    => 'remove',
+                                    'twitch_id' => $user['twitch_id'],
+                                ],
+                                'right'    => true,
+                            ], null) ?>
                         <?php endif ?>
                     </td>
                 <?php endif ?>

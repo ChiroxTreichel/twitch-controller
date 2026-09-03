@@ -89,17 +89,32 @@ $neuer = $state !== null
                     }
                 }
                 ?>
-                <form method="post" action="<?= $e($url('/account/plugins/find')) ?>"
-                    <?php if ($mit !== [] && !$neuer): ?>
-                        onsubmit="return confirm('<?= $e(translate('market.confirm_with_deps', ['plugins' => implode(', ', $mit)])) ?>');"
-                    <?php endif ?>>
-                    <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-                    <input type="hidden" name="action" value="install">
-                    <input type="hidden" name="slug" value="<?= $e($plugin['slug']) ?>">
-                    <button class="btn" type="submit">
-                        <?= $e($neuer ? translate('common.update') : translate('common.install')) ?>
-                    </button>
-                </form>
+                <?php if ($mit !== [] && !$neuer): ?>
+                    <?php /* Kommt etwas mit, wird vorher gefragt. */ ?>
+                    <?= $view->render('_confirm', [
+                        'label'    => translate('common.install'),
+                        'question' => translate('market.confirm_with_deps', ['plugins' => implode(', ', $mit)]),
+                        'confirm'  => translate('market.confirm_with_deps_yes'),
+                        'action'   => $url('/account/plugins/find'),
+                        'fields'   => [
+                            'csrf'   => $csrf,
+                            'action' => 'install',
+                            'slug'   => $plugin['slug'],
+                        ],
+                        'danger'   => false,
+                        'small'    => false,
+                        'right'    => true,
+                    ], null) ?>
+                <?php else: ?>
+                    <form method="post" action="<?= $e($url('/account/plugins/find')) ?>">
+                        <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
+                        <input type="hidden" name="action" value="install">
+                        <input type="hidden" name="slug" value="<?= $e($plugin['slug']) ?>">
+                        <button class="btn" type="submit">
+                            <?= $e($neuer ? translate('common.update') : translate('common.install')) ?>
+                        </button>
+                    </form>
+                <?php endif ?>
             <?php elseif ($state !== null): ?>
                 <a class="btn btn-ghost btn-small" href="<?= $e($url('/account/plugins')) ?>"><?= $e(translate('common.manage')) ?></a>
             <?php endif; ?>

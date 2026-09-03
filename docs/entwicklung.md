@@ -208,6 +208,33 @@ Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
 `core.event.stored` läuft im Webhook-Request. Twitch erwartet eine schnelle
 Antwort, also dort nur notieren und die Arbeit in `cron.tick` erledigen.
 
+### Ein Zuhörer, der abstürzt
+
+Wirft ein Zuhörer eine Exception, wird sie **gemeldet und
+übersprungen** — bei `filter()` bleibt der Wert dann unverändert, bei
+`dispatch()` laufen die übrigen Zuhörer weiter. Die Meldung nennt Hook,
+Plugin und Ursache:
+
+```
+Hook "alerts.tabs": Plugin "twitch-alerts" ist gescheitert -
+Class "…\Types" not found in …/plugin.php:76
+```
+
+Das ist bewusst keine stille Unterdrückung. Ohne diese Isolierung reißt
+ein einziges kaputtes Plugin **jede Seite mit, auf der sein Hook
+läuft** — und man kommt nicht mehr dorthin, wo man es abschalten
+könnte. Der `PluginManager` fängt nur beim *Laden* ab; ein Hook läuft
+später, mitten im Request einer beliebigen Seite.
+
+### Klassen eines Plugins
+
+Der Autoloader bildet `TwitchController\Plugin\<Namensraum>\<Klasse>`
+auf `plugins/<slug>/src/<Klasse>.php` ab. Ein Slug darf Bindestriche
+haben, ein PHP-Namensraum nicht — aus `twitch-alerts` wird also
+`TwitchAlerts`. Diese Richtung rechnet der Autoloader zurück und
+probiert beide Formen (`twitchalerts`, `twitch-alerts`), weil er nicht
+wissen kann, welche gemeint war.
+
 ### Einstellungen und Daten
 
 Jedes Plugin hat einen eigenen Scope:

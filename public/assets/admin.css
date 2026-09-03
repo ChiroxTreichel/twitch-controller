@@ -377,6 +377,64 @@ td.actions { text-align: right; white-space: nowrap; }
     .content { padding: 22px 18px 48px; }
 }
 
+/* --- Rückfrage ----------------------------------------------------- */
+
+/*
+ * Ein Kasten, der unter dem Knopf aufklappt - statt confirm(). Der
+ * Browserdialog ist nicht gestaltbar und schreibt den Domainnamen
+ * darüber; das sieht nach Fehlermeldung aus, nicht nach Rückfrage.
+ *
+ * Gebaut auf <details>: klappt ohne JavaScript auf und zu.
+ */
+.confirm {
+    position: relative;
+    display: inline-block;
+}
+
+/* Das <summary> IST der Knopf. Der Marker muss weg. */
+.confirm > summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.confirm > summary::-webkit-details-marker,
+.confirm > summary::marker {
+    display: none;
+    content: "";
+}
+
+.confirm-panel {
+    position: absolute;
+    z-index: 40;
+    top: calc(100% + 6px);
+    left: 0;
+    width: max(280px, 100%);
+    max-width: min(420px, 90vw);
+    padding: 14px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+
+    /* Der Schatten trennt den Kasten von der Karte darunter - ohne ihn
+       sieht er wie ein weiterer Abschnitt aus. */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+
+/* Nach rechts öffnen, wenn der Knopf am rechten Rand sitzt. */
+.confirm.confirm-right .confirm-panel {
+    left: auto;
+    right: 0;
+}
+
+.confirm-question {
+    margin: 0 0 10px;
+    font-size: 0.9rem;
+    line-height: 1.45;
+
+    /* Die Fragen enthalten Zeilenumbrüche - die sollen wirken. */
+    white-space: pre-line;
+}
+
 /* --- Reiter -------------------------------------------------------- */
 
 .tabs {

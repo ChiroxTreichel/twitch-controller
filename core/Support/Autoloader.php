@@ -35,15 +35,54 @@ final class Autoloader
             if (str_starts_with($class, 'TwitchController\\Plugin\\')) {
                 $relative = substr($class, strlen('TwitchController\\Plugin\\'));
                 $parts = explode('\\', $relative);
-                $slug = strtolower(array_shift($parts));
-                if ($slug === '' || $parts === []) {
+                $namensraum = (string) array_shift($parts);
+
+                if ($namensraum === '' || $parts === []) {
                     return;
                 }
-                $path = $root . '/plugins/' . $slug . '/src/' . implode('/', $parts) . '.php';
-                if (is_file($path)) {
-                    require $path;
+
+                foreach (self::slugCandidates($namensraum) as $slug) {
+                    $path = $root . '/plugins/' . $slug . '/src/' . implode('/', $parts) . '.php';
+
+                    if (is_file($path)) {
+                        require $path;
+
+                        return;
+                    }
                 }
             }
         });
+    }
+
+    /**
+     * Moegliche Ordnernamen zu einem Namensraum-Abschnitt.
+     *
+     * Ein Slug darf Bindestriche haben ("twitch-alerts"), ein
+     * PHP-Namensraum nicht. Aus "twitch-alerts" wird deshalb
+     * "TwitchAlerts" - und diese Richtung muss der Autoloader
+     * zurueckrechnen. Er kann nicht wissen, ob "TwitchAlerts"
+     * urspruenglich "twitchalerts" oder "twitch-alerts" hiess, also
+     * probiert er beides.
+     *
+     * Ohne das laedt die Klasse eines Plugins mit Bindestrich im Slug
+     * nie - und der Fehler zeigt sich erst dort, wo sie gebraucht
+     * wird, weit weg von der Ursache.
+     *
+     * @return list<string>
+     */
+    private static function slugCandidates(string $namespaceSegment): array
+    {
+        $kandidaten = [strtolower($namespaceSegment)];
+
+        // TwitchAlerts -> twitch-alerts
+        $mitBindestrich = strtolower(
+            (string) preg_replace('/(?<!^)([A-Z])/', '-$1', $namespaceSegment)
+        );
+
+        if ($mitBindestrich !== $kandidaten[0]) {
+            $kandidaten[] = $mitBindestrich;
+        }
+
+        return $kandidaten;
     }
 }

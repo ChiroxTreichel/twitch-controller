@@ -139,15 +139,17 @@
                             wieder zwei Klicks.
                         */ ?>
                         <?php if ($canWrite): ?>
-                            <form method="post" action="<?= $e($url('/account/plugins')) ?>"
-                                  onsubmit="return confirm('<?= $e(translate('account.plugins.confirm_remove', ['name' => $manifest->name])) ?>');">
-                                <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-                                <input type="hidden" name="action" value="remove">
-                                <input type="hidden" name="slug" value="<?= $e($manifest->slug) ?>">
-                                <button class="btn btn-danger btn-small" type="submit">
-                                    <?= $e(translate('common.remove')) ?>
-                                </button>
-                            </form>
+                            <?= $view->render('_confirm', [
+                                'label'    => translate('common.remove'),
+                                'question' => translate('account.plugins.confirm_remove', ['name' => $manifest->name]),
+                                'confirm'  => translate('account.plugins.confirm_remove_yes'),
+                                'action'   => $url('/account/plugins'),
+                                'fields'   => [
+                                    'csrf'   => $csrf,
+                                    'action' => 'remove',
+                                    'slug'   => $manifest->slug,
+                                ],
+                            ], null) ?>
                         <?php endif; ?>
                     </div>
                 <?php endif; ?>

@@ -3,6 +3,7 @@
  * Einstellungen des Kerns: nur was mit dem Twitch-Login und dem
  * Event-Empfang zu tun hat. Alles Fachliche gehoert in die Plugins.
  *
+ * @var \TwitchController\Core\Http\View $view
  * @var callable $e
  * @var callable $url
  * @var bool $canManage
@@ -252,12 +253,13 @@ use TwitchController\Core\Support\Dates;
                     : translate('settings.channel.reconnect')) ?>
             </a>
             <?php if ($broadcasterToken !== null): ?>
-                <form method="post" action="<?= $e($url('/account/settings')) ?>"
-                      onsubmit="return confirm('<?= $e(translate('settings.channel.confirm_disconnect')) ?>');">
-                    <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-                    <input type="hidden" name="action" value="disconnect_channel">
-                    <button class="btn btn-danger btn-small" type="submit"><?= $e(translate('settings.channel.disconnect')) ?></button>
-                </form>
+                <?= $view->render('_confirm', [
+                    'label'    => translate('settings.channel.disconnect'),
+                    'question' => translate('settings.channel.confirm_disconnect'),
+                    'confirm'  => translate('settings.channel.confirm_disconnect_yes'),
+                    'action'   => $url('/account/settings'),
+                    'fields'   => ['csrf' => $csrf, 'action' => 'disconnect_channel'],
+                ], null) ?>
             <?php endif; ?>
         </div>
     <?php endif; ?>

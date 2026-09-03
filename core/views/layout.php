@@ -143,6 +143,43 @@ try {
     });
 }());
 </script>
+<script>
+// Rueckfragen: Escape, Klick daneben und "Abbrechen" schliessen den
+// Kasten. Alles davon ist eine Zugabe - ohne JavaScript schliesst ein
+// zweiter Klick auf den Knopf, weil es ein <details> ist.
+(function () {
+    'use strict';
+
+    function alleZu(ausser) {
+        document.querySelectorAll('details.confirm[open]').forEach(function (kasten) {
+            if (kasten !== ausser) {
+                kasten.open = false;
+            }
+        });
+    }
+
+    document.addEventListener('click', function (ereignis) {
+        if (ereignis.target.closest('[data-confirm-cancel]')) {
+            var eigener = ereignis.target.closest('details.confirm');
+            if (eigener) {
+                eigener.open = false;
+            }
+            return;
+        }
+
+        // Immer nur eine Rueckfrage offen - zwei uebereinander sind
+        // nicht zu lesen.
+        alleZu(ereignis.target.closest('details.confirm'));
+    });
+
+    document.addEventListener('keydown', function (ereignis) {
+        if (ereignis.key === 'Escape') {
+            alleZu(null);
+        }
+    });
+}());
+</script>
+
 <?php foreach ($pluginAssets['js'] as $js): ?>
     <script src="<?= $e($js) ?>"></script>
 <?php endforeach ?>

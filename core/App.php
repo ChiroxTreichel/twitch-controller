@@ -57,6 +57,9 @@ final class App
         $this->db       = new Db($this->env);
         $this->settings = new Settings($this->db, $this->crypto);
         $this->hooks    = new Hooks();
+        // Gescheiterte Zuhoerer sollen im Log des Containers stehen,
+        // nicht nur in error_log ohne Kennzeichnung.
+        $this->hooks->setLogger($this->log(...));
         $this->router   = new Router();
         $this->view       = new View($this, [$root . '/core/views']);
         $this->twitch     = new Twitch($this);
