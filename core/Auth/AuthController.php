@@ -33,7 +33,7 @@ final class AuthController
         }
 
         return Response::html($this->app->view->render('login', [
-            'title'  => 'Anmelden',
+            'title'  => translate('login.title'),
             'invite' => $request->get('invite'),
             'error'  => $request->get('error'),
         ], null));

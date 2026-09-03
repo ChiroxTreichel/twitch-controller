@@ -165,7 +165,7 @@ Global verfuegbar, ohne `$app` durchzureichen:
 
 ```php
 translate('nav.users')                        // Text aus der Sprachdatei
-permission('Konto.Benutzer.Manage')           // darf der Angemeldete das?
+permission('Account.Users.Manage')           // darf der Angemeldete das?
 ```
 
 `permission()` ist die Anzeige-Frage, nicht der Schutz: eine Route
@@ -321,9 +321,30 @@ Query-Parameter (`?notice=`, `?error=`, `?filter=`, `?range=`, `?page=`,
 Plugins, weil der im Pfad landet. Ein alter Link mit `?zeitraum=7d`
 bleibt gültig — der Parameter greift dann nicht mehr, und es gilt
 wieder die Voreinstellung. Sichtbare Texte kommen dagegen aus der
-Sprachdatei, und die Rechte-Namen bleiben deutsch (`Konto.Plugins.View`) --
-sie stehen pro Benutzer in der Datenbank und lassen sich nicht umbenennen,
-ohne bestehende Installationen mitzuziehen.
+Sprachdatei.
+
+**Rechte-Namen sind englisch.** `Account.Users.Manage`, nicht
+`Konto.Benutzer.Manage`. Das ist der einzige Bezeichner, dessen
+Umbenennung die Datenbank anfasst: die Namen liegen pro Benutzer als
+JSONB-Liste in `users.permissions`, und ein unbekannter Name ist kein
+Fehler — er trifft nur nie zu. Ohne Migration hätte nach dem Update
+jeder Benutzer außer dem Superadmin still alle Rechte verloren. Die
+Migration steht in `core/install.php` und benennt die gespeicherten
+Werte mit:
+
+| vorher | jetzt |
+| --- | --- |
+| `Konto.Aktivitaeten.*` | `Account.Activity.*` |
+| `Konto.Benutzer.*` | `Account.Users.*` |
+| `Konto.Einstellungen.*` | `Account.Settings.*` |
+| `Konto.Overlay.*` / `Konto.Plugins.*` | `Account.Overlay.*` / `Account.Plugins.*` |
+| `Overlay.Einstellungen.*` | `Overlay.Settings.*` |
+| `Beispiel.Seite.*` | `Example.Page.*` |
+
+Die Reihenfolge der verschachtelten `replace()` ist dort der einzige
+Fallstrick: käme `Konto.` vor `Konto.Benutzer.`, entstünde
+`Account.Benutzer.Manage` — ein Name, der nirgends existiert, und die
+Rechte wären trotz Migration weg.
 
 Rechte folgen dem Schema `Bereich.Funktion.Recht`. Rechte auf `.View`
 bekommen neu eingeladene Benutzer automatisch. Superadmin umgeht jede
@@ -335,13 +356,15 @@ als Kasten, Funktion als Zwischentitel, Rechte nebeneinander. Ein
 Plugin meldet seine Rechte weiter flach über `permissions.catalog` an
 und bekommt die Gliederung geschenkt, solange es sich an das Schema
 hält. Klarnamen der letzten Stufe (`View` → «Anzeigen») liefert
-`Auth::rightLabels()`; unbekannte Stufen erscheinen unter ihrem
-Schlüssel.
+`Auth::rightLabels()`, die der mittleren `Auth::featureLabels()`;
+unbekannte Stufen erscheinen unter ihrem Schlüssel. Was dem Schema
+gar nicht folgt, landet unter `General` — lieber unsortiert angezeigt
+als verschwiegen.
 
 Die Rollenvorlagen (`Auth::rolePresets()`) sind **Regeln**, keine
 Listen: `Read-Only` ist alles auf `.View`, `Stream-Helfer` zusätzlich
-alles außerhalb von `Konto.`, `Editor` alles außer
-`Konto.Benutzer.*` und `Konto.Einstellungen.*`. Eine feste Liste wäre
+alles außerhalb von `Account.`, `Editor` alles außer
+`Account.Users.*` und `Account.Settings.*`. Eine feste Liste wäre
 nach dem ersten installierten Plugin unvollständig — ohne dass es
 auffällt.
 
@@ -723,7 +746,7 @@ Zwei Seiten:
 | `/account/activities` | Einstellungen: Badge-Farben |
 | `/obs` | der Feed selbst, gedacht als Browser-Dock in OBS |
 
-Der Feed ist angemeldet-only (`Konto.Aktivitaeten.View`). Das ist kein
+Der Feed ist angemeldet-only (`Account.Activity.View`). Das ist kein
 Widerspruch zur Nutzung in OBS: ein **eigenes Browser-Dock** teilt die
 Cookies mit dem Browser, eine Browserquelle nicht. Als Quelle im Stream
 ist der Feed auch nicht gedacht.

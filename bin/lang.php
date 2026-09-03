@@ -379,10 +379,27 @@ const PROTOKOLLTEXTE = ['Not Found', 'Method Not Allowed', 'Bad signature'];
  * Was Twitch selbst so schreibt.
  *
  * Wer im Stream «Tier 1» sagt, sagt es auf Deutsch auch so - eine
- * Uebersetzung waere eine Erfindung. Beschreibende Woerter im selben
- * Filterbaum («Gesendet», «Empfangen») sind dagegen uebersetzt.
+ * Uebersetzung waere eine Erfindung. Der Filterbaum im Feed
+ * (Obs/Filters) benutzt darum durchgehend die Vokabeln der Plattform.
+ *
+ * Beschreibende Woerter im selben Baum sind dagegen uebersetzt:
+ * «Gesendet», «Empfangen», «Sonstiges». Die Grenze ist nicht die
+ * Sprache, sondern die Herkunft - steht das Wort so auf Twitch, bleibt
+ * es stehen.
  */
-const TWITCH_BEGRIFFE = ['Tier 1', 'Tier 2', 'Tier 3'];
+const TWITCH_BEGRIFFE = [
+    'Follow', 'Follows', 'Bits', 'Subs', 'Prime', 'Tiered', 'Gifted',
+    'Tier 1', 'Tier 2', 'Tier 3', 'Raid', 'Raids',
+];
+
+/**
+ * Technische Namen, die keine Uebersetzung haben.
+ *
+ * Namen von Umgebungsvariablen und Protokollen. «APP_KEY» heisst in
+ * jeder Sprache APP_KEY - das steht so in der .env, und wer die
+ * Einrichtung durchgeht, sucht genau diese Zeichenfolge.
+ */
+const TECHNISCHE_NAMEN = ['APP_URL', 'APP_KEY', 'HTTPS'];
 
 const DEUTSCH = '/[\x{00e4}\x{00f6}\x{00fc}\x{00c4}\x{00d6}\x{00dc}\x{00df}]'
     . '|(?:^|\s)(?:der|die|das|den|dem|des|nicht|ist|sind|wird|werden|kann|'
@@ -401,6 +418,16 @@ const ANZEIGESTELLEN = [
 
 /** Schluessel, Klassennamen, Zahlen - kein Anzeigetext. */
 const HARMLOS = '/^(?:[a-z0-9_.:\/-]+|[A-Z][A-Za-z0-9_]*|%\{[a-z_]+\}|[0-9.,\s-]+)$/';
+
+/**
+ * Dasselbe ohne den Zweig fuer Klassennamen.
+ *
+ * An einer Beschriftungsstelle steht kein Klassenname, sondern ein
+ * Wort fuer den Benutzer - und genau dieser Zweig hat
+ * `'title' => 'Beispiel'` im Beispiel-Plugin durchgelassen. Was hier
+ * echt bleiben soll, gehoert nach TWITCH_BEGRIFFE.
+ */
+const HARMLOS_BESCHRIFTUNG = '/^(?:[a-z0-9_.:\/-]+|%\{[a-z_]+\}|[0-9.,\s-]+)$/';
 
 /**
  * PHP-Dateien unter den Wurzeln, ohne die ausgenommenen.
@@ -550,13 +577,18 @@ function anzeigeTexte(array $wurzeln): array
                 foreach ($saetze as $satz) {
                     $wert = $satz[1];
 
-                    if (preg_match(HARMLOS, $wert)) {
+                    $harmlos = $art === 'Anzeigefeld' ? HARMLOS_BESCHRIFTUNG : HARMLOS;
+
+                    if (preg_match($harmlos, $wert)) {
                         continue;
                     }
                     if ($art === 'Antworttext' && in_array($wert, PROTOKOLLTEXTE, true)) {
                         continue;
                     }
                     if (in_array($wert, TWITCH_BEGRIFFE, true)) {
+                        continue;
+                    }
+                    if (in_array($wert, TECHNISCHE_NAMEN, true)) {
                         continue;
                     }
 

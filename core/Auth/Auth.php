@@ -388,19 +388,19 @@ final class Auth
     public function permissionCatalog(): array
     {
         $catalog = [
-            'Konto' => [
+            'Account' => [
                 'label' => translate('nav.account'),
                 'permissions' => [
-                    'Konto.Benutzer.View'   => translate('permissions.users.view'),
-                    'Konto.Benutzer.Manage' => translate('permissions.users.manage'),
-                    'Konto.Aktivitaeten.View'   => translate('permissions.activity.view'),
-                    'Konto.Aktivitaeten.Manage' => translate('permissions.activity.manage'),
-                    'Konto.Overlay.View'   => translate('permissions.overlay.view'),
-                    'Konto.Overlay.Manage' => translate('permissions.overlay.manage'),
-                    'Konto.Plugins.View'    => translate('permissions.plugins.view'),
-                    'Konto.Plugins.Manage'  => translate('permissions.plugins.manage'),
-                    'Konto.Einstellungen.View'   => translate('permissions.settings.view'),
-                    'Konto.Einstellungen.Manage' => translate('permissions.settings.manage'),
+                    'Account.Users.View'   => translate('permissions.users.view'),
+                    'Account.Users.Manage' => translate('permissions.users.manage'),
+                    'Account.Activity.View'   => translate('permissions.activity.view'),
+                    'Account.Activity.Manage' => translate('permissions.activity.manage'),
+                    'Account.Overlay.View'   => translate('permissions.overlay.view'),
+                    'Account.Overlay.Manage' => translate('permissions.overlay.manage'),
+                    'Account.Plugins.View'    => translate('permissions.plugins.view'),
+                    'Account.Plugins.Manage'  => translate('permissions.plugins.manage'),
+                    'Account.Settings.View'   => translate('permissions.settings.view'),
+                    'Account.Settings.Manage' => translate('permissions.settings.manage'),
                 ],
             ],
         ];
@@ -429,7 +429,7 @@ final class Auth
      * Der Rechte-Katalog als Baum: Bereich > Funktion > Recht.
      *
      * Die flachen Schluessel haben schon die Form Bereich.Funktion.Recht
-     * ("Konto.Benutzer.View"). Der Baum entsteht deshalb durch Aufteilen
+     * ("Account.Users.View"). Der Baum entsteht deshalb durch Aufteilen
      * und braucht keine zweite Anmeldung - ein Plugin meldet seine
      * Rechte weiter ueber permissions.catalog an, unveraendert.
      *
@@ -456,7 +456,7 @@ final class Auth
                 // Alles, was nicht dem Schema entspricht, landet unter
                 // einer Sammel-Funktion - lieber unsortiert angezeigt
                 // als verschwiegen.
-                $funktion = $teile[1] ?? 'Allgemein';
+                $funktion = $teile[1] ?? 'General';
                 $recht = $teile[2] ?? ($teile[1] ?? (string) $key);
 
                 $baum[$bereichKey]['label'] = trim((string) ($bereich['label'] ?? $bereichKey)) ?: $bereichKey;
@@ -489,22 +489,22 @@ final class Auth
             static fn (string $key): bool => str_ends_with($key, '.View')
         ));
 
-        // Alles ausserhalb von "Konto" ist Stream-Betrieb: Alerts,
+        // Alles ausserhalb von "Account" ist Stream-Betrieb: Alerts,
         // Ziele, Overlay-Inhalte. Wer dort helfen soll, braucht das
         // ganz - aber nichts an Benutzern und Zugangsdaten.
         $streamHelfer = array_values(array_unique(array_merge(
             $nurAnsehen,
             array_values(array_filter(
                 $alle,
-                static fn (string $key): bool => !str_starts_with($key, 'Konto.')
+                static fn (string $key): bool => !str_starts_with($key, 'Account.')
             ))
         )));
 
         // Editor: alles, ausser Benutzerverwaltung und Zugangsdaten.
         $editor = array_values(array_filter(
             $alle,
-            static fn (string $key): bool => !str_starts_with($key, 'Konto.Benutzer.')
-                && !str_starts_with($key, 'Konto.Einstellungen.')
+            static fn (string $key): bool => !str_starts_with($key, 'Account.Users.')
+                && !str_starts_with($key, 'Account.Settings.')
         ));
 
         return [
@@ -611,11 +611,14 @@ final class Auth
     private static function featureLabels(): array
     {
         return [
-            'Benutzer'      => translate('features.users'),
-            'Aktivitaeten'  => translate('features.activities'),
+            'Users'         => translate('features.users'),
+            'Activity'      => translate('features.activities'),
             'Overlay'       => translate('features.overlay'),
             'Plugins'       => translate('features.plugins'),
-            'Einstellungen' => translate('features.settings'),
+            'Settings'      => translate('features.settings'),
+            // Sammelstelle fuer alles, was nicht dem Schema
+            // Bereich.Funktion.Recht folgt - siehe permissionTree().
+            'General'       => translate('features.general'),
         ];
     }
 

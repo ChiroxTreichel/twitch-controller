@@ -86,14 +86,14 @@ final class PluginsController
         }
 
         return Response::html($this->app->view->render('account/plugins', [
-            'title'     => 'Plugins',
+            'title'     => translate('nav.plugins'),
             'active'    => 'account/plugins',
             'updates'   => $updates,
             'catalogError' => $catalogError,
             'tab'       => 'installiert',
             'rows'      => $rows,
             'missing'   => $this->app->plugins->missing(),
-            'canManage' => $this->app->auth->can('Konto.Plugins.Manage'),
+            'canManage' => $this->app->auth->can('Account.Plugins.Manage'),
             'canWrite'  => (new Installer($this->app))->canWrite(),
             'csrf'      => $this->app->auth->csrfToken(),
             'notice'    => $request->get('notice'),
@@ -240,7 +240,7 @@ final class PluginsController
             'tag'        => $tag,
             'needs'      => $needs,
             'registry'   => $registry->baseUrl(),
-            'canManage'  => $this->app->auth->can('Konto.Plugins.Manage'),
+            'canManage'  => $this->app->auth->can('Account.Plugins.Manage'),
             'canWrite'   => (new Installer($this->app))->canWrite(),
             'csrf'       => $this->app->auth->csrfToken(),
             'notice'     => $request->get('notice'),
@@ -287,7 +287,7 @@ final class PluginsController
             'tab'       => 'finden',
             'plugin'    => $plugin,
             'state'     => $states[$plugin['slug']] ?? null,
-            'canManage' => $this->app->auth->can('Konto.Plugins.Manage'),
+            'canManage' => $this->app->auth->can('Account.Plugins.Manage'),
             'canWrite'  => (new Installer($this->app))->canWrite(),
             'csrf'      => $this->app->auth->csrfToken(),
             'notice'    => $request->get('notice'),
@@ -649,7 +649,7 @@ final class PluginsController
             return $this->back($back, null, translate('common.error.form_expired'));
         }
 
-        if (!$this->app->auth->can('Konto.Plugins.Manage')) {
+        if (!$this->app->auth->can('Account.Plugins.Manage')) {
             return $this->back($back, null, translate('common.error.no_permission'));
         }
 

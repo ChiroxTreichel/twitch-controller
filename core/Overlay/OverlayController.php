@@ -138,7 +138,7 @@ final class OverlayController
             'sourceUrl' => $this->app->url('/overlay'),
             'slots'     => Bus::slots($this->app),
             'positions' => Bus::positions(),
-            'canManage' => $this->app->auth->can('Konto.Overlay.Manage'),
+            'canManage' => $this->app->auth->can('Account.Overlay.Manage'),
             'csrf'      => $this->app->auth->csrfToken(),
             'notice'    => $request->get('notice'),
             'error'     => $request->get('error'),
@@ -151,7 +151,7 @@ final class OverlayController
             return $this->back(null, translate('common.error.form_expired'));
         }
 
-        if (!$this->app->auth->can('Konto.Overlay.Manage')) {
+        if (!$this->app->auth->can('Account.Overlay.Manage')) {
             return $this->back(null, translate('common.error.no_permission'));
         }
 

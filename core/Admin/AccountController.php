@@ -41,7 +41,7 @@ final class AccountController
             'tab'       => 'granted',
             'users'     => $this->sortedUsers(),
             'invites'   => $this->app->auth->invites(),
-            'canManage' => $this->app->auth->can('Konto.Benutzer.Manage'),
+            'canManage' => $this->app->auth->can('Account.Users.Manage'),
             'csrf'      => $this->app->auth->csrfToken(),
             'notice'    => $request->get('notice'),
             'error'     => $request->get('error'),
@@ -60,7 +60,7 @@ final class AccountController
             'active'    => 'account/users',
             'tab'       => 'permissions',
             'users'     => $this->sortedUsers(),
-            'canManage' => $this->app->auth->can('Konto.Benutzer.Manage'),
+            'canManage' => $this->app->auth->can('Account.Users.Manage'),
             'csrf'      => $this->app->auth->csrfToken(),
             'notice'    => $request->get('notice'),
             'error'     => $request->get('error'),
@@ -95,7 +95,7 @@ final class AccountController
             'presets'   => $this->app->auth->rolePresets(),
             'count'     => $this->app->auth->permissionCount($ziel),
             'isSuper'   => ($ziel['role'] ?? '') === 'superadmin',
-            'canManage' => $this->app->auth->can('Konto.Benutzer.Manage'),
+            'canManage' => $this->app->auth->can('Account.Users.Manage'),
             'csrf'      => $this->app->auth->csrfToken(),
             'notice'    => $request->get('notice'),
             'error'     => $request->get('error'),
@@ -104,7 +104,7 @@ final class AccountController
 
     public function usersAction(Request $request): Response
     {
-        $guard = $this->guardPost($request, 'Konto.Benutzer.Manage', '/account/users');
+        $guard = $this->guardPost($request, 'Account.Users.Manage', '/account/users');
         if ($guard !== null) {
             return $guard;
         }
@@ -270,7 +270,7 @@ final class AccountController
 
         return [
             'active'        => 'account/settings',
-            'canManage'     => $this->app->auth->can('Konto.Einstellungen.Manage'),
+            'canManage'     => $this->app->auth->can('Account.Settings.Manage'),
             'csrf'          => $this->app->auth->csrfToken(),
             'notice'        => $request->get('notice'),
             'error'         => $request->get('error'),
@@ -306,7 +306,7 @@ final class AccountController
 
     public function settingsAction(Request $request): Response
     {
-        $guard = $this->guardPost($request, 'Konto.Einstellungen.Manage', '/account/settings');
+        $guard = $this->guardPost($request, 'Account.Settings.Manage', '/account/settings');
         if ($guard !== null) {
             return $guard;
         }
@@ -462,7 +462,7 @@ final class AccountController
 
     public function rescueAction(Request $request): Response
     {
-        if ($guard = $this->guardPost($request, 'Konto.Einstellungen.Edit', '/rescue')) {
+        if ($guard = $this->guardPost($request, 'Account.Settings.Edit', '/rescue')) {
             return $guard;
         }
 

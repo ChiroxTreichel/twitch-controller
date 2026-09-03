@@ -21,7 +21,7 @@
  * @var string $error
  */
 
-$darfVerwalten = permission('Konto.Benutzer.Manage');
+$darfVerwalten = permission('Account.Users.Manage');
 $aenderbar = $darfVerwalten && !$isSuper;
 $hat = array_map('strval', (array) ($target['permissions'] ?? []));
 $id = (string) $target['twitch_id'];

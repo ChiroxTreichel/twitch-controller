@@ -48,9 +48,9 @@ if (!function_exists('permission')) {
     /**
      * Darf der angemeldete Benutzer das?
      *
-     *   if (permission('Konto.Benutzer.Manage')) { … }
+     *   if (permission('Account.Users.Manage')) { … }
      *
-     *   <?php if (permission('Overlay.Einstellungen.Manage')): ?>
+     *   <?php if (permission('Overlay.Settings.Manage')): ?>
      *       <button …>
      *   <?php endif ?>
      *

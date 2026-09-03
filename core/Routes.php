@@ -73,7 +73,7 @@ final class Routes
 
         $router->get('/account/users', [$account, 'users'], [
             'auth' => true,
-            'permission' => 'Konto.Benutzer.View',
+            'permission' => 'Account.Users.View',
         ]);
         $router->post('/account/users', [$account, 'usersAction'], ['auth' => true]);
 
@@ -81,18 +81,18 @@ final class Routes
         // Seite, weil es knapp hundert Kaestchen sind.
         $router->get('/account/users/permissions', [$account, 'permissions'], [
             'auth' => true,
-            'permission' => 'Konto.Benutzer.View',
+            'permission' => 'Account.Users.View',
         ]);
         $router->get('/account/users/permissions/{id}', [$account, 'permissionsEdit'], [
             'auth' => true,
-            'permission' => 'Konto.Benutzer.View',
+            'permission' => 'Account.Users.View',
         ]);
 
         // Aktivitäten: Einstellungen im Konto, der Feed selbst unter
         // /obs (gedacht als Browser-Dock in OBS).
         $router->get('/account/activities', [$activity, 'show'], [
             'auth' => true,
-            'permission' => 'Konto.Aktivitaeten.View',
+            'permission' => 'Account.Activity.View',
         ]);
         $router->post('/account/activities', [$activity, 'save'], ['auth' => true]);
 
@@ -105,47 +105,47 @@ final class Routes
 
         $router->get('/overlay', [$overlay, 'show'], [
             'auth' => true,
-            'permission' => 'Konto.Overlay.View',
+            'permission' => 'Account.Overlay.View',
         ]);
         $router->get('/overlay/stream', [$overlay, 'stream'], [
             'auth' => true,
-            'permission' => 'Konto.Overlay.View',
+            'permission' => 'Account.Overlay.View',
         ]);
         $router->get('/account/overlay', [$overlay, 'settings'], [
             'auth' => true,
-            'permission' => 'Konto.Overlay.View',
+            'permission' => 'Account.Overlay.View',
         ]);
         $router->post('/account/overlay', [$overlay, 'save'], ['auth' => true]);
 
         $router->get('/obs', [$feed, 'show'], [
             'auth' => true,
-            'permission' => 'Konto.Aktivitaeten.View',
+            'permission' => 'Account.Activity.View',
         ]);
         $router->get('/obs/updates', [$feed, 'updates'], [
             'auth' => true,
-            'permission' => 'Konto.Aktivitaeten.View',
+            'permission' => 'Account.Activity.View',
         ]);
 
         // Plugins: zwei Reiter, eigene Detailseiten
         $router->get('/account/plugins', [$plugins, 'installed'], [
             'auth' => true,
-            'permission' => 'Konto.Plugins.View',
+            'permission' => 'Account.Plugins.View',
         ]);
         $router->post('/account/plugins', [$plugins, 'action'], ['auth' => true]);
 
         $router->get('/account/plugins/find', [$plugins, 'find'], [
             'auth' => true,
-            'permission' => 'Konto.Plugins.View',
+            'permission' => 'Account.Plugins.View',
         ]);
         $router->post('/account/plugins/find', [$plugins, 'findAction'], ['auth' => true]);
         $router->get('/account/plugins/find/{slug}', [$plugins, 'detail'], [
             'auth' => true,
-            'permission' => 'Konto.Plugins.View',
+            'permission' => 'Account.Plugins.View',
         ]);
 
         $router->get('/account/settings', [$account, 'settings'], [
             'auth' => true,
-            'permission' => 'Konto.Einstellungen.View',
+            'permission' => 'Account.Settings.View',
         ]);
         $router->post('/account/settings', [$account, 'settingsAction'], ['auth' => true]);
 
@@ -153,11 +153,11 @@ final class Routes
         // im Feld "action", nicht in der Adresse.
         $router->get('/account/settings/channel', [$account, 'settingsChannel'], [
             'auth' => true,
-            'permission' => 'Konto.Einstellungen.View',
+            'permission' => 'Account.Settings.View',
         ]);
         $router->get('/account/settings/secrets', [$account, 'settingsSecrets'], [
             'auth' => true,
-            'permission' => 'Konto.Einstellungen.View',
+            'permission' => 'Account.Settings.View',
         ]);
 
         $router->get('/account/settings/connect', [$account, 'reconnectChannel'], ['auth' => true]);
@@ -168,7 +168,7 @@ final class Routes
         // dem Fehler.
         $router->get('/rescue', [$account, 'rescue'], [
             'auth' => true,
-            'permission' => 'Konto.Einstellungen.View',
+            'permission' => 'Account.Settings.View',
         ]);
         $router->post('/rescue', [$account, 'rescueAction'], ['auth' => true]);
 

@@ -34,7 +34,7 @@ final class ActivityController
             'badges'    => $badges->resolved(),
             'presets'   => $badges->catalog(),
             'feedUrl'   => $this->app->url('/obs'),
-            'canManage' => $this->app->auth->can('Konto.Aktivitaeten.Manage'),
+            'canManage' => $this->app->auth->can('Account.Activity.Manage'),
             'csrf'      => $this->app->auth->csrfToken(),
             'notice'    => $request->get('notice'),
             'error'     => $request->get('error'),
@@ -47,7 +47,7 @@ final class ActivityController
             return $this->back(null, translate('common.error.form_expired'));
         }
 
-        if (!$this->app->auth->can('Konto.Aktivitaeten.Manage')) {
+        if (!$this->app->auth->can('Account.Activity.Manage')) {
             return $this->back(null, translate('common.error.no_permission'));
         }
 

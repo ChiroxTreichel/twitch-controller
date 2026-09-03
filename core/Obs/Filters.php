@@ -106,9 +106,9 @@ final class Filters
 
             ['key' => 'raids',             'label' => 'Raids',     'order' => 60],
 
-            ['key' => 'system',            'label' => 'System',    'order' => 90],
-            ['key' => 'system.stream',     'label' => 'Stream',    'parent' => 'system', 'order' => 20],
-            ['key' => 'system.other',      'label' => 'Sonstiges', 'parent' => 'system', 'order' => 90],
+            ['key' => 'system',            'label' => translate('feed.filter.system'),    'order' => 90],
+            ['key' => 'system.stream',     'label' => translate('feed.filter.stream'),    'parent' => 'system', 'order' => 20],
+            ['key' => 'system.other',      'label' => translate('feed.filter.other'), 'parent' => 'system', 'order' => 90],
         ];
 
         $filtered = $this->app->hooks->filter('core.obs.filters', $nodes);

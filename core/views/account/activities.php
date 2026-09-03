@@ -105,7 +105,7 @@
         </div>
     <?php else: ?>
         <p class="hint">
-            <?= translate('common.missing_permission', ['permission' => '<span class="mono">Konto.Aktivitaeten.Manage</span>']) ?>
+            <?= translate('common.missing_permission', ['permission' => '<span class="mono">Account.Activity.Manage</span>']) ?>
         </p>
     <?php endif; ?>
 </form>

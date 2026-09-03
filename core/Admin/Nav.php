@@ -42,11 +42,11 @@ final class Nav
                 'label' => translate('nav.account'),
                 'order' => 0,
                 'items' => [
-                    ['label' => translate('nav.users'),      'href' => '/account/users',      'permission' => 'Konto.Benutzer.View'],
-                    ['label' => translate('nav.activity'),   'href' => '/account/activities',  'permission' => 'Konto.Aktivitaeten.View'],
-                    ['label' => translate('nav.overlay'),     'href' => '/account/overlay',     'permission' => 'Konto.Overlay.View'],
-                    ['label' => translate('nav.plugins'),       'href' => '/account/plugins',       'permission' => 'Konto.Plugins.View'],
-                    ['label' => translate('nav.settings'), 'href' => '/account/settings', 'permission' => 'Konto.Einstellungen.View'],
+                    ['label' => translate('nav.users'),      'href' => '/account/users',      'permission' => 'Account.Users.View'],
+                    ['label' => translate('nav.activity'),   'href' => '/account/activities',  'permission' => 'Account.Activity.View'],
+                    ['label' => translate('nav.overlay'),     'href' => '/account/overlay',     'permission' => 'Account.Overlay.View'],
+                    ['label' => translate('nav.plugins'),       'href' => '/account/plugins',       'permission' => 'Account.Plugins.View'],
+                    ['label' => translate('nav.settings'), 'href' => '/account/settings', 'permission' => 'Account.Settings.View'],
                 ],
             ],
         ];

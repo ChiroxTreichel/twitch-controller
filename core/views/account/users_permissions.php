@@ -14,7 +14,7 @@
  * @var string $error
  */
 
-$darfVerwalten = permission('Konto.Benutzer.Manage');
+$darfVerwalten = permission('Account.Users.Manage');
 ?>
 <h1><?= $e(translate('account.users.tab_permissions')) ?></h1>
 <p class="lead"><?= $e(translate('account.users.permissions_lead')) ?></p>

@@ -42,6 +42,47 @@ $db->run("
     )
 ");
 
+// Rechte-Namen auf Englisch (2.0.0).
+//
+// Die Namen standen bis dahin auf Deutsch: "Konto.Benutzer.Manage".
+// Sie liegen pro Benutzer als JSONB-Liste in users.permissions, also
+// muessen die gespeicherten Werte mitziehen - sonst verliert nach dem
+// Update jeder Benutzer ausser dem Superadmin alle Rechte, und zwar
+// still: ein unbekannter Name ist kein Fehler, er trifft nur nie zu.
+//
+// Umbenannt wird auf dem Text der JSON-Liste. Das ist hier gefahrlos,
+// weil ein Rechte-Name nur Buchstaben und Punkte enthaelt - es gibt
+// nichts, was in JSON anders geschrieben wuerde.
+//
+// Reihenfolge zaehlt: die zusammengesetzten Namen zuerst, sonst macht
+// "Konto." aus "Konto.Benutzer.Manage" ein "Account.Benutzer.Manage",
+// und der zweite Schritt findet es nicht mehr.
+//
+// Idempotent, wie jeder Block hier: nach dem ersten Lauf gibt es kein
+// "Konto." mehr, und die WHERE-Bedingung greift nicht mehr.
+$db->run("
+    UPDATE users
+       SET permissions = replace(
+               replace(
+                   replace(
+                       replace(
+                           replace(
+                               replace(permissions::text, 'Konto.Aktivitaeten.', 'Account.Activity.'),
+                               'Konto.Benutzer.', 'Account.Users.'
+                           ),
+                           'Konto.Einstellungen.', 'Account.Settings.'
+                       ),
+                       'Konto.', 'Account.'
+                   ),
+                   'Overlay.Einstellungen.', 'Overlay.Settings.'
+               ),
+               'Beispiel.Seite.', 'Example.Page.'
+           )::jsonb
+     WHERE permissions::text LIKE '%Konto.%'
+        OR permissions::text LIKE '%Overlay.Einstellungen.%'
+        OR permissions::text LIKE '%Beispiel.Seite.%'
+");
+
 // --- Sessions ----------------------------------------------------------
 // Im Cookie steht ein Zufallstoken, in der Datenbank nur sein Hash.
 $db->run('

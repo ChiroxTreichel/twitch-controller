@@ -16,7 +16,7 @@
  * @var string $link     Gerade erstellter Einladungslink, zum Kopieren
  */
 
-$darfVerwalten = permission('Konto.Benutzer.Manage');
+$darfVerwalten = permission('Account.Users.Manage');
 ?>
 <h1><?= $e(translate('account.users.tab_granted')) ?></h1>
 <p class="lead"><?= $e(translate('account.users.lead')) ?></p>

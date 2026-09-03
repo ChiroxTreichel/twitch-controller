@@ -192,11 +192,13 @@ final class SetupController
 
         $dbReachable = $this->app->db->isReachable();
         $checks[] = [
-            'label'    => 'Datenbank',
+            'label'    => translate('setup.ext.database'),
             'ok'       => $dbReachable,
             'required' => true,
             'detail'   => $dbReachable
-                ? 'erreichbar (' . $this->app->env->get('DB_NAME', '?') . ')'
+                ? translate('setup.db_reachable', [
+                    'name' => (string) $this->app->env->get('DB_NAME', '?'),
+                ])
                 : translate('setup.db_unreachable'),
         ];
 
@@ -404,7 +406,7 @@ final class SetupController
         }
 
         return Response::html($this->app->view->render('setup/locked', [
-            'title' => 'Einrichtung',
+            'title' => translate('setup.title'),
             'step'  => self::STEP_CHECK,
         ], 'setup/layout'), 403);
     }
