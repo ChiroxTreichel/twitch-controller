@@ -7,7 +7,9 @@ namespace TwitchController\Core\Admin;
 use TwitchController\Core\App;
 use TwitchController\Core\Http\Request;
 use TwitchController\Core\Http\Response;
+use TwitchController\Core\Plugin\Manifest;
 use TwitchController\Core\Registry\Client;
+use TwitchController\Core\Registry\Dependencies;
 use TwitchController\Core\Registry\Installer;
 use Throwable;
 
@@ -146,6 +148,7 @@ final class PluginsController
         $error = $request->get('error');
         $plugins = [];
         $tags = [];
+        $needs = [];
 
         try {
             $plugins = $query !== '' ? $registry->search($query) : $registry->all();
@@ -158,6 +161,13 @@ final class PluginsController
             }
 
             $tags = $registry->tags();
+
+            // Je Eintrag, was mitkaeme. Steht schon in der Liste, damit
+            // die Ueberraschung nicht erst nach dem Klick kommt.
+            $dependencies = new Dependencies($this->app);
+            foreach ($plugins as $eintrag) {
+                $needs[(string) $eintrag['slug']] = $dependencies->describe($eintrag);
+            }
         } catch (Throwable $e) {
             if ($error === '') {
                 $error = $e->getMessage();
@@ -172,6 +182,7 @@ final class PluginsController
             'tags'       => $tags,
             'query'      => $query,
             'tag'        => $tag,
+            'needs'      => $needs,
             'registry'   => $registry->baseUrl(),
             'canManage'  => $this->app->auth->can('Konto.Plugins.Manage'),
             'canWrite'   => (new Installer($this->app))->canWrite(),
@@ -207,10 +218,15 @@ final class PluginsController
         // hier geholt - nicht beim Laden des Katalogs.
         $readme = $registry->readme($plugin);
 
+        // Was mitinstalliert wird, gehoert VOR den Knopf - nicht in
+        // die Meldung danach.
+        $needs = (new Dependencies($this->app))->describe($plugin);
+
         return Response::html($this->app->view->render('account/plugins_detail', [
             'title'     => $plugin['name'],
             'readme'    => $readme['html'],
             'readmeErr' => $readme['error'],
+            'needs'     => $needs,
             'active'    => 'account/plugins',
             'tab'       => 'finden',
             'plugin'    => $plugin,
@@ -252,8 +268,13 @@ final class PluginsController
     // -----------------------------------------------------------------
 
     /**
-     * Holt ein Paket aus dem Katalog, legt die Dateien ab und zieht
-     * Schema und Registrierung nach.
+     * Ein Plugin aus dem Katalog installieren - samt allem, was es
+     * voraussetzt.
+     *
+     * Wer auf "Installieren" klickt, soll nicht selbst herausfinden
+     * muessen, dass Twitch-Alerts das Alerts-Plugin braucht. Er soll es
+     * aber erfahren: die Detailseite sagt es vorher, und die Meldung
+     * danach zaehlt auf, was zusaetzlich dazugekommen ist.
      */
     private function installFromRegistry(string $slug, string $back): Response
     {
@@ -261,10 +282,113 @@ final class PluginsController
         $package = $registry->find($slug);
 
         if ($package === null) {
-            return $this->back($back, null, 'Dieses Plugin steht nicht im Katalog.');
+            return $this->back($back, null, translate('market.not_in_catalog'));
         }
 
-        (new Installer($this->app))->fetch($package);
+        $plan = (new Dependencies($this->app))->plan($slug);
+
+        if ($plan['cycle']) {
+            return $this->back($back, null, translate('market.dependency_cycle'));
+        }
+
+        if ($plan['unknown'] !== []) {
+            return $this->back($back, null, translate('market.dependency_missing', [
+                'plugins' => implode(', ', $plan['unknown']),
+            ]));
+        }
+
+        // Voraussetzung zuerst. Andernfalls laeuft die install.php
+        // eines Plugins, dessen Abhaengigkeit noch fehlt.
+        $eingerichtet = [];
+
+        foreach ($plan['order'] as $einzelner) {
+            $eintrag = $einzelner === $slug ? $package : $registry->find($einzelner);
+            if ($eintrag === null) {
+                return $this->back($back, null, translate('market.dependency_missing', [
+                    'plugins' => $einzelner,
+                ]));
+            }
+
+            $manifest = $this->fetchAndRegister($eintrag);
+            if ($manifest instanceof Response) {
+                return $manifest;
+            }
+
+            $eingerichtet[] = $manifest->name;
+        }
+
+        // Ein Update des angeklickten Plugins: dann steht es nicht in
+        // der Reihenfolge, weil es schon installiert ist.
+        if (!in_array($slug, $plan['order'], true)) {
+            (new Installer($this->app))->fetch($package);
+            $this->app->plugins->discover(true);
+
+            $manifest = $this->app->plugins->manifest($slug);
+            if ($manifest === null) {
+                return $this->back($back, null, translate('market.manifest_broken'));
+            }
+
+            $this->app->plugins->upgradeIfNeeded($manifest);
+
+            return $this->back($back, translate('market.updated', [
+                'name'    => $manifest->name,
+                'version' => $manifest->version,
+            ]));
+        }
+
+        $manifest = $this->app->plugins->manifest($slug);
+        $name = $manifest?->name ?? $slug;
+
+        // Erst nach allen Dateien einschalten: blockers() prueft, ob
+        // die Abhaengigkeiten aktiv sind.
+        $offen = [];
+        foreach ($plan['order'] as $einzelner) {
+            $blocker = $this->app->plugins->blockers($einzelner);
+
+            if ($blocker === []) {
+                $this->app->plugins->enable($einzelner);
+                continue;
+            }
+
+            $offen[] = ($this->app->plugins->manifest($einzelner)?->name ?? $einzelner)
+                . ': ' . implode(' ', $blocker);
+        }
+
+        $mitgekommen = array_map(
+            static fn (array $eintrag): string => $eintrag['name'],
+            $plan['also']
+        );
+
+        if ($offen !== []) {
+            return $this->back('/account/plugins', null, translate('market.installed_blocked', [
+                'name'    => $name,
+                'reasons' => implode(' / ', $offen),
+            ]));
+        }
+
+        if ($mitgekommen !== []) {
+            return $this->back('/account/plugins', translate('market.installed_with', [
+                'name'  => $name,
+                'extra' => implode(', ', $mitgekommen),
+            ]));
+        }
+
+        return $this->back('/account/plugins', translate('market.installed', ['name' => $name]));
+    }
+
+    /**
+     * Dateien holen, Manifest neu einlesen, in der Datenbank anmelden.
+     *
+     * Gibt bei einem Fehler die fertige Antwort zurueck statt eines
+     * Manifests - der Aufrufer gibt sie einfach weiter.
+     *
+     * @param array<string, mixed> $entry Katalogeintrag
+     */
+    private function fetchAndRegister(array $entry): Manifest|Response
+    {
+        $slug = (string) $entry['slug'];
+
+        (new Installer($this->app))->fetch($entry);
 
         // Nach dem Dateitausch muss das Manifest neu eingelesen werden -
         // der Zwischenspeicher kennt noch die alte Fassung.
@@ -272,38 +396,16 @@ final class PluginsController
         $manifest = $this->app->plugins->manifest($slug);
 
         if ($manifest === null) {
-            return $this->back($back, null,
-                'Die Dateien sind da, aber das Plugin lässt sich nicht lesen. '
-                . 'Vermutlich ist sein Manifest fehlerhaft.');
+            return $this->back('/account/plugins', null, translate('market.manifest_broken'));
         }
 
-        if ($this->app->plugins->isInstalled($slug)) {
+        if (!$this->app->plugins->isInstalled($slug)) {
+            $this->app->plugins->install($slug);
+        } else {
             $this->app->plugins->upgradeIfNeeded($manifest);
-
-            return $this->back($back, sprintf(
-                '%s auf Version %s aktualisiert.',
-                $manifest->name,
-                $manifest->version
-            ));
         }
 
-        $this->app->plugins->install($slug);
-
-        $blockers = $this->app->plugins->blockers($slug);
-        if ($blockers === []) {
-            $this->app->plugins->enable($slug);
-
-            return $this->back('/account/plugins', sprintf(
-                '%s installiert und aktiviert.',
-                $manifest->name
-            ));
-        }
-
-        return $this->back('/account/plugins', sprintf(
-            '%s installiert, aber noch nicht aktiv: %s',
-            $manifest->name,
-            implode(' ', $blockers)
-        ));
+        return $manifest;
     }
 
     /**

@@ -9,6 +9,7 @@
  * @var string $tab
  * @var string $readme     README des Plugins, schon als HTML
  * @var string $readmeErr  Grund, falls sie nicht geholt werden konnte
+ * @var list<array{slug: string, name: string, state: string}> $needs
  * @var array<string, mixed> $plugin
  * @var array{installed: bool, enabled: bool, version: ?string}|null $state
  * @var bool $canManage
@@ -78,7 +79,20 @@ $neuer = $state !== null
             <?php if (!$coreOk): ?>
                 <span class="badge badge-error"><?= $e(translate('market.needs_newer_core')) ?></span>
             <?php elseif ($canManage && $canWrite && ($state === null || $neuer)): ?>
-                <form method="post" action="<?= $e($url('/account/plugins/find')) ?>">
+                <?php
+                // Was noch dazukommt. Steht als Rueckfrage am Knopf,
+                // damit niemand ungefragt zwei Plugins installiert.
+                $mit = [];
+                foreach ($needs ?? [] as $braucht) {
+                    if ($braucht['state'] === 'will_install') {
+                        $mit[] = $braucht['name'];
+                    }
+                }
+                ?>
+                <form method="post" action="<?= $e($url('/account/plugins/find')) ?>"
+                    <?php if ($mit !== [] && !$neuer): ?>
+                        onsubmit="return confirm('<?= $e(translate('market.confirm_with_deps', ['plugins' => implode(', ', $mit)])) ?>');"
+                    <?php endif ?>>
                     <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                     <input type="hidden" name="action" value="install">
                     <input type="hidden" name="slug" value="<?= $e($plugin['slug']) ?>">
@@ -102,6 +116,32 @@ $neuer = $state !== null
             ]) ?>
         </div>
     <?php endif; ?>
+
+    <?php if (($needs ?? []) !== []): ?>
+        <?php
+        $fehlt = false;
+        foreach ($needs as $braucht) {
+            if ($braucht['state'] === 'unknown') {
+                $fehlt = true;
+            }
+        }
+        ?>
+        <div class="note <?= $fehlt ? 'note-error' : 'note-warn' ?>">
+            <strong><?= $e(translate('market.needs_heading')) ?></strong>
+            <?php foreach ($needs as $braucht): ?>
+                <div>
+                    <strong><?= $e($braucht['name']) ?></strong> &middot;
+                    <?php if ($braucht['state'] === 'installed'): ?>
+                        <?= $e(translate('market.needs_installed')) ?>
+                    <?php elseif ($braucht['state'] === 'will_install'): ?>
+                        <?= $e(translate('market.needs_will_install')) ?>
+                    <?php else: ?>
+                        <?= $e(translate('market.needs_unknown')) ?>
+                    <?php endif ?>
+                </div>
+            <?php endforeach ?>
+        </div>
+    <?php endif ?>
 
     <?php if (($readmeErr ?? '') !== ''): ?>
         <p class="hint"><?= $e(translate('market.readme.failed', ['reason' => $readmeErr])) ?></p>

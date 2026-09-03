@@ -7,6 +7,7 @@
  * @var callable $url
  * @var string $tab
  * @var list<array<string, mixed>> $plugins
+ * @var array<string, list<array{slug: string, name: string, state: string}>> $needs
  * @var list<string> $tags
  * @var string $query
  * @var string $tag
@@ -124,7 +125,20 @@
             <div class="row">
                 <a class="btn btn-ghost btn-small" href="<?= $e($detailUrl) ?>"><?= $e(translate('common.view')) ?></a>
                 <?php if ($canManage && $canWrite && ($state === null || $neuer)): ?>
-                    <form method="post" action="<?= $e($url('/account/plugins/find')) ?>">
+                    <?php
+                    // Was noch dazukaeme. Als Rueckfrage am Knopf,
+                    // damit niemand ungefragt zwei Plugins installiert.
+                    $mit = [];
+                    foreach ($needs[$plugin['slug']] ?? [] as $braucht) {
+                        if ($braucht['state'] === 'will_install') {
+                            $mit[] = $braucht['name'];
+                        }
+                    }
+                    ?>
+                    <form method="post" action="<?= $e($url('/account/plugins/find')) ?>"
+                        <?php if ($mit !== [] && !$neuer): ?>
+                            onsubmit="return confirm('<?= $e(translate('market.confirm_with_deps', ['plugins' => implode(', ', $mit)])) ?>');"
+                        <?php endif ?>>
                         <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                         <input type="hidden" name="action" value="install">
                         <input type="hidden" name="slug" value="<?= $e($plugin['slug']) ?>">
@@ -139,6 +153,23 @@
         <?php if ($plugin['summary'] !== ''): ?>
             <p style="margin:0;"><?= $e($plugin['summary']) ?></p>
         <?php endif; ?>
+
+        <?php if (($needs[$plugin['slug']] ?? []) !== []): ?>
+            <p class="hint" style="margin:8px 0 0;">
+                <?php
+                $teile = [];
+                foreach ($needs[$plugin['slug']] as $braucht) {
+                    $zusatz = match ($braucht['state']) {
+                        'installed'    => translate('market.needs_installed'),
+                        'will_install' => translate('market.needs_will_install'),
+                        default        => translate('market.needs_unknown'),
+                    };
+                    $teile[] = $braucht['name'] . ' (' . $zusatz . ')';
+                }
+                ?>
+                <?= $e(translate('market.needs_line', ['plugins' => implode(', ', $teile)])) ?>
+            </p>
+        <?php endif ?>
 
         <?php if ($plugin['tags'] !== []): ?>
             <div class="row" style="margin-top:10px;">
