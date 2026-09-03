@@ -22,6 +22,9 @@ final class Client
 {
     public const DEFAULT_URL = 'https://plugins.talutah.de';
 
+    /** Katalogformat, das dieses System versteht. */
+    public const FORMAT = 1;
+
     /** Wie lange der zwischengespeicherte Katalog als frisch gilt. */
     private const CACHE_SECONDS = 3600;
 
@@ -157,16 +160,44 @@ final class Client
             throw new RuntimeException($message);
         }
 
-        $format = (int) ($result->json['format'] ?? 0);
-        if ($format !== 1) {
-            $message = 'Der Katalog hat ein unbekanntes Format (' . $format . ').';
+        // Nicht ueber $result->json pruefen: das ist auch bei einer
+        // Antwort, die gar kein JSON ist, ein leeres Array - eine
+        // HTML-Fehlerseite waere von einem leeren Katalog nicht zu
+        // unterscheiden.
+        $decoded = json_decode($result->body, true);
+
+        if (!is_array($decoded)) {
+            $message = sprintf(
+                '%s antwortet nicht mit JSON. Anfang der Antwort: %s',
+                $url,
+                self::anriss($result->body)
+            );
             $this->app->settings->set('registry_error', $message);
             throw new RuntimeException($message);
         }
 
-        $raw = $result->json['plugins'] ?? [];
-        if (!is_array($raw)) {
-            $raw = [];
+        // Zwei Formen sind erlaubt: das Objekt mit "format" und
+        // "plugins", das der eigene Katalogserver liefert, oder eine
+        // nackte Liste von Plugins. Eine leere Liste ist ein gueltiger
+        // Katalog - der Server hat dann einfach noch nichts
+        // veroeffentlicht - und darf deshalb kein Fehler sein.
+        if (array_is_list($decoded)) {
+            $raw = $decoded;
+        } else {
+            $format = (int) ($decoded['format'] ?? self::FORMAT);
+
+            // Nur ein neueres Format ist ein echtes Problem: dort koennen
+            // Felder anders gemeint sein. Aeltere lesen wir mit.
+            if ($format > self::FORMAT) {
+                $message = translate('registry.error.format_newer', [
+                    'format'  => $format,
+                    'support' => self::FORMAT,
+                ]);
+                $this->app->settings->set('registry_error', $message);
+                throw new RuntimeException($message);
+            }
+
+            $raw = is_array($decoded['plugins'] ?? null) ? $decoded['plugins'] : [];
         }
 
         $plugins = self::normalizeList($raw);
@@ -351,5 +382,20 @@ final class Client
         return $url !== ''
             && (str_starts_with($url, 'https://') || str_starts_with($url, 'http://'))
             && filter_var($url, FILTER_VALIDATE_URL) !== false;
+    }
+
+    /**
+     * Erste Zeichen einer Antwort, fuer die Fehlermeldung. Damit man
+     * sieht, ob da eine Fehlerseite des Proxys statt des Katalogs kam.
+     */
+    private static function anriss(string $body): string
+    {
+        $body = trim((string) preg_replace('/\s+/', ' ', $body));
+
+        if ($body === '') {
+            return '(leer)';
+        }
+
+        return strlen($body) > 120 ? substr($body, 0, 120) . ' ...' : $body;
     }
 }

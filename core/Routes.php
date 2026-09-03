@@ -120,6 +120,16 @@ final class Routes
         $router->post('/konto/einstellungen', [$account, 'settingsAction'], ['auth' => true]);
         $router->get('/konto/einstellungen/kanal', [$account, 'reconnectChannel'], ['auth' => true]);
 
+        // Notausgang. Bewusst nicht unter /konto: Update und Sprache
+        // muessen erreichbar bleiben, wenn eine Seite dort nicht mehr
+        // laedt - sonst liegt der Knopf, der den Fehler behebt, hinter
+        // dem Fehler.
+        $router->get('/rettung', [$account, 'rescue'], [
+            'auth' => true,
+            'permission' => 'Konto.Einstellungen.View',
+        ]);
+        $router->post('/rettung', [$account, 'rescueAction'], ['auth' => true]);
+
         // --- Plugin-Dateien ---------------------------------------------
         // Plugins liegen ausserhalb des DocumentRoots, ihre statischen
         // Dateien werden deshalb hier ausgeliefert:

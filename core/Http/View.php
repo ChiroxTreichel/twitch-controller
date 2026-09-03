@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Overlays\Core\Http;
 
 use Overlays\Core\App;
+use Overlays\Core\I18n\Translator;
 use RuntimeException;
 use Throwable;
 
@@ -84,13 +85,22 @@ final class View
         $app = $this->app;
         $view = $this;
 
+        // Fuer das lang-Attribut im Layout. Mit Netz: die Fehlerseite
+        // benutzt dasselbe Layout, und wenn die Datenbank weg ist, darf
+        // die Sprachabfrage die Meldung darueber nicht verschlucken.
+        try {
+            $language = $this->app->language();
+        } catch (Throwable) {
+            $language = Translator::DEFAULT_LANGUAGE;
+        }
+
         ob_start();
 
         try {
             (static function (array $__scope, string $__file): void {
                 extract($__scope, EXTR_SKIP);
                 require $__file;
-            })($data + compact('e', 'url', 'asset', 'app', 'view'), $file);
+            })($data + compact('e', 'url', 'asset', 'app', 'view', 'language'), $file);
         } catch (Throwable $exception) {
             ob_end_clean();
             throw $exception;

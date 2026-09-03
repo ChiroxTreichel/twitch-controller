@@ -7,7 +7,9 @@ namespace Overlays\Core\Admin;
 use Overlays\Core\App;
 use Overlays\Core\Http\Request;
 use Overlays\Core\Http\Response;
+use Overlays\Core\I18n\Translator;
 use Overlays\Core\Twitch\TokenStore;
+use Overlays\Core\Update\Updater;
 use Throwable;
 
 /**
@@ -91,7 +93,7 @@ final class AccountController
     public function settings(Request $request): Response
     {
         $tokens = $this->app->twitch->tokens();
-        $updater = new \Overlays\Core\Update\Updater($this->app);
+        $updater = new Updater($this->app);
         $missingScopes = [];
 
         try {
@@ -127,7 +129,7 @@ final class AccountController
             'update'           => $updater->status(),
             'timezone'         => $this->app->timezone(),
             'language'         => $this->app->language(),
-            'languages'        => \Overlays\Core\I18n\Translator::available(
+            'languages'        => Translator::available(
                 $this->app->languageDirectory()
             ),
             'timezones'        => self::timezones(),
@@ -225,17 +227,17 @@ final class AccountController
                     return $this->back('/konto/einstellungen', 'Zeitzone gespeichert: ' . $timezone);
 
                 case 'language':
-                    $language = \Overlays\Core\I18n\Translator::normalize($request->input('language'));
+                    $language = Translator::normalize($request->input('language'));
                     $this->app->settings->set('language', $language);
                     $this->app->applyLanguage();
 
                     return $this->back(
                         '/konto/einstellungen',
-                        translate('account.settings.language_saved', ['language' => \Overlays\Core\I18n\Translator::label($language)])
+                        translate('account.settings.language_saved', ['language' => Translator::label($language)])
                     );
 
                 case 'update_check':
-                    $check = (new \Overlays\Core\Update\Updater($this->app))->check();
+                    $check = (new Updater($this->app))->check();
 
                     return $check['ok']
                         ? $this->back('/konto/einstellungen', $check['message'])
@@ -244,19 +246,80 @@ final class AccountController
                 case 'update_apply':
                     // Ausgefuehrt wird das im worker-Container, weil der
                     // Webserver im Projektordner nicht schreiben darf.
-                    (new \Overlays\Core\Update\Updater($this->app))->request();
+                    (new Updater($this->app))->request();
 
-                    return $this->back(
-                        '/konto/einstellungen',
-                        'Update ist beauftragt. Es läuft im Hintergrund an und dauert meist '
-                        . 'weniger als eine Minute - diese Seite danach neu laden.'
-                    );
+                    return $this->back('/konto/einstellungen', translate('settings.update.queued'));
             }
         } catch (Throwable $e) {
             return $this->back('/konto/einstellungen', null, $e->getMessage());
         }
 
         return $this->back('/konto/einstellungen', null, 'Unbekannte Aktion.');
+    }
+
+    /**
+     * Notausgang: Update und Sprache auf einer eigenen Seite.
+     *
+     * Update pruefen und einspielen lag ausschliesslich auf
+     * /konto/einstellungen. Geht dort etwas kaputt - eine schiefe
+     * Uebersetzung reicht -, ist genau der Knopf unerreichbar, der den
+     * Fehler behebt, und es bleibt nur die Kommandozeile. Diese Seite
+     * kommt ohne Navigation, ohne Plugins und ohne Twitch-Abfragen aus
+     * und hat deshalb kaum etwas, das scheitern kann.
+     */
+    public function rescue(Request $request): Response
+    {
+        $updater = new Updater($this->app);
+
+        $languages = [];
+        foreach (Translator::available($this->app->languageDirectory()) as $code) {
+            $languages[$code] = Translator::label($code);
+        }
+
+        return Response::html($this->app->view->render('rescue', [
+            'notice'    => $request->query('hinweis'),
+            'error'     => $request->query('fehler'),
+            'csrf'      => $this->app->auth->csrfToken(),
+            'version'   => $updater->currentVersion(),
+            'language'  => $this->app->language(),
+            'languages' => $languages,
+        ], 'plain'));
+    }
+
+    public function rescueAction(Request $request): Response
+    {
+        if ($guard = $this->guardPost($request, 'Konto.Einstellungen.Edit', '/rettung')) {
+            return $guard;
+        }
+
+        try {
+            switch ($request->input('action')) {
+                case 'update_check':
+                    $check = (new Updater($this->app))->check();
+
+                    return $check['ok']
+                        ? $this->back('/rettung', $check['message'])
+                        : $this->back('/rettung', null, $check['message']);
+
+                case 'update_apply':
+                    (new Updater($this->app))->request();
+
+                    return $this->back('/rettung', translate('settings.update.queued'));
+
+                case 'language':
+                    $language = Translator::normalize($request->input('language'));
+                    $this->app->settings->set('language', $language);
+                    $this->app->applyLanguage();
+
+                    return $this->back('/rettung', translate('account.settings.language_saved', [
+                        'language' => Translator::label($language),
+                    ]));
+            }
+        } catch (Throwable $e) {
+            return $this->back('/rettung', null, $e->getMessage());
+        }
+
+        return $this->back('/rettung', null, translate('common.error.unknown_action'));
     }
 
     /**

@@ -103,6 +103,10 @@ try {
             'title'   => 'Fehler',
             'heading' => 'Da ist etwas schiefgegangen',
             'message' => 'Die Einzelheiten stehen im Log des Containers: docker compose logs -f web',
+            // Wer angemeldet ist, bekommt hier den Notausgang - damit ein
+            // Fehler auf einer Verwaltungsseite nicht auch das Update
+            // unerreichbar macht.
+            'rescue'  => $app->auth->isLoggedIn(),
         ], 'plain'),
         500
     );
