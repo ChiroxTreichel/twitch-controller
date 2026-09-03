@@ -426,6 +426,200 @@ final class Auth
     }
 
     /**
+     * Der Rechte-Katalog als Baum: Bereich > Funktion > Recht.
+     *
+     * Die flachen Schluessel haben schon die Form Bereich.Funktion.Recht
+     * ("Konto.Benutzer.View"). Der Baum entsteht deshalb durch Aufteilen
+     * und braucht keine zweite Anmeldung - ein Plugin meldet seine
+     * Rechte weiter ueber permissions.catalog an, unveraendert.
+     *
+     * Gebraucht wird der Baum fuer die Rechteseite: dort stehen die
+     * Rechte einer Funktion nebeneinander in einer Reihe, mit der
+     * Funktion als Zwischentitel. Bei knapp hundert Rechten ist das der
+     * Unterschied zwischen benutzbar und unbenutzbar.
+     *
+     * @return array<string, array{label: string, features: array<string, array{label: string, permissions: array<string, array{label: string, description: string}>}>}>
+     */
+    public function permissionTree(): array
+    {
+        $rechte = self::rightLabels();
+        $funktionen = self::featureLabels();
+
+        $baum = [];
+
+        foreach ($this->permissionCatalog() as $bereichKey => $bereich) {
+            $bereichKey = (string) $bereichKey;
+
+            foreach ((array) ($bereich['permissions'] ?? []) as $key => $beschreibung) {
+                $teile = explode('.', (string) $key);
+
+                // Alles, was nicht dem Schema entspricht, landet unter
+                // einer Sammel-Funktion - lieber unsortiert angezeigt
+                // als verschwiegen.
+                $funktion = $teile[1] ?? 'Allgemein';
+                $recht = $teile[2] ?? ($teile[1] ?? (string) $key);
+
+                $baum[$bereichKey]['label'] = trim((string) ($bereich['label'] ?? $bereichKey)) ?: $bereichKey;
+                $baum[$bereichKey]['features'][$funktion]['label'] = $funktionen[$funktion] ?? $funktion;
+                $baum[$bereichKey]['features'][$funktion]['permissions'][(string) $key] = [
+                    'label'       => $rechte[$recht] ?? $recht,
+                    'description' => trim((string) $beschreibung),
+                ];
+            }
+        }
+
+        return $baum;
+    }
+
+    /**
+     * Rollenvorlagen.
+     *
+     * Bewusst als Regel und nicht als Liste: Plugins bringen eigene
+     * Rechte mit, und eine feste Liste waere nach dem ersten
+     * installierten Plugin unvollstaendig - ohne dass es auffaellt.
+     *
+     * @return array<string, array{label: string, description: string, keys: list<string>}>
+     */
+    public function rolePresets(): array
+    {
+        $alle = $this->flatPermissionKeys();
+
+        $nurAnsehen = array_values(array_filter(
+            $alle,
+            static fn (string $key): bool => str_ends_with($key, '.View')
+        ));
+
+        // Alles ausserhalb von "Konto" ist Stream-Betrieb: Alerts,
+        // Ziele, Overlay-Inhalte. Wer dort helfen soll, braucht das
+        // ganz - aber nichts an Benutzern und Zugangsdaten.
+        $streamHelfer = array_values(array_unique(array_merge(
+            $nurAnsehen,
+            array_values(array_filter(
+                $alle,
+                static fn (string $key): bool => !str_starts_with($key, 'Konto.')
+            ))
+        )));
+
+        // Editor: alles, ausser Benutzerverwaltung und Zugangsdaten.
+        $editor = array_values(array_filter(
+            $alle,
+            static fn (string $key): bool => !str_starts_with($key, 'Konto.Benutzer.')
+                && !str_starts_with($key, 'Konto.Einstellungen.')
+        ));
+
+        return [
+            'readonly' => [
+                'label'       => translate('roles.readonly'),
+                'description' => translate('roles.readonly.hint'),
+                'keys'        => $nurAnsehen,
+            ],
+            'helper' => [
+                'label'       => translate('roles.helper'),
+                'description' => translate('roles.helper.hint'),
+                'keys'        => $streamHelfer,
+            ],
+            'editor' => [
+                'label'       => translate('roles.editor'),
+                'description' => translate('roles.editor.hint'),
+                'keys'        => $editor,
+            ],
+        ];
+    }
+
+    /**
+     * Wie die Rolle eines Benutzers in der Liste heisst.
+     *
+     * Deckt sich seine Auswahl genau mit einer Vorlage, steht deren
+     * Name da - sonst "Benutzerdefiniert". So sieht man auf einen Blick,
+     * wer vom Schema abweicht.
+     *
+     * @param array<string, mixed> $user
+     */
+    public function roleLabel(array $user): string
+    {
+        if (($user['role'] ?? '') === 'superadmin') {
+            return translate('roles.superadmin');
+        }
+
+        $rechte = array_map('strval', (array) ($user['permissions'] ?? []));
+        sort($rechte);
+
+        foreach ($this->rolePresets() as $vorlage) {
+            $vergleich = $vorlage['keys'];
+            sort($vergleich);
+
+            if ($rechte === $vergleich) {
+                return $vorlage['label'];
+            }
+        }
+
+        return translate('roles.custom');
+    }
+
+    /**
+     * Wie viele Rechte jemand hat, von wie vielen moeglichen.
+     *
+     * @param array<string, mixed> $user
+     * @return array{have: int, total: int, all: bool}
+     */
+    public function permissionCount(array $user): array
+    {
+        $gesamt = count($this->flatPermissionKeys());
+
+        if (($user['role'] ?? '') === 'superadmin') {
+            return ['have' => $gesamt, 'total' => $gesamt, 'all' => true];
+        }
+
+        return [
+            'have'  => count((array) ($user['permissions'] ?? [])),
+            'total' => $gesamt,
+            'all'   => false,
+        ];
+    }
+
+    /**
+     * Klarnamen der letzten Schluesselstufe.
+     *
+     * Ausgeschrieben und nicht per translate('rights.' . $x)
+     * zusammengesetzt: nur so sieht bin/lang.php die Schluessel und
+     * kann fehlende melden.
+     *
+     * @return array<string, string>
+     */
+    private static function rightLabels(): array
+    {
+        return [
+            'View'   => translate('rights.view'),
+            'Manage' => translate('rights.manage'),
+            'Edit'   => translate('rights.edit'),
+            'Create' => translate('rights.create'),
+            'Delete' => translate('rights.delete'),
+            'Toggle' => translate('rights.toggle'),
+            'Test'   => translate('rights.test'),
+            'Sort'   => translate('rights.sort'),
+            'Invite' => translate('rights.invite'),
+            'Remove' => translate('rights.remove'),
+        ];
+    }
+
+    /**
+     * Klarnamen der mittleren Schluesselstufe. Unbekannte Funktionen -
+     * etwa aus einem Plugin - erscheinen unter ihrem Schluessel.
+     *
+     * @return array<string, string>
+     */
+    private static function featureLabels(): array
+    {
+        return [
+            'Benutzer'      => translate('features.users'),
+            'Aktivitaeten'  => translate('features.activities'),
+            'Overlay'       => translate('features.overlay'),
+            'Plugins'       => translate('features.plugins'),
+            'Einstellungen' => translate('features.settings'),
+        ];
+    }
+
+    /**
      * Was ein neu eingeladener Benutzer bekommt: nur Lesen.
      *
      * @return list<string>

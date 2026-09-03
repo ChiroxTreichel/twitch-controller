@@ -30,7 +30,7 @@ final class ActivityController
 
         return Response::html($this->app->view->render('account/activities', [
             'title'     => 'Aktivitäten',
-            'active'    => 'konto/aktivitaeten',
+            'active'    => 'account/activities',
             'badges'    => $badges->resolved(),
             'presets'   => $badges->catalog(),
             'feedUrl'   => $this->app->url('/obs'),

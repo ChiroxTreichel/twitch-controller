@@ -158,7 +158,19 @@ immer bedienbar.
 | `$settings` | `Overlays\Core\Config\Settings` |
 | `$db` | `Overlays\Core\Database\Db` |
 
-In Vorlagen zusaetzlich: `$e` (Escaping), `$url`, `$asset`, `$app`, `$view`.
+In Vorlagen zusaetzlich: `$e` (Escaping), `$url`, `$asset`, `$app`, `$view`,
+`$language`.
+
+Global verfuegbar, ohne `$app` durchzureichen:
+
+```php
+translate('nav.users')                        // Text aus der Sprachdatei
+permission('Konto.Benutzer.Manage')           // darf der Angemeldete das?
+```
+
+`permission()` ist die Anzeige-Frage, nicht der Schutz: eine Route
+schuetzt ihr `permission` im Router, eine POST-Aktion prueft zusaetzlich
+selbst. Wer nur den Knopf ausblendet, hat die Aktion nicht abgesichert.
 
 `plugin.php` soll nur registrieren, nicht arbeiten — sie wird bei jedem
 Request geladen.
@@ -235,6 +247,22 @@ ohne bestehende Installationen mitzuziehen.
 Rechte folgen dem Schema `Bereich.Funktion.Recht`. Rechte auf `.View`
 bekommen neu eingeladene Benutzer automatisch. Superadmin umgeht jede
 Prüfung.
+
+Das Schema ist nicht nur Konvention: `Auth::permissionTree()` teilt die
+Schlüssel auf und baut daraus die Gliederung der Rechteseite — Bereich
+als Kasten, Funktion als Zwischentitel, Rechte nebeneinander. Ein
+Plugin meldet seine Rechte weiter flach über `permissions.catalog` an
+und bekommt die Gliederung geschenkt, solange es sich an das Schema
+hält. Klarnamen der letzten Stufe (`View` → «Anzeigen») liefert
+`Auth::rightLabels()`; unbekannte Stufen erscheinen unter ihrem
+Schlüssel.
+
+Die Rollenvorlagen (`Auth::rolePresets()`) sind **Regeln**, keine
+Listen: `Read-Only` ist alles auf `.View`, `Stream-Helfer` zusätzlich
+alles außerhalb von `Konto.`, `Editor` alles außer
+`Konto.Benutzer.*` und `Konto.Einstellungen.*`. Eine feste Liste wäre
+nach dem ersten installierten Plugin unvollständig — ohne dass es
+auffällt.
 
 Statische Plugin-Dateien liegen unter `/plugin/<slug>/assets/<pfad>` und
 werden vom Kern ausgeliefert (nur bekannte Dateitypen, kein

@@ -291,6 +291,43 @@ td.actions { text-align: right; white-space: nowrap; }
 .perm span { font-size: 0.88rem; }
 .perm code { color: var(--muted); font-size: 0.8rem; }
 
+/*
+ * Rechteseite: ein Kasten je Bereich, darin die Funktionen als
+ * Zwischentitel und deren Rechte nebeneinander. Bei knapp hundert
+ * Kaestchen ist diese Gliederung der Unterschied zwischen benutzbar
+ * und unbenutzbar - untereinander waere das eine Bildschirmlaenge
+ * ohne Halt.
+ */
+.perm-feature { margin: 0 0 18px; }
+.perm-feature:last-child { margin-bottom: 0; }
+.perm-feature h3 {
+    margin: 0 0 8px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.perm-grid {
+    display: grid;
+    /* auto-fill statt fester Spalten: auf einem schmalen Fenster
+       werden es von allein weniger. */
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 4px 18px;
+}
+
+.perm-grid .perm {
+    padding: 6px 8px;
+    border-radius: 7px;
+    cursor: pointer;
+}
+.perm-grid .perm:hover { background: var(--panel-2); }
+
+/* Klarname fett, Erklaerung darunter klein - so ist die Zeile auf
+   einen Blick zu erfassen und die Erklaerung trotzdem da. */
+.perm-grid .perm span { display: flex; flex-direction: column; gap: 1px; }
+.perm-grid .perm strong { font-weight: 500; font-size: 0.88rem; }
+.perm-grid .perm .hint { font-size: 0.78rem; line-height: 1.35; }
+
 /* --- Login und Einrichtung ----------------------------------------- */
 
 .centered {

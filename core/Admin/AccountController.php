@@ -28,19 +28,76 @@ final class AccountController
     //  Benutzer
     // -----------------------------------------------------------------
 
+    /**
+     * Reiter "Freigegebene Benutzer": wer Zugang hat, seit wann, und
+     * wie man ihn wieder los wird.
+     */
     public function users(Request $request): Response
     {
         return Response::html($this->app->view->render('account/users', [
-            'title'    => 'Benutzer',
-            'active'   => 'konto/benutzer',
-            'users'    => $this->app->auth->users(),
-            'invites'  => $this->app->auth->invites(),
-            'catalog'  => $this->app->auth->permissionCatalog(),
+            'title'     => translate('nav.users'),
+            'active'    => 'account/users',
+            'tab'       => 'granted',
+            'users'     => $this->sortedUsers(),
+            'invites'   => $this->app->auth->invites(),
             'canManage' => $this->app->auth->can('Konto.Benutzer.Manage'),
-            'csrf'     => $this->app->auth->csrfToken(),
-            'notice'   => $request->get('notice'),
-            'error'    => $request->get('error'),
-            'editing'  => $request->get('bearbeiten'),
+            'csrf'      => $this->app->auth->csrfToken(),
+            'notice'    => $request->get('notice'),
+            'error'     => $request->get('error'),
+            'link'      => $request->get('link'),
+        ]));
+    }
+
+    /**
+     * Reiter "Benutzerrechte": dieselbe Liste, aber mit dem Blick auf
+     * die Rechte - Rolle und Anzahl.
+     */
+    public function permissions(Request $request): Response
+    {
+        return Response::html($this->app->view->render('account/users_permissions', [
+            'title'     => translate('account.users.permissions'),
+            'active'    => 'account/users',
+            'tab'       => 'permissions',
+            'users'     => $this->sortedUsers(),
+            'canManage' => $this->app->auth->can('Konto.Benutzer.Manage'),
+            'csrf'      => $this->app->auth->csrfToken(),
+            'notice'    => $request->get('notice'),
+            'error'     => $request->get('error'),
+        ]));
+    }
+
+    /**
+     * Die Rechte eines Benutzers. Eigene Seite und nicht aufgeklappt in
+     * der Liste: es sind knapp hundert Kaestchen.
+     *
+     * @param array<string, string> $params
+     */
+    public function permissionsEdit(Request $request, array $params): Response
+    {
+        $ziel = $this->app->auth->find((string) ($params['id'] ?? ''));
+
+        if ($ziel === null) {
+            return Response::html($this->app->view->render('error', [
+                'title'   => translate('account.users.not_found'),
+                'heading' => translate('account.users.not_found'),
+                'message' => translate('account.users.not_found_hint'),
+                'rescue'  => false,
+            ], 'plain'), 404);
+        }
+
+        return Response::html($this->app->view->render('account/users_permissions_edit', [
+            'title'     => translate('account.users.permissions_for', ['name' => $ziel['display_name']]),
+            'active'    => 'account/users',
+            'tab'       => 'permissions',
+            'target'    => $ziel,
+            'tree'      => $this->app->auth->permissionTree(),
+            'presets'   => $this->app->auth->rolePresets(),
+            'count'     => $this->app->auth->permissionCount($ziel),
+            'isSuper'   => ($ziel['role'] ?? '') === 'superadmin',
+            'canManage' => $this->app->auth->can('Konto.Benutzer.Manage'),
+            'csrf'      => $this->app->auth->csrfToken(),
+            'notice'    => $request->get('notice'),
+            'error'     => $request->get('error'),
         ]));
     }
 
@@ -51,39 +108,92 @@ final class AccountController
             return $guard;
         }
 
-        $action = $request->input('action');
+        $twitchId = $request->input('twitch_id');
+        $rechteSeite = '/account/users/permissions'
+            . ($twitchId !== '' ? '/' . rawurlencode($twitchId) : '');
 
         try {
-            switch ($action) {
+            switch ($request->input('action')) {
                 case 'invite':
                     $invite = $this->app->auth->createInvite((int) ($request->input('hours') ?: '72'));
 
-                    return $this->back('/account/users', 'Einladungslink erstellt: ' . $invite['url']);
+                    // Der Link kommt in die Adresszeile zurueck, damit
+                    // die Seite ihn zum Kopieren anzeigen kann.
+                    return Response::redirect($this->app->url('/account/users') . '?' . http_build_query([
+                        'notice' => translate('account.users.invite_created'),
+                        'link'   => $invite['url'],
+                    ]));
 
                 case 'revoke_invite':
                     $this->app->auth->revokeInvite($request->input('code'));
 
-                    return $this->back('/account/users', 'Einladung zurückgezogen.');
-
-                case 'permissions':
-                    $permissions = $request->post['permissions'] ?? [];
-                    $this->app->auth->setPermissions(
-                        $request->input('twitch_id'),
-                        is_array($permissions) ? array_map('strval', $permissions) : []
-                    );
-
-                    return $this->back('/account/users', 'Rechte gespeichert.');
+                    return $this->back('/account/users', translate('account.users.invite_revoked'));
 
                 case 'remove':
-                    $this->app->auth->removeUser($request->input('twitch_id'));
+                    $this->app->auth->removeUser($twitchId);
 
-                    return $this->back('/account/users', 'Benutzer entfernt.');
+                    return $this->back('/account/users', translate('account.users.removed'));
+
+                case 'permissions':
+                    $gewaehlt = $request->post['permissions'] ?? [];
+                    $gewaehlt = is_array($gewaehlt) ? array_map('strval', $gewaehlt) : [];
+
+                    // Nur Schluessel, die es wirklich gibt. Sonst
+                    // sammelt die Datenbank Rechte an, die einmal in
+                    // einem Formular standen und nie wieder gelten.
+                    $bekannt = $this->app->auth->flatPermissionKeys();
+                    $gewaehlt = array_values(array_intersect($gewaehlt, $bekannt));
+
+                    $this->app->auth->setPermissions($twitchId, $gewaehlt);
+
+                    return $this->back($rechteSeite, translate('account.users.permissions_saved'));
+
+                case 'preset':
+                    $vorlagen = $this->app->auth->rolePresets();
+                    $name = $request->input('preset');
+
+                    if (!isset($vorlagen[$name])) {
+                        return $this->back($rechteSeite, null, translate('account.users.no_such_preset'));
+                    }
+
+                    $this->app->auth->setPermissions($twitchId, $vorlagen[$name]['keys']);
+
+                    return $this->back($rechteSeite, translate('account.users.preset_applied', [
+                        'role' => $vorlagen[$name]['label'],
+                    ]));
             }
         } catch (Throwable $e) {
             return $this->back('/account/users', null, $e->getMessage());
         }
 
-        return $this->back('/account/users', null, 'Unbekannte Aktion.');
+        return $this->back('/account/users', null, translate('common.error.unknown_action'));
+    }
+
+    /**
+     * Benutzer nach Anzahl der Rechte absteigend, dann alphabetisch.
+     * Der Superadmin hat alle und steht damit oben.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function sortedUsers(): array
+    {
+        $users = $this->app->auth->users();
+
+        usort($users, function (array $a, array $b): int {
+            $za = $this->app->auth->permissionCount($a)['have'];
+            $zb = $this->app->auth->permissionCount($b)['have'];
+
+            if ($za !== $zb) {
+                return $zb <=> $za;
+            }
+
+            return strcasecmp(
+                (string) ($a['display_name'] ?? ''),
+                (string) ($b['display_name'] ?? '')
+            );
+        });
+
+        return $users;
     }
 
     // -----------------------------------------------------------------
@@ -107,7 +217,7 @@ final class AccountController
 
         return Response::html($this->app->view->render('account/settings', [
             'title'         => 'Einstellungen',
-            'active'        => 'konto/einstellungen',
+            'active'        => 'account/settings',
             'canManage'     => $this->app->auth->can('Konto.Einstellungen.Manage'),
             'csrf'          => $this->app->auth->csrfToken(),
             'notice'        => $request->get('notice'),

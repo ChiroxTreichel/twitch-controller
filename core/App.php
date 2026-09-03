@@ -58,13 +58,30 @@ final class App
         $this->events     = new EventStore($this);
     }
 
+    /**
+     * Die laufende Anwendung. Es gibt genau eine je Request; das hier
+     * ist der Zugriff darauf fuer die globalen Helfer in
+     * core/functions.php - sonst muesste $app durch jede Vorlage und
+     * jeden Hook durchgereicht werden, nur um eine Frage zu stellen.
+     */
+    private static ?self $current = null;
+
     public static function boot(string $root): self
     {
         $app = new self($root);
         $app->plugins = new PluginManager($app, $root . '/plugins');
         $app->auth = new Auth($app);
 
-        return $app;
+        return self::$current = $app;
+    }
+
+    /**
+     * Null, solange nicht gebootet wurde - etwa in einem Testskript.
+     * Die Helfer muessen damit umgehen koennen.
+     */
+    public static function current(): ?self
+    {
+        return self::$current;
     }
 
     /**

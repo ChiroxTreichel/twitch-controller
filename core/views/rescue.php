@@ -24,10 +24,10 @@
 <p class="lead"><?= $e(translate('rescue.lead')) ?></p>
 
 <?php if ($notice !== ''): ?>
-    <div class="alert alert-ok"><?= $e($notice) ?></div>
+    <div class="note note-ok"><?= $e($notice) ?></div>
 <?php endif ?>
 <?php if ($error !== ''): ?>
-    <div class="alert alert-error"><?= $e($error) ?></div>
+    <div class="note note-error"><?= $e($error) ?></div>
 <?php endif ?>
 
 <div class="card">

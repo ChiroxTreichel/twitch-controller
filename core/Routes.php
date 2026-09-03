@@ -77,6 +77,17 @@ final class Routes
         ]);
         $router->post('/account/users', [$account, 'usersAction'], ['auth' => true]);
 
+        // Zweiter Reiter und die Rechteseite je Benutzer. Eigene
+        // Seite, weil es knapp hundert Kaestchen sind.
+        $router->get('/account/users/permissions', [$account, 'permissions'], [
+            'auth' => true,
+            'permission' => 'Konto.Benutzer.View',
+        ]);
+        $router->get('/account/users/permissions/{id}', [$account, 'permissionsEdit'], [
+            'auth' => true,
+            'permission' => 'Konto.Benutzer.View',
+        ]);
+
         // Aktivitäten: Einstellungen im Konto, der Feed selbst unter
         // /obs (gedacht als Browser-Dock in OBS).
         $router->get('/account/activities', [$activity, 'show'], [

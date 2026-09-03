@@ -1,126 +1,38 @@
 <?php
 /**
+ * Reiter "Freigegebene Benutzer": wer Zugang hat, seit wann, und wie
+ * man ihn wieder los wird.
+ *
  * @var \Overlays\Core\App $app
+ * @var \Overlays\Core\Http\View $view
  * @var callable $e
  * @var callable $url
+ * @var string $tab
  * @var list<array<string, mixed>> $users
  * @var list<array<string, mixed>> $invites
- * @var array<string, array{label: string, permissions: array<string, string>}> $catalog
- * @var bool $canManage
  * @var string $csrf
  * @var string $notice
  * @var string $error
- * @var string $editing
+ * @var string $link     Gerade erstellter Einladungslink, zum Kopieren
  */
+
+$darfVerwalten = permission('Konto.Benutzer.Manage');
 ?>
-<h1><?= $e(translate('nav.users')) ?></h1>
+<h1><?= $e(translate('account.users.tab_granted')) ?></h1>
 <p class="lead"><?= $e(translate('account.users.lead')) ?></p>
+
+<?= $view->render('account/_user_tabs', ['tab' => $tab], null) ?>
 
 <?php if ($notice !== ''): ?>
     <div class="note note-ok"><?= $e($notice) ?></div>
-<?php endif; ?>
+<?php endif ?>
 <?php if ($error !== ''): ?>
     <div class="note note-error"><?= $e($error) ?></div>
-<?php endif; ?>
+<?php endif ?>
 
 <div class="card">
-    <table>
-        <thead>
-        <tr>
-            <th><?= $e(translate('account.users.account')) ?></th>
-            <th><?= $e(translate('account.users.role')) ?></th>
-            <th><?= $e(translate('account.users.permissions')) ?></th>
-            <th><?= $e(translate('account.users.last_seen')) ?></th>
-            <th></th>
-        </tr>
-        </thead>
-        <tbody>
-        <?php foreach ($users as $user): ?>
-            <tr>
-                <td>
-                    <strong><?= $e($user['display_name']) ?></strong>
-                    <div class="hint mono"><?= $e($user['twitch_id']) ?></div>
-                </td>
-                <td>
-                    <?php if ($user['role'] === 'superadmin'): ?>
-                        <span class="badge badge-ok"><?= $e(translate('nav.owner')) ?></span>
-                    <?php else: ?>
-                        <span class="badge"><?= $e(translate('nav.team')) ?></span>
-                    <?php endif; ?>
-                </td>
-                <td class="hint">
-                    <?php if ($user['role'] === 'superadmin'): ?>
-                        <?= $e(translate('account.users.all')) ?>
-                    <?php else: ?>
-                        <?= $e((string) count((array) $user['permissions'])) ?>
-                    <?php endif; ?>
-                </td>
-                <td class="hint"><?= $e(\Overlays\Core\Support\Dates::long($user['last_seen_at'])) ?></td>
-                <td class="actions">
-                    <?php if ($canManage && $user['role'] !== 'superadmin'): ?>
-                        <a class="btn btn-ghost btn-small"
-                           href="<?= $e($url('/account/users?bearbeiten=' . rawurlencode((string) $user['twitch_id']))) ?>"><?= $e(translate('account.users.permissions')) ?></a>
-                        <form method="post" action="<?= $e($url('/account/users')) ?>" style="display:inline;"
-                              onsubmit="return confirm('<?= $e(translate('account.users.confirm_remove', ['name' => $user['display_name']])) ?>');">
-                            <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-                            <input type="hidden" name="action" value="remove">
-                            <input type="hidden" name="twitch_id" value="<?= $e($user['twitch_id']) ?>">
-                            <button class="btn btn-danger btn-small" type="submit"><?= $e(translate('common.remove')) ?></button>
-                        </form>
-                    <?php endif; ?>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>
-
-<?php
-$editUser = null;
-foreach ($users as $candidate) {
-    if ($editing !== '' && (string) $candidate['twitch_id'] === $editing && $candidate['role'] !== 'superadmin') {
-        $editUser = $candidate;
-    }
-}
-?>
-
-<?php if ($canManage && $editUser !== null): ?>
-    <div class="card">
-        <div class="card-head">
-            <h2><?= $e(translate('account.users.permissions_for', ['name' => $editUser['display_name']])) ?></h2>
-            <a class="btn btn-ghost btn-small" href="<?= $e($url('/account/users')) ?>"><?= $e(translate('common.cancel')) ?></a>
-        </div>
-
-        <form method="post" action="<?= $e($url('/account/users')) ?>">
-            <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-            <input type="hidden" name="action" value="permissions">
-            <input type="hidden" name="twitch_id" value="<?= $e($editUser['twitch_id']) ?>">
-
-            <?php foreach ($catalog as $group): ?>
-                <div class="perm-group">
-                    <h3><?= $e($group['label']) ?></h3>
-                    <?php foreach ((array) $group['permissions'] as $key => $description): ?>
-                        <label class="perm">
-                            <input type="checkbox" name="permissions[]" value="<?= $e((string) $key) ?>"
-                                <?= in_array((string) $key, (array) $editUser['permissions'], true) ? 'checked' : '' ?>>
-                            <span>
-                                <?= $e((string) $description) ?>
-                                <br><code><?= $e((string) $key) ?></code>
-                            </span>
-                        </label>
-                    <?php endforeach; ?>
-                </div>
-            <?php endforeach; ?>
-
-            <button class="btn" type="submit"><?= $e(translate('account.users.save_permissions')) ?></button>
-        </form>
-    </div>
-<?php endif; ?>
-
-<?php if ($canManage): ?>
-    <div class="card">
-        <div class="card-head">
-            <h2><?= $e(translate('account.users.invites')) ?></h2>
+    <?php if ($darfVerwalten): ?>
+        <div class="row">
             <form method="post" action="<?= $e($url('/account/users')) ?>" class="row">
                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                 <input type="hidden" name="action" value="invite">
@@ -129,38 +41,110 @@ foreach ($users as $candidate) {
                     <option value="72" selected><?= $e(translate('account.users.invite_3d')) ?></option>
                     <option value="168"><?= $e(translate('account.users.invite_7d')) ?></option>
                 </select>
-                <button class="btn btn-small" type="submit"><?= $e(translate('account.users.create_link')) ?></button>
+                <button class="btn btn-small" type="submit"><?= $e(translate('account.users.create_code')) ?></button>
             </form>
         </div>
 
-        <?php if ($invites === []): ?>
-            <div class="empty"><?= $e(translate('account.users.no_invites')) ?></div>
-        <?php else: ?>
-            <table>
-                <thead>
-                <tr>
-                    <th><?= $e(translate('account.users.link')) ?></th>
-                    <th><?= $e(translate('account.users.expires')) ?></th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                <?php foreach ($invites as $invite): ?>
-                    <tr>
-                        <td class="mono"><?= $e($url('/login?invite=' . $invite['code'])) ?></td>
-                        <td class="hint"><?= $e(\Overlays\Core\Support\Dates::long($invite['expires_at'])) ?></td>
-                        <td class="actions">
-                            <form method="post" action="<?= $e($url('/account/users')) ?>">
+        <?php if ($link !== ''): ?>
+            <div class="field" style="margin-top:14px;">
+                <label>
+                    <span class="hint"><?= $e(translate('account.users.link')) ?></span><br>
+                    <?php /* readonly und nicht nur Text: so laesst sich der Link mit
+                            einem Griff markieren und kopieren. */ ?>
+                    <input class="input mono" type="text" readonly
+                           onclick="this.select();"
+                           value="<?= $e($link) ?>">
+                </label>
+                <p class="hint"><?= $e(translate('account.users.link_hint')) ?></p>
+            </div>
+        <?php endif ?>
+    <?php endif ?>
+
+    <table style="margin-top:16px;">
+        <thead>
+        <tr>
+            <th><?= $e(translate('account.users.name')) ?></th>
+            <th><?= $e(translate('account.users.twitch_id')) ?></th>
+            <th><?= $e(translate('account.users.role')) ?></th>
+            <th><?= $e(translate('account.users.added')) ?></th>
+            <th><?= $e(translate('account.users.last_seen')) ?></th>
+            <?php if ($darfVerwalten): ?>
+                <th></th>
+            <?php endif ?>
+        </tr>
+        </thead>
+        <tbody>
+        <?php if ($users === []): ?>
+            <tr>
+                <td colspan="<?= $darfVerwalten ? 6 : 5 ?>" class="hint">
+                    <?= $e(translate('account.users.none')) ?>
+                </td>
+            </tr>
+        <?php endif ?>
+
+        <?php foreach ($users as $user): ?>
+            <?php $istSuper = ($user['role'] ?? '') === 'superadmin'; ?>
+            <tr>
+                <td><strong><?= $e($user['display_name']) ?></strong></td>
+                <td class="mono"><?= $e($user['twitch_id']) ?></td>
+                <td><?= $e($app->auth->roleLabel($user)) ?></td>
+                <td class="hint"><?= $e(\Overlays\Core\Support\Dates::long($user['created_at'] ?? null)) ?></td>
+                <td class="hint"><?= $e(\Overlays\Core\Support\Dates::long($user['last_seen_at'] ?? null)) ?></td>
+                <?php if ($darfVerwalten): ?>
+                    <td class="actions">
+                        <?php /* Der Superadmin bleibt: ohne ihn koennte niemand mehr
+                                Rechte vergeben. */ ?>
+                        <?php if (!$istSuper): ?>
+                            <form method="post" action="<?= $e($url('/account/users')) ?>"
+                                  onsubmit="return confirm('<?= $e(translate('account.users.confirm_remove', ['name' => $user['display_name']])) ?>');">
                                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-                                <input type="hidden" name="action" value="revoke_invite">
-                                <input type="hidden" name="code" value="<?= $e($invite['code']) ?>">
-                                <button class="btn btn-ghost btn-small" type="submit"><?= $e(translate('account.users.revoke')) ?></button>
+                                <input type="hidden" name="action" value="remove">
+                                <input type="hidden" name="twitch_id" value="<?= $e($user['twitch_id']) ?>">
+                                <button class="btn btn-danger btn-small" type="submit">
+                                    <?= $e(translate('common.remove')) ?>
+                                </button>
                             </form>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-        <?php endif; ?>
+                        <?php endif ?>
+                    </td>
+                <?php endif ?>
+            </tr>
+        <?php endforeach ?>
+        </tbody>
+    </table>
+</div>
+
+<?php if ($darfVerwalten && $invites !== []): ?>
+    <div class="card">
+        <div class="card-head">
+            <h2><?= $e(translate('account.users.invites')) ?></h2>
+        </div>
+
+        <table>
+            <thead>
+            <tr>
+                <th><?= $e(translate('account.users.link')) ?></th>
+                <th><?= $e(translate('account.users.expires')) ?></th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($invites as $invite): ?>
+                <tr>
+                    <td class="mono"><?= $e($url('/login?invite=' . $invite['code'])) ?></td>
+                    <td class="hint"><?= $e(\Overlays\Core\Support\Dates::long($invite['expires_at'])) ?></td>
+                    <td class="actions">
+                        <form method="post" action="<?= $e($url('/account/users')) ?>">
+                            <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
+                            <input type="hidden" name="action" value="revoke_invite">
+                            <input type="hidden" name="code" value="<?= $e($invite['code']) ?>">
+                            <button class="btn btn-ghost btn-small" type="submit">
+                                <?= $e(translate('account.users.revoke')) ?>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            <?php endforeach ?>
+            </tbody>
+        </table>
     </div>
-<?php endif; ?>
+<?php endif ?>

@@ -63,7 +63,7 @@ final class PluginsController
 
         return Response::html($this->app->view->render('account/plugins', [
             'title'     => 'Plugins',
-            'active'    => 'konto/plugins',
+            'active'    => 'account/plugins',
             'tab'       => 'installiert',
             'rows'      => $rows,
             'missing'   => $this->app->plugins->missing(),
@@ -166,7 +166,7 @@ final class PluginsController
 
         return Response::html($this->app->view->render('account/plugins_find', [
             'title'      => 'Plugins finden',
-            'active'     => 'konto/plugins',
+            'active'     => 'account/plugins',
             'tab'        => 'finden',
             'plugins'    => $plugins,
             'tags'       => $tags,
@@ -211,7 +211,7 @@ final class PluginsController
             'title'     => $plugin['name'],
             'readme'    => $readme['html'],
             'readmeErr' => $readme['error'],
-            'active'    => 'konto/plugins',
+            'active'    => 'account/plugins',
             'tab'       => 'finden',
             'plugin'    => $plugin,
             'state'     => $states[$plugin['slug']] ?? null,
