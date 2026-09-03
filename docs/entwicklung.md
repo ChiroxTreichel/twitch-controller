@@ -471,10 +471,13 @@ Beteiligte Klassen:
 | `core/Admin/PluginsController.php` | die beiden Reiter und die Detailseite |
 | `core/Support/Markdown.php` | Beschreibungstexte, escapt vor dem Umwandeln |
 
-Der Katalog wird eine Stunde lang als frisch betrachtet und liegt in der
-Einstellung `registry_cache`. Die Liste der installierten Plugins liest
-bewusst nur den Zwischenspeicher, damit sie nicht auf einen fremden Server
-wartet.
+Der Katalog wird bei **jedem** Aufruf des Reiters live geholt, und
+gesucht wird auf dem Katalogserver (`?search=`) - er kennt seinen
+Bestand. Zwischengespeichert wird nur die letzte vollständige Antwort in
+der Einstellung `registry_cache`, als Rückfall für die Liste der
+installierten Plugins: die wird bei jedem Seitenaufruf gebraucht und darf
+nicht auf einen fremden Server warten. Ein Suchergebnis landet dort
+bewusst nicht - es ist ausschnittsweise.
 
 Beim Installieren prüft `Installer` in dieser Reihenfolge: gleicher Host
 wie der Katalog, Größenbegrenzungen, `sha256`, optionale Signatur, Pfade
@@ -487,7 +490,43 @@ Weil der Webserver als `www-data` läuft, muss `plugins/` ihm gehören -
 `install.sh` setzt das. Ist es nicht beschreibbar, sagt der Reiter das und
 bietet nichts zum Installieren an.
 
-Die Gegenseite samt Format liegt in [registry/README.md](../registry/README.md).
+### Die Gegenseite
+
+Der Katalogserver liegt nicht in diesem Repository. Verlangt werden drei
+Endpunkte:
+
+| Adresse | Antwort |
+| --- | --- |
+| `/index.php` | der Katalog als JSON, `?search=` filtert |
+| `/download.php?name=<slug>` | das ZIP |
+| `/readme.php?name=<slug>` | die Beschreibung als Markdown |
+
+Ein Katalogeintrag:
+
+```json
+{
+  "slug": "example",
+  "name": "Beispiel",
+  "version": "1.0.0",
+  "description": "…",
+  "author": "Twitch-Controller",
+  "tags": ["beispiel"],
+  "requires": { "core": ">=1.0.0" },
+  "download": "https://plugins.talutah.de/download.php?name=example",
+  "readme": "https://plugins.talutah.de/readme.php?name=example",
+  "sha256": "7b8ef82d…",
+  "size": 6466,
+  "updated_at": "2026-09-03T09:37:09+00:00"
+}
+```
+
+Pflicht sind `slug`, `version` und `download` - fehlt eines, verwirft
+der Client den Eintrag. `sha256` braucht er zum Installieren. `summary`
+darf fehlen; dann nimmt der Client den ersten Satz aus `description`.
+
+Zwei Formen sind erlaubt: das Objekt mit `format` und `plugins`, oder
+eine nackte Liste. Eine leere Liste ist ein gültiger Katalog, kein
+Fehler.
 
 Eigene Einstellungen eines Plugins - etwa PayPal-Zugangsdaten - werden
 über den Hook `plugin.settings` in der Plugin-Liste verlinkt:
