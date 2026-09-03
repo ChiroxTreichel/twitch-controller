@@ -266,7 +266,7 @@ final class SetupController
         return Response::html($this->app->view->render('setup/channel', [
             'title'  => 'Einrichtung · Kanal verbinden',
             'step'   => self::STEP_CHANNEL,
-            'error'  => $error ?? ($_GET['fehler'] ?? null),
+            'error'  => $error ?? ($_GET['error'] ?? null),
             'scopes' => $this->app->twitch->broadcasterScopes(),
         ], 'setup/layout'));
     }
@@ -353,7 +353,7 @@ final class SetupController
         $this->app->settings->set('installed', true);
         $this->app->settings->set('installed_at', date('c'));
 
-        return Response::redirect($this->app->url('/konto/plugins?willkommen=1'));
+        return Response::redirect($this->app->url('/account/plugins?willkommen=1'));
     }
 
     public function finish(Request $request): Response
@@ -366,7 +366,7 @@ final class SetupController
         $this->app->settings->set('installed', true);
         $this->app->settings->set('installed_at', date('c'));
 
-        return Response::redirect($this->app->url('/konto/plugins?willkommen=1'));
+        return Response::redirect($this->app->url('/account/plugins?willkommen=1'));
     }
 
     // -----------------------------------------------------------------

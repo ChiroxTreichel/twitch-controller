@@ -45,7 +45,7 @@
         <div class="empty">
             <?= $e(translate('account.plugins.none')) ?><br>
             <a class="btn btn-small" style="margin-top:14px;"
-               href="<?= $e($url('/konto/plugins/finden')) ?>"><?= $e(translate('account.plugins.tab_find')) ?></a>
+               href="<?= $e($url('/account/plugins/find')) ?>"><?= $e(translate('account.plugins.tab_find')) ?></a>
         </div>
     </div>
 <?php else: ?>
@@ -90,7 +90,7 @@
                         <?php endif; ?>
 
                         <?php if ($row['catalog'] !== null): ?>
-                            <form method="post" action="<?= $e($url('/konto/plugins')) ?>">
+                            <form method="post" action="<?= $e($url('/account/plugins')) ?>">
                                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                                 <input type="hidden" name="action" value="download_update">
                                 <input type="hidden" name="slug" value="<?= $e($manifest->slug) ?>">
@@ -99,7 +99,7 @@
                                 </button>
                             </form>
                         <?php elseif ($row['updatable']): ?>
-                            <form method="post" action="<?= $e($url('/konto/plugins')) ?>">
+                            <form method="post" action="<?= $e($url('/account/plugins')) ?>">
                                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                                 <input type="hidden" name="action" value="update">
                                 <input type="hidden" name="slug" value="<?= $e($manifest->slug) ?>">
@@ -108,7 +108,7 @@
                         <?php endif; ?>
 
                         <?php if (!$row['installed'] || !$row['enabled']): ?>
-                            <form method="post" action="<?= $e($url('/konto/plugins')) ?>">
+                            <form method="post" action="<?= $e($url('/account/plugins')) ?>">
                                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                                 <input type="hidden" name="action" value="enable">
                                 <input type="hidden" name="slug" value="<?= $e($manifest->slug) ?>">
@@ -118,7 +118,7 @@
                                 </button>
                             </form>
                         <?php else: ?>
-                            <form method="post" action="<?= $e($url('/konto/plugins')) ?>">
+                            <form method="post" action="<?= $e($url('/account/plugins')) ?>">
                                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                                 <input type="hidden" name="action" value="disable">
                                 <input type="hidden" name="slug" value="<?= $e($manifest->slug) ?>">
@@ -127,7 +127,7 @@
                         <?php endif; ?>
 
                         <?php if ($row['installed'] && !$row['enabled']): ?>
-                            <form method="post" action="<?= $e($url('/konto/plugins')) ?>"
+                            <form method="post" action="<?= $e($url('/account/plugins')) ?>"
                                   onsubmit="return confirm('<?= $e(translate('account.plugins.confirm_remove')) ?>');">
                                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                                 <input type="hidden" name="action" value="uninstall">

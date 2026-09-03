@@ -3,7 +3,7 @@
  * Vorlage eines Plugins. Liegt im Plugin, benutzt aber das Layout des
  * Kerns - erreicht wird sie mit:
  *
- *   $app->view->from($plugin->directory . '/views')->render('seite', [...])
+ *   $app->view->from($plugin->directory . '/views')->render('page', [...])
  *
  * @var callable $e
  * @var callable $url
@@ -15,7 +15,7 @@
  * @var string $notice
  */
 ?>
-<link rel="stylesheet" href="<?= $e($asset('/plugin/beispiel/assets/beispiel.css')) ?>">
+<link rel="stylesheet" href="<?= $e($asset('/plugin/example/assets/example.css')) ?>">
 
 <h1><?= $e(translate('example.name')) ?></h1>
 <p class="lead"><?= $e(translate('example.lead')) ?></p>
@@ -27,11 +27,11 @@
 <div class="card">
     <h2><?= $e(translate('example.own_setting')) ?></h2>
     <p class="hint">
-        <?= translate('example.scope_hint', ['scope' => '<span class="mono">plugin:beispiel</span>']) ?>
+        <?= translate('example.scope_hint', ['scope' => '<span class="mono">plugin:example</span>']) ?>
     </p>
 
     <?php if ($canManage): ?>
-        <form method="post" action="<?= $e($url('/beispiel')) ?>">
+        <form method="post" action="<?= $e($url('/example')) ?>">
             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
             <div class="field">
                 <label for="gruss"><?= $e(translate('example.greeting')) ?></label>
@@ -47,9 +47,9 @@
 
 <div class="card">
     <h2><?= $e(translate('example.events_title')) ?></h2>
-    <p class="beispiel-hinweis">
+    <p class="example-notice">
         Dieser Absatz ist über eine eigene CSS-Datei des Plugins gestaltet
-        (<span class="mono">assets/beispiel.css</span>).
+        (<span class="mono">assets/example.css</span>).
     </p>
     <p>
         Follows gezählt seit Installation: <strong><?= $e((string) $zaehler) ?></strong>

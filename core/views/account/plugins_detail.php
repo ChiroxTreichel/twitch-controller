@@ -28,7 +28,7 @@ $neuer = $state !== null
 <?= $view->render('account/_plugin_tabs', ['tab' => $tab], null) ?>
 
 <p style="margin:-6px 0 18px;">
-    <a class="hint" href="<?= $e($url('/konto/plugins/finden')) ?>">&larr; <?= $e(translate('market.back')) ?></a>
+    <a class="hint" href="<?= $e($url('/account/plugins/find')) ?>">&larr; <?= $e(translate('market.back')) ?></a>
 </p>
 
 <?php if ($notice !== ''): ?>
@@ -76,7 +76,7 @@ $neuer = $state !== null
             <?php if (!$coreOk): ?>
                 <span class="badge badge-error"><?= $e(translate('market.needs_newer_core')) ?></span>
             <?php elseif ($canManage && $canWrite && ($state === null || $neuer)): ?>
-                <form method="post" action="<?= $e($url('/konto/plugins/finden')) ?>">
+                <form method="post" action="<?= $e($url('/account/plugins/find')) ?>">
                     <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                     <input type="hidden" name="action" value="install">
                     <input type="hidden" name="slug" value="<?= $e($plugin['slug']) ?>">
@@ -85,7 +85,7 @@ $neuer = $state !== null
                     </button>
                 </form>
             <?php elseif ($state !== null): ?>
-                <a class="btn btn-ghost btn-small" href="<?= $e($url('/konto/plugins')) ?>"><?= $e(translate('common.manage')) ?></a>
+                <a class="btn btn-ghost btn-small" href="<?= $e($url('/account/plugins')) ?>"><?= $e(translate('common.manage')) ?></a>
             <?php endif; ?>
         </div>
     </div>

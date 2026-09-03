@@ -1,5 +1,5 @@
 {
-  "slug": "beispiel",
+  "slug": "example",
   "name": "Beispiel",
   "version": "1.0.0",
   "description": "Zeigt, wie ein Plugin aufgebaut ist: Menüpunkt, eigene Seite, eigene Einstellungen, eigene Rechte, Reaktion auf Events. Kann gelöscht werden.",

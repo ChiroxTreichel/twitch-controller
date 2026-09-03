@@ -39,7 +39,7 @@
 </table>
 
 <?php if ($ready): ?>
-    <form method="post" action="<?= $e($url('/setup/datenbank')) ?>" style="margin-top:22px;">
+    <form method="post" action="<?= $e($url('/setup/database')) ?>" style="margin-top:22px;">
         <button class="btn" type="submit"><?= $e(translate('setup.check.continue')) ?></button>
     </form>
 <?php else: ?>

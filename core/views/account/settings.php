@@ -90,7 +90,7 @@ use Overlays\Core\Support\Dates;
                         cd <?= $e($installPath) ?> &amp;&amp; sudo ./install.sh
                     </p>
                 <?php elseif ($canManage): ?>
-                    <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>"
+                    <form method="post" action="<?= $e($url('/account/settings')) ?>"
                           style="margin-top:12px;">
                         <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                         <input type="hidden" name="action" value="update_apply">
@@ -116,7 +116,7 @@ use Overlays\Core\Support\Dates;
         <?php endif; ?>
 
         <?php if ($canManage && $update['requested_at'] === 0): ?>
-            <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>" style="margin-top:14px;">
+            <form method="post" action="<?= $e($url('/account/settings')) ?>" style="margin-top:14px;">
                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                 <input type="hidden" name="action" value="update_check">
                 <button class="btn btn-ghost btn-small" type="submit"><?= $e(translate('settings.system.check')) ?></button>
@@ -125,7 +125,7 @@ use Overlays\Core\Support\Dates;
     <?php endif; ?>
 
     <?php if ($canManage): ?>
-        <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>" class="row"
+        <form method="post" action="<?= $e($url('/account/settings')) ?>" class="row"
               style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);">
             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
             <input type="hidden" name="action" value="timezone">
@@ -140,7 +140,7 @@ use Overlays\Core\Support\Dates;
             <button class="btn btn-ghost btn-small" type="submit">Übernehmen</button>
         </form>
 
-        <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>" class="row"
+        <form method="post" action="<?= $e($url('/account/settings')) ?>" class="row"
               style="margin-top:10px;">
             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
             <input type="hidden" name="action" value="language">
@@ -233,7 +233,7 @@ use Overlays\Core\Support\Dates;
             </p>
             <?php if ($canManage): ?>
                 <p style="margin:12px 0 0;">
-                    <a class="btn btn-small" href="<?= $e($url('/konto/einstellungen/kanal')) ?>">
+                    <a class="btn btn-small" href="<?= $e($url('/account/settings/channel')) ?>">
                         <?= $e(translate('common.reconnect_channel')) ?>
                     </a>
                 </p>
@@ -246,13 +246,13 @@ use Overlays\Core\Support\Dates;
 
     <?php if ($canManage): ?>
         <div class="row" style="margin-top:14px;">
-            <a class="btn btn-small" href="<?= $e($url('/konto/einstellungen/kanal')) ?>">
+            <a class="btn btn-small" href="<?= $e($url('/account/settings/channel')) ?>">
                 <?= $e($broadcasterToken === null
                     ? translate('settings.channel.connect')
                     : translate('settings.channel.reconnect')) ?>
             </a>
             <?php if ($broadcasterToken !== null): ?>
-                <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>"
+                <form method="post" action="<?= $e($url('/account/settings')) ?>"
                       onsubmit="return confirm('<?= $e(translate('settings.channel.confirm_disconnect')) ?>');">
                     <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                     <input type="hidden" name="action" value="disconnect_channel">
@@ -273,7 +273,7 @@ use Overlays\Core\Support\Dates;
     </p>
 
     <?php if ($canManage): ?>
-        <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>">
+        <form method="post" action="<?= $e($url('/account/settings')) ?>">
             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
             <input type="hidden" name="action" value="eventsub">
             <button class="btn btn-small" type="submit"><?= $e(translate('settings.events.sync')) ?></button>
@@ -296,7 +296,7 @@ use Overlays\Core\Support\Dates;
     </p>
 
     <?php if ($canManage): ?>
-        <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>">
+        <form method="post" action="<?= $e($url('/account/settings')) ?>">
             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
             <input type="hidden" name="action" value="credentials">
 

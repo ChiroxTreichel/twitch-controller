@@ -12,6 +12,6 @@
 <div class="row gap">
     <a class="btn btn-ghost" href="<?= $e($url('/')) ?>"><?= $e(translate('common.back')) ?></a>
     <?php if (!empty($rescue)): ?>
-        <a class="btn" href="<?= $e($url('/rettung')) ?>"><?= $e(translate('rescue.title')) ?></a>
+        <a class="btn" href="<?= $e($url('/rescue')) ?>"><?= $e(translate('rescue.title')) ?></a>
     <?php endif ?>
 </div>

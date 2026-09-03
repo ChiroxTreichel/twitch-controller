@@ -54,7 +54,7 @@
     <?php endforeach; ?>
 
     <?php if ($brauchtNeuVerbinden): ?>
-        <a class="btn" href="<?= $e($url('/setup/kanal')) ?>">
+        <a class="btn" href="<?= $e($url('/setup/channel')) ?>">
             <?= $e(translate('common.reconnect_channel')) ?>
         </a>
         <p class="hint" style="margin-top:10px;">
@@ -101,7 +101,7 @@
     </button>
 </form>
 
-<form method="post" action="<?= $e($url('/setup/fertig')) ?>" style="margin-top:12px;">
+<form method="post" action="<?= $e($url('/setup/finish')) ?>" style="margin-top:12px;">
     <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
     <button class="btn btn-ghost btn-small" type="submit">
         <?= $e(translate('setup.events.skip')) ?>

@@ -38,4 +38,4 @@
     <?= $e(translate('setup.channel.use_channel_account')) ?>
 </div>
 
-<a class="btn" href="<?= $e($url('/setup/kanal')) ?>"><?= $e(translate('common.sign_in_twitch')) ?></a>
+<a class="btn" href="<?= $e($url('/setup/channel')) ?>"><?= $e(translate('common.sign_in_twitch')) ?></a>

@@ -3,7 +3,7 @@
  * Notausgang.
  *
  * Der Grund fuer diese Seite: Update pruefen und einspielen lag nur auf
- * /konto/einstellungen. Reisst dort eine einzige Zeile die Seite, ist
+ * /account/settings. Reisst dort eine einzige Zeile die Seite, ist
  * genau der Knopf unerreichbar, der den Fehler behebt - und es bleibt
  * nur die Kommandozeile. Deshalb liegt beides zusaetzlich hier, auf
  * einer Seite ohne Navigation, ohne Plugins und mit so wenig Inhalt wie
@@ -34,7 +34,7 @@
     <h2><?= $e(translate('rescue.update_heading')) ?></h2>
     <p class="muted"><?= $e(translate('rescue.update_hint', ['version' => $version])) ?></p>
 
-    <form method="post" action="<?= $e($url('/rettung')) ?>" class="row gap">
+    <form method="post" action="<?= $e($url('/rescue')) ?>" class="row gap">
         <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
         <button class="btn btn-ghost" type="submit" name="action" value="update_check">
             <?= $e(translate('rescue.update_check')) ?>
@@ -49,7 +49,7 @@
     <h2><?= $e(translate('rescue.language_heading')) ?></h2>
     <p class="muted"><?= $e(translate('rescue.language_hint')) ?></p>
 
-    <form method="post" action="<?= $e($url('/rettung')) ?>" class="row gap">
+    <form method="post" action="<?= $e($url('/rescue')) ?>" class="row gap">
         <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
         <?php foreach ($languages as $code => $label): ?>
             <button class="btn <?= $code === $language ? '' : 'btn-ghost' ?>"
@@ -61,6 +61,6 @@
     </form>
 </div>
 
-<a class="btn btn-ghost" href="<?= $e($url('/konto/einstellungen')) ?>">
+<a class="btn btn-ghost" href="<?= $e($url('/account/settings')) ?>">
     <?= $e(translate('rescue.back_to_settings')) ?>
 </a>

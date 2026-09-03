@@ -442,7 +442,7 @@ $zweig = static function (array $knoten, int $tiefe) use (&$zweig, $e, $selected
     var laeuft = true;
     var timer = null;
 
-    var quelle = <?= json_encode($url('/obs/neu')) ?>
+    var quelle = <?= json_encode($url('/obs/updates')) ?>
         + '?zeitraum=' + encodeURIComponent(<?= json_encode($range) ?>)
         + <?= $allSelected ? "''" : "'&filter=' + encodeURIComponent(" . json_encode(implode(',', $selected)) . ")" ?>;
 

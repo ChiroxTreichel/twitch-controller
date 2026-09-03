@@ -1,7 +1,0 @@
-{
-  "summary": "Zeigt an einem lauffaehigen Beispiel, wie ein Plugin aufgebaut ist",
-  "description": "Dieses Plugin tut nichts Nuetzliches, dafuer ist jede Zeile kommentiert.\n\nEnthalten ist:\n- ein eigener Menuepunkt und eine eigene Seite\n- eigene Rechte, die in der Benutzerverwaltung auftauchen\n- eine eigene Einstellung im Scope `plugin:beispiel`\n- eine Reaktion auf Twitch-Events ueber `core.event.stored`\n- eine wiederkehrende Aufgabe ueber `cron.tick`\n\nWer ein Plugin schreiben will, kopiert diesen Ordner und legt los.",
-  "tags": ["beispiel", "entwicklung"],
-  "homepage": "https://github.com/ChiroxTreichel/twitch-controller",
-  "icon": "img/beispiel.png"
-}

@@ -159,6 +159,10 @@ einer Minute durch. Danach die Seite neu laden.
 
 Deine Einstellungen, Benutzer und Daten bleiben dabei erhalten.
 
+Dieselben Knöpfe liegen zur Sicherheit noch ein zweites Mal unter
+`https://deine-domain/rescue` — für den Fall, dass die Einstellungsseite
+selbst einmal nicht mehr lädt.
+
 **Manche Updates brauchen doch die Konsole.** Wenn sich am Server selbst
 etwas ändert, sagt dir die Oberfläche das und zeigt den passenden Befehl
 an. Er sieht so aus:
@@ -207,6 +211,18 @@ nicht.
 **Es kommen keine Alerts / keine Aktivitäten.** Schau unter *Konto →
 Einstellungen* und klicke auf **Abos abgleichen**. Das ist auch nach jedem
 neu aktivierten Plugin nötig.
+
+**Eine Seite in der Verwaltung lädt nicht mehr.** Dafür gibt es den
+Notausgang. Rufe ihn direkt auf:
+
+```
+https://deine-domain/rescue
+```
+
+Diese Seite ist absichtlich fast leer — kein Menü, keine Plugins — und
+läuft deshalb auch dann noch, wenn eine andere Seite streikt. Dort kannst
+du das System aktualisieren und die Sprache umstellen. Meistens ist damit
+alles wieder in Ordnung, ohne dass du auf die Konsole musst.
 
 **Irgendwas anderes.** Dieser Befehl zeigt dir, was der Server gerade
 macht:

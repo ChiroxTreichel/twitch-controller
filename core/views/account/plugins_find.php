@@ -45,7 +45,7 @@
 <?php endif; ?>
 
 <div class="card">
-    <form method="get" action="<?= $e($url('/konto/plugins/finden')) ?>" class="row">
+    <form method="get" action="<?= $e($url('/account/plugins/find')) ?>" class="row">
         <input class="input grow" type="search" name="q" placeholder="<?= $e(translate('market.search_placeholder')) ?>"
                value="<?= $e($query) ?>">
         <?php if ($tag !== ''): ?>
@@ -53,7 +53,7 @@
         <?php endif; ?>
         <button class="btn btn-small" type="submit"><?= $e(translate('common.search')) ?></button>
         <?php if ($query !== '' || $tag !== ''): ?>
-            <a class="btn btn-ghost btn-small" href="<?= $e($url('/konto/plugins/finden')) ?>"><?= $e(translate('market.show_all')) ?></a>
+            <a class="btn btn-ghost btn-small" href="<?= $e($url('/account/plugins/find')) ?>"><?= $e(translate('market.show_all')) ?></a>
         <?php endif; ?>
     </form>
 
@@ -62,7 +62,7 @@
             <?php foreach ($tags as $one): ?>
                 <a class="badge<?= $tag === $one ? ' badge-ok' : '' ?>"
                    style="text-decoration:none;"
-                   href="<?= $e($url('/konto/plugins/finden?' . http_build_query(
+                   href="<?= $e($url('/account/plugins/find?' . http_build_query(
                        $tag === $one ? ['q' => $query] : ['q' => $query, 'tag' => $one]
                    ))) ?>"><?= $e($one) ?></a>
             <?php endforeach; ?>
@@ -78,7 +78,7 @@
             <?php endif; ?>
         </span>
         <?php if ($canManage): ?>
-            <form method="post" action="<?= $e($url('/konto/plugins/finden')) ?>">
+            <form method="post" action="<?= $e($url('/account/plugins/find')) ?>">
                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                 <input type="hidden" name="action" value="refresh">
                 <button class="btn btn-ghost btn-small" type="submit"><?= $e(translate('market.reload')) ?></button>
@@ -103,7 +103,7 @@
 <?php foreach ($plugins as $plugin): ?>
     <?php
     $state = $states[$plugin['slug']] ?? null;
-    $detailUrl = $url('/konto/plugins/finden/' . rawurlencode((string) $plugin['slug']));
+    $detailUrl = $url('/account/plugins/find/' . rawurlencode((string) $plugin['slug']));
     $neuer = $state !== null && version_compare((string) $state['version'], (string) $plugin['version'], '<');
     ?>
     <div class="card">
@@ -138,7 +138,7 @@
             <div class="row">
                 <a class="btn btn-ghost btn-small" href="<?= $e($detailUrl) ?>"><?= $e(translate('common.view')) ?></a>
                 <?php if ($canManage && $canWrite && ($state === null || $neuer)): ?>
-                    <form method="post" action="<?= $e($url('/konto/plugins/finden')) ?>">
+                    <form method="post" action="<?= $e($url('/account/plugins/find')) ?>">
                         <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                         <input type="hidden" name="action" value="install">
                         <input type="hidden" name="slug" value="<?= $e($plugin['slug']) ?>">

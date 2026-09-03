@@ -38,15 +38,15 @@ final class AccountController
             'catalog'  => $this->app->auth->permissionCatalog(),
             'canManage' => $this->app->auth->can('Konto.Benutzer.Manage'),
             'csrf'     => $this->app->auth->csrfToken(),
-            'notice'   => $request->get('hinweis'),
-            'error'    => $request->get('fehler'),
+            'notice'   => $request->get('notice'),
+            'error'    => $request->get('error'),
             'editing'  => $request->get('bearbeiten'),
         ]));
     }
 
     public function usersAction(Request $request): Response
     {
-        $guard = $this->guardPost($request, 'Konto.Benutzer.Manage', '/konto/benutzer');
+        $guard = $this->guardPost($request, 'Konto.Benutzer.Manage', '/account/users');
         if ($guard !== null) {
             return $guard;
         }
@@ -58,12 +58,12 @@ final class AccountController
                 case 'invite':
                     $invite = $this->app->auth->createInvite((int) ($request->input('hours') ?: '72'));
 
-                    return $this->back('/konto/benutzer', 'Einladungslink erstellt: ' . $invite['url']);
+                    return $this->back('/account/users', 'Einladungslink erstellt: ' . $invite['url']);
 
                 case 'revoke_invite':
                     $this->app->auth->revokeInvite($request->input('code'));
 
-                    return $this->back('/konto/benutzer', 'Einladung zurückgezogen.');
+                    return $this->back('/account/users', 'Einladung zurückgezogen.');
 
                 case 'permissions':
                     $permissions = $request->post['permissions'] ?? [];
@@ -72,18 +72,18 @@ final class AccountController
                         is_array($permissions) ? array_map('strval', $permissions) : []
                     );
 
-                    return $this->back('/konto/benutzer', 'Rechte gespeichert.');
+                    return $this->back('/account/users', 'Rechte gespeichert.');
 
                 case 'remove':
                     $this->app->auth->removeUser($request->input('twitch_id'));
 
-                    return $this->back('/konto/benutzer', 'Benutzer entfernt.');
+                    return $this->back('/account/users', 'Benutzer entfernt.');
             }
         } catch (Throwable $e) {
-            return $this->back('/konto/benutzer', null, $e->getMessage());
+            return $this->back('/account/users', null, $e->getMessage());
         }
 
-        return $this->back('/konto/benutzer', null, 'Unbekannte Aktion.');
+        return $this->back('/account/users', null, 'Unbekannte Aktion.');
     }
 
     // -----------------------------------------------------------------
@@ -110,8 +110,8 @@ final class AccountController
             'active'        => 'konto/einstellungen',
             'canManage'     => $this->app->auth->can('Konto.Einstellungen.Manage'),
             'csrf'          => $this->app->auth->csrfToken(),
-            'notice'        => $request->get('hinweis'),
-            'error'         => $request->get('fehler'),
+            'notice'        => $request->get('notice'),
+            'error'         => $request->get('error'),
             'clientId'      => $this->app->settings->string('twitch_client_id'),
             'hasSecret'     => $this->app->settings->hasSecret('twitch_client_secret'),
             'hasWebhook'    => $this->app->settings->hasSecret('twitch_webhook_secret'),
@@ -143,7 +143,7 @@ final class AccountController
 
     public function settingsAction(Request $request): Response
     {
-        $guard = $this->guardPost($request, 'Konto.Einstellungen.Manage', '/konto/einstellungen');
+        $guard = $this->guardPost($request, 'Konto.Einstellungen.Manage', '/account/settings');
         if ($guard !== null) {
             return $guard;
         }
@@ -167,7 +167,7 @@ final class AccountController
                     if ($webhookSecret !== '') {
                         if (strlen($webhookSecret) < 10 || strlen($webhookSecret) > 100) {
                             return $this->back(
-                                '/konto/einstellungen',
+                                '/account/settings',
                                 null,
                                 'Das Webhook-Secret muss 10 bis 100 Zeichen haben.'
                             );
@@ -178,7 +178,7 @@ final class AccountController
                     $this->app->settings->forget('twitch_app_token');
                     $this->app->settings->forget('twitch_app_token_expires');
 
-                    return $this->back('/konto/einstellungen', 'Zugangsdaten gespeichert.');
+                    return $this->back('/account/settings', 'Zugangsdaten gespeichert.');
 
                 case 'eventsub':
                     $report = $this->app->twitch->eventSub()->sync();
@@ -197,13 +197,13 @@ final class AccountController
                         }
 
                         return $this->back(
-                            '/konto/einstellungen',
+                            '/account/settings',
                             null,
                             implode(' ', array_keys($ursachen))
                         );
                     }
 
-                    return $this->back('/konto/einstellungen', sprintf(
+                    return $this->back('/account/settings', sprintf(
                         'Abos abgeglichen: %d neu, %d bestanden, %d entfernt.',
                         count($report['created']),
                         count($report['kept']),
@@ -213,18 +213,18 @@ final class AccountController
                 case 'disconnect_channel':
                     $this->app->twitch->tokens()->delete(TokenStore::BROADCASTER);
 
-                    return $this->back('/konto/einstellungen', 'Kanal-Verbindung getrennt.');
+                    return $this->back('/account/settings', 'Kanal-Verbindung getrennt.');
 
                 case 'timezone':
                     $timezone = $request->input('timezone');
                     if (!in_array($timezone, timezone_identifiers_list(), true)) {
-                        return $this->back('/konto/einstellungen', null, 'Unbekannte Zeitzone.');
+                        return $this->back('/account/settings', null, 'Unbekannte Zeitzone.');
                     }
 
                     $this->app->settings->set('timezone', $timezone);
                     $this->app->applyTimezone();
 
-                    return $this->back('/konto/einstellungen', 'Zeitzone gespeichert: ' . $timezone);
+                    return $this->back('/account/settings', 'Zeitzone gespeichert: ' . $timezone);
 
                 case 'language':
                     $language = Translator::normalize($request->input('language'));
@@ -232,7 +232,7 @@ final class AccountController
                     $this->app->applyLanguage();
 
                     return $this->back(
-                        '/konto/einstellungen',
+                        '/account/settings',
                         translate('account.settings.language_saved', ['language' => Translator::label($language)])
                     );
 
@@ -240,28 +240,28 @@ final class AccountController
                     $check = (new Updater($this->app))->check();
 
                     return $check['ok']
-                        ? $this->back('/konto/einstellungen', $check['message'])
-                        : $this->back('/konto/einstellungen', null, $check['message']);
+                        ? $this->back('/account/settings', $check['message'])
+                        : $this->back('/account/settings', null, $check['message']);
 
                 case 'update_apply':
                     // Ausgefuehrt wird das im worker-Container, weil der
                     // Webserver im Projektordner nicht schreiben darf.
                     (new Updater($this->app))->request();
 
-                    return $this->back('/konto/einstellungen', translate('settings.update.queued'));
+                    return $this->back('/account/settings', translate('settings.update.queued'));
             }
         } catch (Throwable $e) {
-            return $this->back('/konto/einstellungen', null, $e->getMessage());
+            return $this->back('/account/settings', null, $e->getMessage());
         }
 
-        return $this->back('/konto/einstellungen', null, 'Unbekannte Aktion.');
+        return $this->back('/account/settings', null, 'Unbekannte Aktion.');
     }
 
     /**
      * Notausgang: Update und Sprache auf einer eigenen Seite.
      *
      * Update pruefen und einspielen lag ausschliesslich auf
-     * /konto/einstellungen. Geht dort etwas kaputt - eine schiefe
+     * /account/settings. Geht dort etwas kaputt - eine schiefe
      * Uebersetzung reicht -, ist genau der Knopf unerreichbar, der den
      * Fehler behebt, und es bleibt nur die Kommandozeile. Diese Seite
      * kommt ohne Navigation, ohne Plugins und ohne Twitch-Abfragen aus
@@ -277,8 +277,8 @@ final class AccountController
         }
 
         return Response::html($this->app->view->render('rescue', [
-            'notice'    => $request->query('hinweis'),
-            'error'     => $request->query('fehler'),
+            'notice'    => $request->query('notice'),
+            'error'     => $request->query('error'),
             'csrf'      => $this->app->auth->csrfToken(),
             'version'   => $updater->currentVersion(),
             'language'  => $this->app->language(),
@@ -288,7 +288,7 @@ final class AccountController
 
     public function rescueAction(Request $request): Response
     {
-        if ($guard = $this->guardPost($request, 'Konto.Einstellungen.Edit', '/rettung')) {
+        if ($guard = $this->guardPost($request, 'Konto.Einstellungen.Edit', '/rescue')) {
             return $guard;
         }
 
@@ -298,28 +298,28 @@ final class AccountController
                     $check = (new Updater($this->app))->check();
 
                     return $check['ok']
-                        ? $this->back('/rettung', $check['message'])
-                        : $this->back('/rettung', null, $check['message']);
+                        ? $this->back('/rescue', $check['message'])
+                        : $this->back('/rescue', null, $check['message']);
 
                 case 'update_apply':
                     (new Updater($this->app))->request();
 
-                    return $this->back('/rettung', translate('settings.update.queued'));
+                    return $this->back('/rescue', translate('settings.update.queued'));
 
                 case 'language':
                     $language = Translator::normalize($request->input('language'));
                     $this->app->settings->set('language', $language);
                     $this->app->applyLanguage();
 
-                    return $this->back('/rettung', translate('account.settings.language_saved', [
+                    return $this->back('/rescue', translate('account.settings.language_saved', [
                         'language' => Translator::label($language),
                     ]));
             }
         } catch (Throwable $e) {
-            return $this->back('/rettung', null, $e->getMessage());
+            return $this->back('/rescue', null, $e->getMessage());
         }
 
-        return $this->back('/rettung', null, translate('common.error.unknown_action'));
+        return $this->back('/rescue', null, translate('common.error.unknown_action'));
     }
 
     /**
@@ -329,7 +329,7 @@ final class AccountController
     public function reconnectChannel(Request $request): Response
     {
         if (!$this->app->auth->isSuperadmin()) {
-            return $this->back('/konto/einstellungen', null, 'Das darf nur der Kanalinhaber.');
+            return $this->back('/account/settings', null, 'Das darf nur der Kanalinhaber.');
         }
 
         return Response::redirect($this->app->twitch->oauth()->authorizeUrl(
@@ -376,10 +376,10 @@ final class AccountController
     {
         $query = [];
         if ($notice !== null) {
-            $query['hinweis'] = $notice;
+            $query['notice'] = $notice;
         }
         if ($error !== null) {
-            $query['fehler'] = $error;
+            $query['error'] = $error;
         }
 
         return Response::redirect(

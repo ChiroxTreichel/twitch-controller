@@ -66,13 +66,13 @@ $hooks->on('permissions.catalog', static function (array $catalog): array {
 // "order" bestimmt die Position: der Kern-Bereich "Konto" hat 0,
 // alles darueber landet dahinter.
 $hooks->on('admin.nav', static function (array $nav): array {
-    $nav['beispiel'] = [
+    $nav['example'] = [
         'label' => translate('example.name'),
         'order' => 90,
         'items' => [
             [
                 'label'      => translate('example.page'),
-                'href'       => '/beispiel',
+                'href'       => '/example',
                 'permission' => 'Beispiel.Seite.View',
             ],
         ],
@@ -90,10 +90,10 @@ $hooks->on('admin.nav', static function (array $nav): array {
 $hooks->on('plugin.settings', static function (array $pages) use ($plugin): array {
     $pages[$plugin->slug] = [
         // Auch Plugin-Texte laufen ueber translate(). Die Sprachdatei
-        // liegt in plugins/beispiel/lang/<code>.json und wird beim
+        // liegt in plugins/example/lang/<code>.json und wird beim
         // Laden des Plugins ergaenzt.
         'label' => translate('nav.settings'),
-        'href'  => '/beispiel',
+        'href'  => '/example',
     ];
 
     return $pages;
@@ -103,21 +103,21 @@ $hooks->on('plugin.settings', static function (array $pages) use ($plugin): arra
 //  3. Eigene Seiten
 // -------------------------------------------------------------------
 // Vorlagen liegen im Plugin, benutzen aber das Layout des Kerns.
-$router->get('/beispiel', static function (Request $request) use ($app, $plugin, $scope): Response {
+$router->get('/example', static function (Request $request) use ($app, $plugin, $scope): Response {
     return Response::html(
-        $app->view->from($plugin->directory . '/views')->render('seite', [
+        $app->view->from($plugin->directory . '/views')->render('page', [
             'title'     => 'Beispiel',
-            'active'    => 'beispiel',
+            'active'    => 'example',
             'gruss'     => $app->settings->string('gruss', 'Moin', $scope),
             'zaehler'   => $app->settings->int('events_gesehen', 0, $scope),
             'canManage' => $app->auth->can('Beispiel.Seite.Manage'),
             'csrf'      => $app->auth->csrfToken(),
-            'notice'    => $request->get('hinweis'),
+            'notice'    => $request->get('notice'),
         ])
     );
 }, ['auth' => true, 'permission' => 'Beispiel.Seite.View']);
 
-$router->post('/beispiel', static function (Request $request) use ($app, $scope): Response {
+$router->post('/example', static function (Request $request) use ($app, $scope): Response {
     if (!$app->auth->checkCsrf($request->input('csrf'))) {
         return Response::text('Formular abgelaufen.', 400);
     }
@@ -128,7 +128,7 @@ $router->post('/beispiel', static function (Request $request) use ($app, $scope)
 
     $app->settings->set('gruss', $request->input('gruss'), $scope);
 
-    return Response::redirect($app->url('/beispiel?hinweis=Gespeichert.'));
+    return Response::redirect($app->url('/example?notice=Gespeichert.'));
 }, ['auth' => true]);
 
 // -------------------------------------------------------------------

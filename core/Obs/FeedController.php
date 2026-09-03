@@ -17,7 +17,7 @@ use Overlays\Core\Http\Response;
  * Adresse: /obs
  * Einstellungen dazu: Konto > Aktivitaeten
  *
- * Nachladen laeuft ueber /obs/neu?since_id=…
+ * Nachladen laeuft ueber /obs/updates?since_id=…
  * Die Seite fragt in einem festen Takt nach und haengt Neues oben an,
  * ohne neu zu laden.
  */

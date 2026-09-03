@@ -59,8 +59,8 @@
                 <td class="actions">
                     <?php if ($canManage && $user['role'] !== 'superadmin'): ?>
                         <a class="btn btn-ghost btn-small"
-                           href="<?= $e($url('/konto/benutzer?bearbeiten=' . rawurlencode((string) $user['twitch_id']))) ?>"><?= $e(translate('account.users.permissions')) ?></a>
-                        <form method="post" action="<?= $e($url('/konto/benutzer')) ?>" style="display:inline;"
+                           href="<?= $e($url('/account/users?bearbeiten=' . rawurlencode((string) $user['twitch_id']))) ?>"><?= $e(translate('account.users.permissions')) ?></a>
+                        <form method="post" action="<?= $e($url('/account/users')) ?>" style="display:inline;"
                               onsubmit="return confirm('<?= $e(translate('account.users.confirm_remove', ['name' => $user['display_name']])) ?>');">
                             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                             <input type="hidden" name="action" value="remove">
@@ -88,10 +88,10 @@ foreach ($users as $candidate) {
     <div class="card">
         <div class="card-head">
             <h2><?= $e(translate('account.users.permissions_for', ['name' => $editUser['display_name']])) ?></h2>
-            <a class="btn btn-ghost btn-small" href="<?= $e($url('/konto/benutzer')) ?>"><?= $e(translate('common.cancel')) ?></a>
+            <a class="btn btn-ghost btn-small" href="<?= $e($url('/account/users')) ?>"><?= $e(translate('common.cancel')) ?></a>
         </div>
 
-        <form method="post" action="<?= $e($url('/konto/benutzer')) ?>">
+        <form method="post" action="<?= $e($url('/account/users')) ?>">
             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
             <input type="hidden" name="action" value="permissions">
             <input type="hidden" name="twitch_id" value="<?= $e($editUser['twitch_id']) ?>">
@@ -121,7 +121,7 @@ foreach ($users as $candidate) {
     <div class="card">
         <div class="card-head">
             <h2><?= $e(translate('account.users.invites')) ?></h2>
-            <form method="post" action="<?= $e($url('/konto/benutzer')) ?>" class="row">
+            <form method="post" action="<?= $e($url('/account/users')) ?>" class="row">
                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                 <input type="hidden" name="action" value="invite">
                 <select name="hours" class="input" style="width:auto;">
@@ -150,7 +150,7 @@ foreach ($users as $candidate) {
                         <td class="mono"><?= $e($url('/login?invite=' . $invite['code'])) ?></td>
                         <td class="hint"><?= $e(\Overlays\Core\Support\Dates::long($invite['expires_at'])) ?></td>
                         <td class="actions">
-                            <form method="post" action="<?= $e($url('/konto/benutzer')) ?>">
+                            <form method="post" action="<?= $e($url('/account/users')) ?>">
                                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                                 <input type="hidden" name="action" value="revoke_invite">
                                 <input type="hidden" name="code" value="<?= $e($invite['code']) ?>">

@@ -35,7 +35,7 @@ final class AuthController
         return Response::html($this->app->view->render('login', [
             'title'  => 'Anmelden',
             'invite' => $request->get('invite'),
-            'error'  => $request->get('fehler'),
+            'error'  => $request->get('error'),
         ], null));
     }
 
@@ -126,9 +126,9 @@ final class AuthController
         $this->app->log('Login fehlgeschlagen: ' . $message);
 
         if (!$this->app->settings->bool('installed', false)) {
-            return Response::redirect($this->app->url('/setup?fehler=' . rawurlencode($message)));
+            return Response::redirect($this->app->url('/setup?error=' . rawurlencode($message)));
         }
 
-        return Response::redirect($this->app->url('/login?fehler=' . rawurlencode($message)));
+        return Response::redirect($this->app->url('/login?error=' . rawurlencode($message)));
     }
 }

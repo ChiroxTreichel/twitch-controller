@@ -65,7 +65,7 @@ plugins/<slug>/
   src/             Klassen unter Overlays\Plugin\<Slug>\  (optional)
 ```
 
-`plugins/beispiel/` ist ein vollständig kommentiertes Beispiel und die
+`plugins/example/` ist ein vollständig kommentiertes Beispiel und die
 ausführbare Fassung dieser Dokumentation.
 
 ### Manifest
@@ -194,6 +194,14 @@ $router->get('/throne', $handler, [
 Muster kennen `{name}` für ein Segment und `{name*}` für den Rest des
 Pfades. Handler-Signatur: `fn(Request $request, array $params): Response`.
 
+**Pfade sind englisch.** `/account/settings`, nicht
+`/konto/einstellungen`. Das gilt für Segmente ebenso wie für
+Query-Parameter (`?notice=`, `?error=`, `?filter=`) und für den Slug eines
+Plugins, weil der im Pfad landet. Sichtbare Texte kommen dagegen aus der
+Sprachdatei, und die Rechte-Namen bleiben deutsch (`Konto.Plugins.View`) --
+sie stehen pro Benutzer in der Datenbank und lassen sich nicht umbenennen,
+ohne bestehende Installationen mitzuziehen.
+
 Rechte folgen dem Schema `Bereich.Funktion.Recht`. Rechte auf `.View`
 bekommen neu eingeladene Benutzer automatisch. Superadmin umgeht jede
 Prüfung.
@@ -310,7 +318,7 @@ Zwei Seiten:
 
 | Adresse | Zweck |
 | --- | --- |
-| `/konto/aktivitaeten` | Einstellungen: Badge-Farben |
+| `/account/activities` | Einstellungen: Badge-Farben |
 | `/obs` | der Feed selbst, gedacht als Browser-Dock in OBS |
 
 Der Feed ist angemeldet-only (`Konto.Aktivitaeten.View`). Das ist kein
@@ -333,7 +341,7 @@ erst aus dem Payload ergibt (eine Abostufe steht nicht als Spalte in der
 Datenbank). Bei aktiver Auswahl liest der Controller deshalb ein
 groesseres Fenster und schneidet danach zu.
 
-Nachgeladen wird ueber `/obs/neu?since_id=…`, das nur die neuen
+Nachgeladen wird ueber `/obs/updates?since_id=…`, das nur die neuen
 Ereignisse als JSON zurueckgibt; die Seite haengt sie oben an.
 
 Ein Plugin mit eigener Ereignisart braucht drei Hooks:
@@ -460,7 +468,7 @@ Eigene Einstellungen eines Plugins - etwa PayPal-Zugangsdaten - werden
 $hooks->on('plugin.settings', function (array $pages) use ($plugin) {
     $pages[$plugin->slug] = [
         'label' => 'PayPal einrichten',
-        'href'  => '/spenden/einstellungen',
+        'href'  => '/donations/settings',
     ];
     return $pages;
 });
@@ -527,6 +535,24 @@ und git sonst „dubious ownership" meldet.
 
 Nur vorspulen, nie `reset --hard`: liegen im Ordner eigene Änderungen,
 schlägt das Update mit einer Meldung fehl statt sie zu überschreiben.
+
+---
+
+## Notausgang
+
+`/rescue` -- Update pruefen, Update einspielen, Sprache umstellen. Ohne
+Navigation, ohne Plugins, ohne Twitch-Abfragen, mit dem `plain`-Layout.
+
+Der Grund fuer die Seite: beides lag ausschliesslich auf
+`/account/settings`. Reisst dort eine Zeile die Seite -- eine
+Uebersetzung, deren Platzhalter nicht zum Aufruf passen, genuegt --, ist
+genau der Knopf unerreichbar, der den Fehler behebt, und es bleibt nur
+die Kommandozeile. Die Fehlerseite verlinkt `/rescue` deshalb, sobald
+jemand angemeldet ist.
+
+Wer hier etwas ergaenzt, haelt die Seite arm: kein Hook-Aufruf, keine
+Netzanfrage, nichts, was eine Datenbanktabelle voraussetzt, die eine
+Migration erst noch anlegen muss.
 
 ---
 

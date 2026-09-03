@@ -42,10 +42,10 @@ final class Nav
                 'label' => translate('nav.account'),
                 'order' => 0,
                 'items' => [
-                    ['label' => translate('nav.users'),      'href' => '/konto/benutzer',      'permission' => 'Konto.Benutzer.View'],
-                    ['label' => translate('nav.activity'),   'href' => '/konto/aktivitaeten',  'permission' => 'Konto.Aktivitaeten.View'],
-                    ['label' => translate('nav.plugins'),       'href' => '/konto/plugins',       'permission' => 'Konto.Plugins.View'],
-                    ['label' => translate('nav.settings'), 'href' => '/konto/einstellungen', 'permission' => 'Konto.Einstellungen.View'],
+                    ['label' => translate('nav.users'),      'href' => '/account/users',      'permission' => 'Konto.Benutzer.View'],
+                    ['label' => translate('nav.activity'),   'href' => '/account/activities',  'permission' => 'Konto.Aktivitaeten.View'],
+                    ['label' => translate('nav.plugins'),       'href' => '/account/plugins',       'permission' => 'Konto.Plugins.View'],
+                    ['label' => translate('nav.settings'), 'href' => '/account/settings', 'permission' => 'Konto.Einstellungen.View'],
                 ],
             ],
         ];
@@ -107,6 +107,6 @@ final class Nav
             }
         }
 
-        return '/konto';
+        return '/account';
     }
 }

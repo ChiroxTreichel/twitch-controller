@@ -15,7 +15,7 @@ use Throwable;
  *
  *   $app     die Anwendung
  *   $e       Escaping-Funktion:  <?= $e($name) ?>
- *   $url     Link-Helfer:        <?= $url('/konto/benutzer') ?>
+ *   $url     Link-Helfer:        <?= $url('/account/users') ?>
  *   dazu alle uebergebenen Daten
  *
  * Plugins koennen ihre eigenen Vorlagen rendern:

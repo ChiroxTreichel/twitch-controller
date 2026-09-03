@@ -69,8 +69,8 @@ final class PluginsController
             'missing'   => $this->app->plugins->missing(),
             'canManage' => $this->app->auth->can('Konto.Plugins.Manage'),
             'csrf'      => $this->app->auth->csrfToken(),
-            'notice'    => $request->get('hinweis'),
-            'error'     => $request->get('fehler'),
+            'notice'    => $request->get('notice'),
+            'error'     => $request->get('error'),
             'welcome'   => $request->get('willkommen') !== '',
         ]));
     }
@@ -90,19 +90,19 @@ final class PluginsController
                 case 'enable':
                     $this->app->plugins->enable($slug);
 
-                    return $this->back('/konto/plugins',
+                    return $this->back('/account/plugins',
                         'Plugin aktiviert. Falls es Twitch-Events braucht: einmal '
                         . 'Einstellungen → Abos abgleichen.');
 
                 case 'disable':
                     $this->app->plugins->disable($slug);
 
-                    return $this->back('/konto/plugins', 'Plugin deaktiviert.');
+                    return $this->back('/account/plugins', 'Plugin deaktiviert.');
 
                 case 'uninstall':
                     $this->app->plugins->uninstall($slug);
 
-                    return $this->back('/konto/plugins', 'Plugin entfernt, seine Daten sind gelöscht.');
+                    return $this->back('/account/plugins', 'Plugin entfernt, seine Daten sind gelöscht.');
 
                 case 'update':
                     $manifest = $this->app->plugins->manifest($slug);
@@ -110,16 +110,16 @@ final class PluginsController
                         $this->app->plugins->upgradeIfNeeded($manifest);
                     }
 
-                    return $this->back('/konto/plugins', 'Plugin aktualisiert.');
+                    return $this->back('/account/plugins', 'Plugin aktualisiert.');
 
                 case 'download_update':
-                    return $this->installFromRegistry($slug, '/konto/plugins');
+                    return $this->installFromRegistry($slug, '/account/plugins');
             }
         } catch (Throwable $e) {
-            return $this->back('/konto/plugins', null, $e->getMessage());
+            return $this->back('/account/plugins', null, $e->getMessage());
         }
 
-        return $this->back('/konto/plugins', null, 'Unbekannte Aktion.');
+        return $this->back('/account/plugins', null, 'Unbekannte Aktion.');
     }
 
     // -----------------------------------------------------------------
@@ -132,7 +132,7 @@ final class PluginsController
         $query = trim($request->get('q'));
         $tag = trim($request->get('tag'));
 
-        $error = $request->get('fehler');
+        $error = $request->get('error');
         $plugins = [];
         $tags = [];
 
@@ -166,7 +166,7 @@ final class PluginsController
             'canManage'  => $this->app->auth->can('Konto.Plugins.Manage'),
             'canWrite'   => (new Installer($this->app))->canWrite(),
             'csrf'       => $this->app->auth->csrfToken(),
-            'notice'     => $request->get('hinweis'),
+            'notice'     => $request->get('notice'),
             'error'      => $error,
             'states'     => $this->installStates(),
         ]));
@@ -180,7 +180,7 @@ final class PluginsController
         try {
             $plugin = $registry->find($slug);
         } catch (Throwable $e) {
-            return $this->back('/konto/plugins/finden', null, $e->getMessage());
+            return $this->back('/account/plugins/find', null, $e->getMessage());
         }
 
         if ($plugin === null) {
@@ -202,15 +202,15 @@ final class PluginsController
             'canManage' => $this->app->auth->can('Konto.Plugins.Manage'),
             'canWrite'  => (new Installer($this->app))->canWrite(),
             'csrf'      => $this->app->auth->csrfToken(),
-            'notice'    => $request->get('hinweis'),
-            'error'     => $request->get('fehler'),
+            'notice'    => $request->get('notice'),
+            'error'     => $request->get('error'),
             'coreOk'    => $this->coreSatisfies($plugin),
         ]));
     }
 
     public function findAction(Request $request): Response
     {
-        $guard = $this->guard($request, '/konto/plugins/finden');
+        $guard = $this->guard($request, '/account/plugins/find');
         if ($guard !== null) {
             return $guard;
         }
@@ -218,15 +218,15 @@ final class PluginsController
         $action = $request->input('action');
         $slug = $request->input('slug');
         $back = $slug !== '' && $action === 'install'
-            ? '/konto/plugins/finden/' . rawurlencode($slug)
-            : '/konto/plugins/finden';
+            ? '/account/plugins/find/' . rawurlencode($slug)
+            : '/account/plugins/find';
 
         try {
             switch ($action) {
                 case 'refresh':
                     $count = count((new Client($this->app))->refresh());
 
-                    return $this->back('/konto/plugins/finden', sprintf(
+                    return $this->back('/account/plugins/find', sprintf(
                         'Katalog neu geladen: %d Plugins verfügbar.',
                         $count
                     ));
@@ -285,13 +285,13 @@ final class PluginsController
         if ($blockers === []) {
             $this->app->plugins->enable($slug);
 
-            return $this->back('/konto/plugins', sprintf(
+            return $this->back('/account/plugins', sprintf(
                 '%s installiert und aktiviert.',
                 $manifest->name
             ));
         }
 
-        return $this->back('/konto/plugins', sprintf(
+        return $this->back('/account/plugins', sprintf(
             '%s installiert, aber noch nicht aktiv: %s',
             $manifest->name,
             implode(' ', $blockers)
@@ -339,7 +339,7 @@ final class PluginsController
      *   $hooks->on('plugin.settings', function (array $pages) use ($plugin) {
      *       $pages[$plugin->slug] = [
      *           'label' => 'PayPal einrichten',
-     *           'href'  => '/spenden/einstellungen',
+     *           'href'  => '/donations/settings',
      *       ];
      *       return $pages;
      *   });
@@ -368,7 +368,7 @@ final class PluginsController
         return $clean;
     }
 
-    private function guard(Request $request, string $back = '/konto/plugins'): ?Response
+    private function guard(Request $request, string $back = '/account/plugins'): ?Response
     {
         if (!$this->app->auth->checkCsrf($request->input('csrf'))) {
             return $this->back($back, null, 'Das Formular ist abgelaufen. Bitte erneut versuchen.');
@@ -385,10 +385,10 @@ final class PluginsController
     {
         $query = [];
         if ($notice !== null) {
-            $query['hinweis'] = $notice;
+            $query['notice'] = $notice;
         }
         if ($error !== null) {
-            $query['fehler'] = $error;
+            $query['error'] = $error;
         }
 
         return Response::redirect(

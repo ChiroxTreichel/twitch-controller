@@ -7,7 +7,7 @@ declare(strict_types=1);
  * Prueft und pflegt die Sprachdateien.
  *
  *   php bin/lang.php                     Kern pruefen
- *   php bin/lang.php --plugin throne     ein Plugin pruefen
+ *   php bin/lang.php --plugin example     ein Plugin pruefen
  *   php bin/lang.php --all               Kern und alle Plugins
  *   php bin/lang.php --fix               fehlende Schluessel anlegen (leer)
  *

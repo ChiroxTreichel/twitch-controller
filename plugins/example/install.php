@@ -22,7 +22,7 @@ declare(strict_types=1);
 /** @var string|null $fromVersion */
 
 $db->run('
-    CREATE TABLE IF NOT EXISTS beispiel_notizen (
+    CREATE TABLE IF NOT EXISTS example_notes (
         id         BIGSERIAL   PRIMARY KEY,
         text       TEXT        NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -40,5 +40,5 @@ if ($fromVersion === null) {
 // Beispiel fuer einen gezielten Upgrade-Schritt:
 //
 // if ($fromVersion !== null && version_compare($fromVersion, '1.1.0', '<')) {
-//     $db->run('ALTER TABLE beispiel_notizen ADD COLUMN IF NOT EXISTS farbe TEXT');
+//     $db->run('ALTER TABLE example_notes ADD COLUMN IF NOT EXISTS farbe TEXT');
 // }

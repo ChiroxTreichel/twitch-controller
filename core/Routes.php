@@ -56,34 +56,34 @@ final class Routes
 
         // --- Ersteinrichtung -------------------------------------------
         $router->get('/setup', [$setup, 'show']);
-        $router->post('/setup/datenbank', [$setup, 'prepareDatabase']);
+        $router->post('/setup/database', [$setup, 'prepareDatabase']);
         $router->post('/setup/twitch', [$setup, 'saveCredentials']);
-        $router->get('/setup/kanal', [$setup, 'startChannelConnect']);
+        $router->get('/setup/channel', [$setup, 'startChannelConnect']);
         $router->post('/setup/events', [$setup, 'syncEventSub']);
-        $router->post('/setup/fertig', [$setup, 'finish']);
+        $router->post('/setup/finish', [$setup, 'finish']);
 
         // --- Twitch-Webhook --------------------------------------------
         // Kein Login: Twitch authentifiziert sich per Signatur.
         $router->post('/hooks/twitch', [$webhook, 'handle']);
 
         // --- Konto ------------------------------------------------------
-        $router->get('/konto', static function () use ($app): Response {
+        $router->get('/account', static function () use ($app): Response {
             return Response::redirect($app->url((new Nav($app))->firstAllowedHref()));
         }, ['auth' => true]);
 
-        $router->get('/konto/benutzer', [$account, 'users'], [
+        $router->get('/account/users', [$account, 'users'], [
             'auth' => true,
             'permission' => 'Konto.Benutzer.View',
         ]);
-        $router->post('/konto/benutzer', [$account, 'usersAction'], ['auth' => true]);
+        $router->post('/account/users', [$account, 'usersAction'], ['auth' => true]);
 
         // Aktivitäten: Einstellungen im Konto, der Feed selbst unter
         // /obs (gedacht als Browser-Dock in OBS).
-        $router->get('/konto/aktivitaeten', [$activity, 'show'], [
+        $router->get('/account/activities', [$activity, 'show'], [
             'auth' => true,
             'permission' => 'Konto.Aktivitaeten.View',
         ]);
-        $router->post('/konto/aktivitaeten', [$activity, 'save'], ['auth' => true]);
+        $router->post('/account/activities', [$activity, 'save'], ['auth' => true]);
 
         // Kurze Adresse, weil der Link in OBS eingetragen und
         // gelegentlich von Hand getippt wird.
@@ -91,44 +91,44 @@ final class Routes
             'auth' => true,
             'permission' => 'Konto.Aktivitaeten.View',
         ]);
-        $router->get('/obs/neu', [$feed, 'updates'], [
+        $router->get('/obs/updates', [$feed, 'updates'], [
             'auth' => true,
             'permission' => 'Konto.Aktivitaeten.View',
         ]);
 
         // Plugins: zwei Reiter, eigene Detailseiten
-        $router->get('/konto/plugins', [$plugins, 'installed'], [
+        $router->get('/account/plugins', [$plugins, 'installed'], [
             'auth' => true,
             'permission' => 'Konto.Plugins.View',
         ]);
-        $router->post('/konto/plugins', [$plugins, 'action'], ['auth' => true]);
+        $router->post('/account/plugins', [$plugins, 'action'], ['auth' => true]);
 
-        $router->get('/konto/plugins/finden', [$plugins, 'find'], [
+        $router->get('/account/plugins/find', [$plugins, 'find'], [
             'auth' => true,
             'permission' => 'Konto.Plugins.View',
         ]);
-        $router->post('/konto/plugins/finden', [$plugins, 'findAction'], ['auth' => true]);
-        $router->get('/konto/plugins/finden/{slug}', [$plugins, 'detail'], [
+        $router->post('/account/plugins/find', [$plugins, 'findAction'], ['auth' => true]);
+        $router->get('/account/plugins/find/{slug}', [$plugins, 'detail'], [
             'auth' => true,
             'permission' => 'Konto.Plugins.View',
         ]);
 
-        $router->get('/konto/einstellungen', [$account, 'settings'], [
+        $router->get('/account/settings', [$account, 'settings'], [
             'auth' => true,
             'permission' => 'Konto.Einstellungen.View',
         ]);
-        $router->post('/konto/einstellungen', [$account, 'settingsAction'], ['auth' => true]);
-        $router->get('/konto/einstellungen/kanal', [$account, 'reconnectChannel'], ['auth' => true]);
+        $router->post('/account/settings', [$account, 'settingsAction'], ['auth' => true]);
+        $router->get('/account/settings/channel', [$account, 'reconnectChannel'], ['auth' => true]);
 
-        // Notausgang. Bewusst nicht unter /konto: Update und Sprache
+        // Notausgang. Bewusst nicht unter /account: Update und Sprache
         // muessen erreichbar bleiben, wenn eine Seite dort nicht mehr
         // laedt - sonst liegt der Knopf, der den Fehler behebt, hinter
         // dem Fehler.
-        $router->get('/rettung', [$account, 'rescue'], [
+        $router->get('/rescue', [$account, 'rescue'], [
             'auth' => true,
             'permission' => 'Konto.Einstellungen.View',
         ]);
-        $router->post('/rettung', [$account, 'rescueAction'], ['auth' => true]);
+        $router->post('/rescue', [$account, 'rescueAction'], ['auth' => true]);
 
         // --- Plugin-Dateien ---------------------------------------------
         // Plugins liegen ausserhalb des DocumentRoots, ihre statischen

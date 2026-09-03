@@ -14,4 +14,4 @@ declare(strict_types=1);
 
 /** @var \Overlays\Core\Database\Db $db */
 
-$db->run('DROP TABLE IF EXISTS beispiel_notizen');
+$db->run('DROP TABLE IF EXISTS example_notes');

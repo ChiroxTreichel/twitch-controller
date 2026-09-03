@@ -36,8 +36,8 @@ final class ActivityController
             'feedUrl'   => $this->app->url('/obs'),
             'canManage' => $this->app->auth->can('Konto.Aktivitaeten.Manage'),
             'csrf'      => $this->app->auth->csrfToken(),
-            'notice'    => $request->get('hinweis'),
-            'error'     => $request->get('fehler'),
+            'notice'    => $request->get('notice'),
+            'error'     => $request->get('error'),
         ]));
     }
 
@@ -70,14 +70,14 @@ final class ActivityController
     {
         $query = [];
         if ($notice !== null) {
-            $query['hinweis'] = $notice;
+            $query['notice'] = $notice;
         }
         if ($error !== null) {
-            $query['fehler'] = $error;
+            $query['error'] = $error;
         }
 
         return Response::redirect(
-            $this->app->url('/konto/aktivitaeten') . ($query === [] ? '' : '?' . http_build_query($query))
+            $this->app->url('/account/activities') . ($query === [] ? '' : '?' . http_build_query($query))
         );
     }
 }

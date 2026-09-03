@@ -45,7 +45,7 @@
     </p>
 </div>
 
-<form method="post" action="<?= $e($url('/konto/aktivitaeten')) ?>">
+<form method="post" action="<?= $e($url('/account/activities')) ?>">
     <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
 
     <div class="card">
