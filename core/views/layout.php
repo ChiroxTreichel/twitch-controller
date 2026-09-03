@@ -12,13 +12,24 @@
 
 // Defensiv: das Layout wird auch bei Fehlerseiten gerendert und darf
 // nicht selbst an einer wegbrechenden Datenbank scheitern.
+//
+// Drei getrennte Absicherungen, nicht eine gemeinsame: sonst wuerde ein
+// Fehler beim Kanalnamen auch die Navigation verschwinden lassen.
 try {
     $user = $app->auth->user();
-    $nav = (new \Overlays\Core\Admin\Nav($app))->build();
-    $channel = $app->settings->string('twitch_broadcaster_login');
 } catch (\Throwable) {
     $user = null;
+}
+
+try {
+    $nav = (new \Overlays\Core\Admin\Nav($app))->build();
+} catch (\Throwable) {
     $nav = [];
+}
+
+try {
+    $channel = $app->settings->string('twitch_broadcaster_login');
+} catch (\Throwable) {
     $channel = '';
 }
 ?>
@@ -44,14 +55,28 @@ try {
         </div>
 
         <nav>
-            <?php foreach ($nav as $group): ?>
-                <div class="nav-group">
-                    <div class="nav-label"><?= $e($group['label']) ?></div>
-                    <?php foreach ($group['items'] as $item): ?>
-                        <a class="nav-item<?= $active === $item['key'] ? ' is-active' : '' ?>"
-                           href="<?= $e($url($item['href'])) ?>"><?= $e($item['label']) ?></a>
-                    <?php endforeach; ?>
-                </div>
+            <?php foreach ($nav as $key => $group): ?>
+                <?php
+                // Die Gruppe mit der aktuellen Seite ist immer offen -
+                // man will sehen, wo man steht. Alle anderen behalten
+                // den Zustand, den der Benutzer gesetzt hat.
+                $enthaeltAktive = false;
+                foreach ($group['items'] as $item) {
+                    if ($active === $item['key']) {
+                        $enthaeltAktive = true;
+                    }
+                }
+                ?>
+                <details class="nav-group" data-group="<?= $e((string) $key) ?>"
+                    <?= $enthaeltAktive ? 'open data-current' : 'open' ?>>
+                    <summary class="nav-label"><?= $e($group['label']) ?></summary>
+                    <div class="nav-links">
+                        <?php foreach ($group['items'] as $item): ?>
+                            <a class="nav-item<?= $active === $item['key'] ? ' is-active' : '' ?>"
+                               href="<?= $e($url($item['href'])) ?>"><?= $e($item['label']) ?></a>
+                        <?php endforeach; ?>
+                    </div>
+                </details>
             <?php endforeach; ?>
         </nav>
 
@@ -71,5 +96,47 @@ try {
         <?= $content ?>
     </main>
 </div>
+
+<script>
+// Zugeklappte Gruppen merken. Die Gruppe der aktuellen Seite bleibt
+// offen, damit man nach dem Navigieren nicht ins Leere schaut.
+(function () {
+    'use strict';
+
+    var schluessel = 'ov_nav_zu';
+    var zu = [];
+
+    try {
+        zu = JSON.parse(localStorage.getItem(schluessel) || '[]');
+    } catch (e) {
+        zu = [];
+    }
+
+    var gruppen = document.querySelectorAll('.nav-group');
+
+    gruppen.forEach(function (gruppe) {
+        if (!gruppe.hasAttribute('data-current') && zu.indexOf(gruppe.dataset.group) !== -1) {
+            gruppe.open = false;
+        }
+
+        gruppe.addEventListener('toggle', function () {
+            var name = gruppe.dataset.group;
+            var index = zu.indexOf(name);
+
+            if (gruppe.open && index !== -1) {
+                zu.splice(index, 1);
+            } else if (!gruppe.open && index === -1) {
+                zu.push(name);
+            }
+
+            try {
+                localStorage.setItem(schluessel, JSON.stringify(zu));
+            } catch (e) {
+                // Kein Speicher verfuegbar - dann eben nur fuer diese Sitzung.
+            }
+        });
+    });
+}());
+</script>
 </body>
 </html>
