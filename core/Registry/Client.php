@@ -130,6 +130,8 @@ final class Client
      */
     public function refresh(): array
     {
+        // Genau eine Adresse. Der Katalog wird nicht hier erzeugt, er
+        // wird geladen - dafuer hat der Katalogserver zu sorgen.
         $url = $this->baseUrl() . '/index.json';
 
         try {
@@ -141,6 +143,11 @@ final class Client
 
         if (!$result->ok()) {
             $message = sprintf('%s antwortet mit %d.', $url, $result->status);
+
+            if ($result->status === 404) {
+                $message .= ' Der Katalogserver liefert dort keinen Katalog aus.';
+            }
+
             $this->app->settings->set('registry_error', $message);
             throw new RuntimeException($message);
         }

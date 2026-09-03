@@ -111,6 +111,10 @@ $catalog = loadCatalog($catalogFile);
 
 // --- Schnittstelle --------------------------------------------------
 
+// Normalerweise liefert der Webserver /index.json direkt als Datei aus.
+// Hierher kommt der Aufruf nur, falls die Datei fehlt und eine
+// Umschreibung greift - dann ist ein leerer Katalog die richtige
+// Antwort, kein 404.
 if ($path === '/index.json') {
     sendJson($catalog);
 }

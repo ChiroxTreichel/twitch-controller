@@ -1,3 +1,2 @@
-# Erzeugte Pakete und Katalog - gehoeren nicht ins Repository.
+# Erzeugte Pakete gehoeren nicht ins Repository.
 /public/pkg/*.zip
-/public/index.json

@@ -24,6 +24,15 @@ location / { try_files $uri $uri/ /index.php?$query_string; }
 > Wenn die Domain mit **403** antwortet, zeigt das DocumentRoot meist noch
 > aufs falsche Verzeichnis oder es fehlt eine Startdatei. Prüfen: liegt
 > `public/index.php` wirklich unter dem eingestellten Pfad?
+>
+> Wenn `/index.json` mit **404** antwortet, fehlt die Datei
+> `public/index.json`. Sie liegt bei und muss mitkopiert werden - sonst
+> findet der Client keinen Katalog. Danach `bin/build.php` ausführen.
+
+`public/index.json` ist die eine Adresse, die der Client abfragt. Sie liegt
+als leerer Katalog bei, damit ein frisch aufgesetzter Server sofort
+gültig antwortet; `bin/build.php` überschreibt sie mit dem echten Inhalt.
+Sie muss **immer** vorhanden sein - der Client erzeugt nichts, er lädt nur.
 
 PHP 8.2 oder neuer mit der Erweiterung `zip`. Mehr wird nicht gebraucht —
 keine Datenbank, kein Composer.
