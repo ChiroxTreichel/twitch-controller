@@ -157,7 +157,8 @@ du oben die Karte **System**. Dort steht deine Version, und ein Klick auf
 **Jetzt aktualisieren** — das läuft im Hintergrund und ist meist in unter
 einer Minute durch. Danach die Seite neu laden.
 
-Deine Einstellungen, Benutzer und Daten bleiben dabei erhalten.
+Deine Einstellungen, Benutzer, Daten und installierten Plugins bleiben
+dabei erhalten.
 
 Dieselben Knöpfe liegen zur Sicherheit noch ein zweites Mal unter
 `https://deine-domain/rescue` — für den Fall, dass die Einstellungsseite

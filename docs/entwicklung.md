@@ -65,8 +65,16 @@ plugins/<slug>/
   src/             Klassen unter Overlays\Plugin\<Slug>\  (optional)
 ```
 
-`plugins/example/` ist ein vollständig kommentiertes Beispiel und die
-ausführbare Fassung dieser Dokumentation.
+`docs/example/` ist ein vollständig kommentiertes Beispiel und die
+ausführbare Fassung dieser Dokumentation. Es liegt unter `docs/`, weil
+`plugins/` nicht im Repository verfolgt wird -- dort steht, was der
+Betreiber installiert hat. Zum Ausprobieren einmal hineinkopieren:
+
+```bash
+cp -r docs/example plugins/example
+```
+
+Danach erscheint es unter *Konto → Plugins* und lässt sich aktivieren.
 
 ### Manifest
 

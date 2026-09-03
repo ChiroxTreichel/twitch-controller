@@ -8,6 +8,17 @@
 /public/uploads/*
 !/public/uploads/.gitkeep
 
+# Installierte Plugins. Die kommen aus dem Marktplatz oder werden von
+# Hand hineingelegt - sie gehoeren dem Betreiber, nicht diesem
+# Repository. Waeren sie verfolgt, wuerde jede Installation den
+# Selbst-Update-Pull (git merge --ff-only) zum Konflikt bringen.
+#
+# Der Ordner selbst bleibt ueber .gitkeep erhalten, weil der Kern ihn
+# beim Start erwartet. Die Vorlage fuer eigene Plugins liegt unter
+# docs/example/.
+/plugins/*
+!/plugins/.gitkeep
+
 # Alter Code als Nachschlagewerk waehrend der Umstellung.
 # Bewusst nicht im Repository: enthaelt Tokens, Team-Daten und die
 # Konfiguration der bisherigen Installation.
