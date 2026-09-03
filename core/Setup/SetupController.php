@@ -102,7 +102,7 @@ final class SetupController
         );
 
         return Response::html($this->app->view->render('setup/check', [
-            'title'  => 'Einrichtung',
+            'title'  => translate('setup.title'),
             'step'   => self::STEP_CHECK,
             'checks' => $checks,
             'ready'  => $ready,
@@ -139,10 +139,13 @@ final class SetupController
         $checks = [];
 
         $checks[] = [
-            'label'    => 'PHP-Version',
+            'label'    => translate('setup.php_version'),
             'ok'       => PHP_VERSION_ID >= 80200,
             'required' => true,
-            'detail'   => PHP_VERSION . ' (benötigt: 8.2 oder neuer)',
+            'detail'   => translate('setup.php_version.detail', [
+                'found'  => PHP_VERSION,
+                'needed' => '8.2',
+            ]),
         ];
 
         $erweiterungen = [
@@ -199,7 +202,7 @@ final class SetupController
 
         $pluginsWritable = is_dir($this->app->root . '/plugins') && is_writable($this->app->root . '/plugins');
         $checks[] = [
-            'label'    => 'Plugin-Verzeichnis beschreibbar',
+            'label' => translate('setup.plugins_dir'),
             'ok'       => $pluginsWritable,
             'required' => false,
             'detail'   => $pluginsWritable
@@ -217,7 +220,7 @@ final class SetupController
     private function renderCredentials(?string $error = null): Response
     {
         return Response::html($this->app->view->render('setup/credentials', [
-            'title'        => 'Einrichtung · Twitch-App',
+            'title'        => translate('setup.title.app'),
             'step'         => self::STEP_CREDENTIALS,
             'error'        => $error,
             'redirectUri'  => $this->app->url('/auth/callback'),
@@ -273,7 +276,7 @@ final class SetupController
     private function renderChannel(?string $error = null): Response
     {
         return Response::html($this->app->view->render('setup/channel', [
-            'title'  => 'Einrichtung · Kanal verbinden',
+            'title'  => translate('setup.title.channel'),
             'step'   => self::STEP_CHANNEL,
             'error'  => $error ?? ($_GET['error'] ?? null),
             'scopes' => $this->app->twitch->broadcasterScopes(),
@@ -332,7 +335,7 @@ final class SetupController
     private function renderEventSub(Request $request, ?array $report = null, ?string $error = null): Response
     {
         return Response::html($this->app->view->render('setup/eventsub', [
-            'title'    => 'Einrichtung · Events',
+            'title'    => translate('setup.title.events'),
             'step'     => self::STEP_EVENTSUB,
             'report'   => $report,
             'error'    => $error,
@@ -362,7 +365,7 @@ final class SetupController
         $this->app->settings->set('installed', true);
         $this->app->settings->set('installed_at', date('c'));
 
-        return Response::redirect($this->app->url('/account/plugins?willkommen=1'));
+        return Response::redirect($this->app->url('/account/plugins?welcome=1'));
     }
 
     public function finish(Request $request): Response
@@ -375,7 +378,7 @@ final class SetupController
         $this->app->settings->set('installed', true);
         $this->app->settings->set('installed_at', date('c'));
 
-        return Response::redirect($this->app->url('/account/plugins?willkommen=1'));
+        return Response::redirect($this->app->url('/account/plugins?welcome=1'));
     }
 
     // -----------------------------------------------------------------

@@ -12,7 +12,7 @@ $channel = $app->settings->string('twitch_broadcaster_name')
     ?: $app->settings->string('twitch_broadcaster_login');
 ?>
 <!doctype html>
-<html lang="de">
+<html lang="<?= $e($language) ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">

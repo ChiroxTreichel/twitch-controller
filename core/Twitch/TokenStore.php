@@ -114,10 +114,9 @@ final class TokenStore
         );
 
         if ($row === null) {
-            throw new RuntimeException(sprintf(
-                'Kein Twitch-Token fuer "%s" vorhanden. Bitte in den Einstellungen verbinden.',
-                $purpose
-            ));
+            throw new RuntimeException(translate('twitch.no_token', [
+                'purpose' => $purpose,
+            ]));
         }
 
         if ((int) $row['remaining'] > 60) {

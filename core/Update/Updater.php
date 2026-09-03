@@ -173,7 +173,7 @@ final class Updater
             'ok' => true,
             'message' => $behind > 0
                 ? translate('update.behind', ['count' => $behind])
-                : 'Alles auf dem neuesten Stand.',
+                : translate('update.current'),
         ];
     }
 

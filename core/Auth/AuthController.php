@@ -55,7 +55,7 @@ final class AuthController
     {
         $error = $request->get('error_description') ?: $request->get('error');
         if ($error !== '') {
-            return $this->fail('Twitch hat den Login abgebrochen: ' . $error);
+            return $this->fail(translate('auth.login_cancelled', ['reason' => $error]));
         }
 
         $code = $request->get('code');
@@ -107,7 +107,7 @@ final class AuthController
             return $this->fail($e->getMessage());
         }
 
-        return $this->fail('Unbekannter Login-Vorgang: ' . $purpose);
+        return $this->fail(translate('auth.unknown_purpose', ['purpose' => $purpose]));
     }
 
     public function logout(Request $request): Response

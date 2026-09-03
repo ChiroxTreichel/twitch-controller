@@ -38,19 +38,19 @@ final class Badges
     public function catalog(): array
     {
         $badges = [
-            'follow'         => ['label' => 'Follow',         'bg' => '#1f8b4c', 'text' => '#ffffff'],
-            'sub'            => ['label' => 'Sub',            'bg' => '#9146ff', 'text' => '#ffffff'],
-            'resub'          => ['label' => 'Resub',          'bg' => '#7a2df0', 'text' => '#ffffff'],
-            'prime'          => ['label' => 'Prime',          'bg' => '#00a4dc', 'text' => '#ffffff'],
-            'gift'           => ['label' => 'Gift',           'bg' => '#e0a800', 'text' => '#1a1a1a'],
-            'gift_anon'      => ['label' => 'Gift anonym',    'bg' => '#8a7300', 'text' => '#ffffff'],
-            'gift_received'  => ['label' => 'Gift erhalten',  'bg' => '#c68a00', 'text' => '#1a1a1a'],
-            'sub_end'        => ['label' => 'Sub Ende',       'bg' => '#4a4f5a', 'text' => '#ffffff'],
-            'bits'           => ['label' => 'Bits',           'bg' => '#d94f8a', 'text' => '#ffffff'],
-            'raid'           => ['label' => 'Raid',           'bg' => '#ff6a3d', 'text' => '#1a1a1a'],
-            'stream_online'  => ['label' => 'Stream an',      'bg' => '#3ecf8e', 'text' => '#0e1014'],
-            'stream_offline' => ['label' => 'Stream aus',     'bg' => '#3a3f4a', 'text' => '#ffffff'],
-            'system'         => ['label' => 'System',         'bg' => '#272c36', 'text' => '#98a1b0'],
+            'follow'         => ['label' => translate('badge.follow'),         'bg' => '#1f8b4c', 'text' => '#ffffff'],
+            'sub'            => ['label' => translate('badge.sub'),            'bg' => '#9146ff', 'text' => '#ffffff'],
+            'resub'          => ['label' => translate('badge.resub'),          'bg' => '#7a2df0', 'text' => '#ffffff'],
+            'prime'          => ['label' => translate('badge.prime'),          'bg' => '#00a4dc', 'text' => '#ffffff'],
+            'gift'           => ['label' => translate('badge.gift'),           'bg' => '#e0a800', 'text' => '#1a1a1a'],
+            'gift_anon'      => ['label' => translate('badge.gift_anon'),    'bg' => '#8a7300', 'text' => '#ffffff'],
+            'gift_received'  => ['label' => translate('badge.gift_received'),  'bg' => '#c68a00', 'text' => '#1a1a1a'],
+            'sub_end'        => ['label' => translate('badge.sub_end'),       'bg' => '#4a4f5a', 'text' => '#ffffff'],
+            'bits'           => ['label' => translate('badge.bits'),           'bg' => '#d94f8a', 'text' => '#ffffff'],
+            'raid'           => ['label' => translate('badge.raid'),           'bg' => '#ff6a3d', 'text' => '#1a1a1a'],
+            'stream_online'  => ['label' => translate('badge.stream_online'),      'bg' => '#3ecf8e', 'text' => '#0e1014'],
+            'stream_offline' => ['label' => translate('badge.stream_offline'),     'bg' => '#3a3f4a', 'text' => '#ffffff'],
+            'system'         => ['label' => translate('badge.system'),         'bg' => '#272c36', 'text' => '#98a1b0'],
         ];
 
         $filtered = $this->app->hooks->filter('core.obs.badges', $badges);

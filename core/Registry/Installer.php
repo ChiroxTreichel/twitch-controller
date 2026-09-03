@@ -325,7 +325,7 @@ final class Installer
         if (!$zip->extractTo($staging)) {
             $zip->close();
             self::removeTree($staging);
-            throw new RuntimeException('Entpacken fehlgeschlagen.');
+            throw new RuntimeException(translate('install.extract_failed'));
         }
         $zip->close();
 
@@ -354,11 +354,10 @@ final class Installer
 
         if ($packageSlug !== $slug) {
             self::removeTree($staging);
-            throw new RuntimeException(sprintf(
-                'Das Paket enthält "%s", angefordert war "%s".',
-                $packageSlug !== '' ? $packageSlug : '?',
-                $slug
-            ));
+            throw new RuntimeException(translate('install.wrong_slug', [
+                'found'  => $packageSlug !== '' ? $packageSlug : '?',
+                'wanted' => $slug,
+            ]));
         }
 
         // Falls in einem Unterordner: Inhalt eine Ebene hochziehen, damit

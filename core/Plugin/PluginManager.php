@@ -155,22 +155,26 @@ final class PluginManager
         foreach ($manifest->requiredPlugins() as $needed => $constraint) {
             $neededManifest = $this->manifest($needed);
             if ($neededManifest === null) {
-                $problems[] = sprintf('Plugin "%s" fehlt (%s benoetigt).', $needed, $constraint);
+                $problems[] = translate('plugin.blocker.missing', [
+                    'name'       => $needed,
+                    'constraint' => $constraint,
+                ]);
                 continue;
             }
 
             if (!$this->isEnabled($needed)) {
-                $problems[] = sprintf('Plugin "%s" muss aktiv sein.', $neededManifest->name);
+                $problems[] = translate('plugin.blocker.inactive', [
+                    'name' => $neededManifest->name,
+                ]);
                 continue;
             }
 
             if (!VersionConstraint::satisfies($neededManifest->version, $constraint)) {
-                $problems[] = sprintf(
-                    'Plugin "%s" %s installiert, gebraucht wird %s.',
-                    $neededManifest->name,
-                    $neededManifest->version,
-                    $constraint
-                );
+                $problems[] = translate('plugin.blocker.version', [
+                    'name'       => $neededManifest->name,
+                    'installed'  => $neededManifest->version,
+                    'constraint' => $constraint,
+                ]);
             }
         }
 
@@ -396,9 +400,10 @@ final class PluginManager
 
         $blockers = $this->blockers($manifest->slug);
         if ($blockers !== []) {
-            throw new RuntimeException(
-                'Kann "' . $manifest->name . '" nicht aktivieren: ' . implode(' ', $blockers)
-            );
+            throw new RuntimeException(translate('plugin.enable_blocked', [
+                'name'    => $manifest->name,
+                'reasons' => implode(' ', $blockers),
+            ]));
         }
 
         $this->app->db->run(

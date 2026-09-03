@@ -64,11 +64,11 @@ $zweig = static function (array $knoten, int $tiefe) use (&$zweig, $e, $selected
 };
 ?>
 <!doctype html>
-<html lang="de">
+<html lang="<?= $e($language) ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Aktivitäten</title>
+    <title><?= $e(translate('nav.activity_title')) ?></title>
     <style>
         :root {
             --bg: #0e1014;
@@ -268,9 +268,9 @@ $zweig = static function (array $knoten, int $tiefe) use (&$zweig, $e, $selected
 
         <div class="filter-panel">
             <form method="get" action="<?= $e($url('/obs')) ?>" id="filter-form">
-                <input type="hidden" name="zeitraum" value="<?= $e($range) ?>">
+                <input type="hidden" name="range" value="<?= $e($range) ?>">
                 <?php if ($compact): ?>
-                    <input type="hidden" name="kompakt" value="1">
+                    <input type="hidden" name="compact" value="1">
                 <?php endif; ?>
 
                 <?= $zweig($tree, 0) ?>
@@ -286,13 +286,13 @@ $zweig = static function (array $knoten, int $tiefe) use (&$zweig, $e, $selected
 
     <select onchange="location.href=this.value" title="Zeitraum">
         <?php foreach ($ranges as $key => $option): ?>
-            <option value="<?= $e($link(['zeitraum' => $key, 'seite' => null])) ?>"
+            <option value="<?= $e($link(['range' => $key, 'page' => null])) ?>"
                 <?= $range === $key ? 'selected' : '' ?>><?= $e($option['label']) ?></option>
         <?php endforeach; ?>
     </select>
 
     <a class="btn <?= $compact ? 'is-on' : '' ?>"
-       href="<?= $e($link(['kompakt' => $compact ? null : '1'])) ?>" title="Kompakte Ansicht">Kompakt</a>
+       href="<?= $e($link(['compact' => $compact ? null : '1'])) ?>" title="Kompakte Ansicht">Kompakt</a>
 
     <span class="grow"></span>
 
@@ -307,10 +307,10 @@ $zweig = static function (array $knoten, int $tiefe) use (&$zweig, $e, $selected
         <?php if ($events === []): ?>
             <div class="empty">
                 <?php if ($selected === []): ?>
-                    Alles abgewählt &mdash; im Filter etwas anhaken.
+                    <?= $e(translate('feed.empty.nothing_selected')) ?>
                 <?php else: ?>
-                    Keine Aktivitäten in diesem Zeitraum.<br>
-                    Sobald Twitch etwas schickt, erscheint es hier von selbst.
+                    <?= $e(translate('feed.empty.no_events')) ?><br>
+                    <?= $e(translate('feed.empty.hint')) ?>
                 <?php endif; ?>
             </div>
         <?php endif; ?>
@@ -330,11 +330,14 @@ $zweig = static function (array $knoten, int $tiefe) use (&$zweig, $e, $selected
     <?php if ($pages > 1): ?>
         <div class="pager">
             <?php if ($page > 1): ?>
-                <a class="btn" href="<?= $e($link(['seite' => $page - 1])) ?>">Neuer</a>
+                <a class="btn" href="<?= $e($link(['page' => $page - 1])) ?>"><?= $e(translate('feed.pager.newer')) ?></a>
             <?php endif; ?>
-            <span>Seite <?= $e((string) $page) ?> von <?= $e((string) $pages) ?></span>
+            <span><?= $e(translate('feed.pager.position', [
+                'page'  => (string) $page,
+                'pages' => (string) $pages,
+            ])) ?></span>
             <?php if ($page < $pages): ?>
-                <a class="btn" href="<?= $e($link(['seite' => $page + 1])) ?>">Älter</a>
+                <a class="btn" href="<?= $e($link(['page' => $page + 1])) ?>"><?= $e(translate('feed.pager.older')) ?></a>
             <?php endif; ?>
         </div>
     <?php endif; ?>
@@ -409,8 +412,8 @@ $zweig = static function (array $knoten, int $tiefe) use (&$zweig, $e, $selected
                 .map(function (box) { return box.value; });
 
             var params = new URLSearchParams();
-            params.set('zeitraum', form.querySelector('[name=zeitraum]').value);
-            if (form.querySelector('[name=kompakt]')) { params.set('kompakt', '1'); }
+            params.set('range', form.querySelector('[name=range]').value);
+            if (form.querySelector('[name=compact]')) { params.set('compact', '1'); }
 
             if (gewaehlt.length !== alleBlaetter.length) {
                 params.set('filter', gewaehlt.join(','));
@@ -443,7 +446,7 @@ $zweig = static function (array $knoten, int $tiefe) use (&$zweig, $e, $selected
     var timer = null;
 
     var quelle = <?= json_encode($url('/obs/updates')) ?>
-        + '?zeitraum=' + encodeURIComponent(<?= json_encode($range) ?>)
+        + '?range=' + encodeURIComponent(<?= json_encode($range) ?>)
         + <?= $allSelected ? "''" : "'&filter=' + encodeURIComponent(" . json_encode(implode(',', $selected)) . ")" ?>;
 
     function zustand(klasse, titel) {

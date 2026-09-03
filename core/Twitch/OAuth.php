@@ -99,19 +99,19 @@ final class OAuth
     {
         $parts = explode('.', $state, 2);
         if (count($parts) !== 2) {
-            throw new RuntimeException('Login-Rueckweg ungueltig (state fehlt).');
+            throw new RuntimeException(translate('auth.state_missing'));
         }
 
         $payload = strtr($parts[0], '-_', '+/');
         $payload .= str_repeat('=', (4 - strlen($payload) % 4) % 4);
 
         if (!hash_equals($this->sign($payload), $parts[1])) {
-            throw new RuntimeException('Login-Rueckweg ungueltig (Signatur passt nicht).');
+            throw new RuntimeException(translate('auth.state_bad_signature'));
         }
 
         $decoded = json_decode((string) base64_decode($payload, true), true);
         if (!is_array($decoded)) {
-            throw new RuntimeException('Login-Rueckweg ungueltig (state unlesbar).');
+            throw new RuntimeException(translate('auth.state_unreadable'));
         }
 
         if (abs(time() - (int) ($decoded['ts'] ?? 0)) > 900) {
@@ -148,7 +148,9 @@ final class OAuth
         ]);
 
         if (!$result->ok() || !isset($result->json['access_token'])) {
-            throw new RuntimeException('Twitch hat den Login abgelehnt: ' . $result->error());
+            throw new RuntimeException(translate('auth.login_refused', [
+                'reason' => $result->error(),
+            ]));
         }
 
         return self::normalizeTokenResponse($result->json);
@@ -167,7 +169,9 @@ final class OAuth
         ]);
 
         if (!$result->ok() || !isset($result->json['access_token'])) {
-            throw new RuntimeException('Token-Erneuerung fehlgeschlagen: ' . $result->error());
+            throw new RuntimeException(translate('auth.refresh_failed', [
+                'reason' => $result->error(),
+            ]));
         }
 
         $normalized = self::normalizeTokenResponse($result->json);

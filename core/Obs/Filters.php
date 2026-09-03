@@ -44,14 +44,25 @@ use TwitchController\Core\App;
  */
 final class Filters
 {
-    /** Zeitraeume fuer die Auswahl. */
-    public const RANGES = [
-        '1d'  => ['label' => '1 Tag',        'interval' => '1 day'],
-        '3d'  => ['label' => '3 Tage',       'interval' => '3 days'],
-        '7d'  => ['label' => '7 Tage',       'interval' => '7 days'],
-        '1m'  => ['label' => '1 Monat',      'interval' => '1 month'],
-        'all' => ['label' => 'Gesamte Zeit', 'interval' => null],
-    ];
+    /**
+     * Zeitraeume fuer die Auswahl.
+     *
+     * Eine Methode und keine Konstante: in einem konstanten Ausdruck
+     * darf kein Funktionsaufruf stehen, und die Beschriftungen gehoeren
+     * in die Sprachdatei.
+     *
+     * @return array<string, array{label: string, interval: ?string}>
+     */
+    public static function ranges(): array
+    {
+        return [
+            '1d'  => ['label' => translate('feed.range.1d'),        'interval' => '1 day'],
+            '3d'  => ['label' => translate('feed.range.3d'),       'interval' => '3 days'],
+            '7d'  => ['label' => translate('feed.range.7d'),       'interval' => '7 days'],
+            '1m'  => ['label' => translate('feed.range.1m'),      'interval' => '1 month'],
+            'all' => ['label' => translate('feed.range.all'), 'interval' => null],
+        ];
+    }
 
     public const DEFAULT_RANGE = '7d';
 
@@ -89,9 +100,9 @@ final class Filters
             ['key' => 'subs.tiered.tier2', 'label' => 'Tier 2',    'parent' => 'subs.tiered', 'order' => 20],
             ['key' => 'subs.tiered.tier3', 'label' => 'Tier 3',    'parent' => 'subs.tiered', 'order' => 30],
             ['key' => 'subs.gifted',       'label' => 'Gifted',    'parent' => 'subs', 'order' => 30],
-            ['key' => 'subs.gifted.sent',     'label' => 'Gesendet',  'parent' => 'subs.gifted', 'order' => 10],
-            ['key' => 'subs.gifted.received', 'label' => 'Empfangen', 'parent' => 'subs.gifted', 'order' => 20],
-            ['key' => 'subs.end',          'label' => 'Sub Ende',  'parent' => 'subs', 'order' => 40],
+            ['key' => 'subs.gifted.sent',     'label' => translate('feed.filter.sent'),  'parent' => 'subs.gifted', 'order' => 10],
+            ['key' => 'subs.gifted.received', 'label' => translate('feed.filter.received'), 'parent' => 'subs.gifted', 'order' => 20],
+            ['key' => 'subs.end',          'label' => translate('feed.filter.sub_end'),  'parent' => 'subs', 'order' => 40],
 
             ['key' => 'raids',             'label' => 'Raids',     'order' => 60],
 
@@ -289,9 +300,9 @@ final class Filters
      */
     public function range(array $query): string
     {
-        $range = is_string($query['zeitraum'] ?? null) ? $query['zeitraum'] : '';
+        $range = is_string($query['range'] ?? null) ? $query['range'] : '';
 
-        return isset(self::RANGES[$range]) ? $range : self::DEFAULT_RANGE;
+        return isset(self::ranges()[$range]) ? $range : self::DEFAULT_RANGE;
     }
 
     public function interval(string $range): ?string
@@ -299,10 +310,10 @@ final class Filters
         // Bewusst array_key_exists statt ?? - bei "Gesamte Zeit" ist der
         // Wert null, und mit ?? wuerde stattdessen der Standardzeitraum
         // greifen. Der Feed haette dann trotz "alles" nur 7 Tage gezeigt.
-        if (!array_key_exists($range, self::RANGES)) {
+        if (!array_key_exists($range, self::ranges())) {
             $range = self::DEFAULT_RANGE;
         }
 
-        return self::RANGES[$range]['interval'];
+        return self::ranges()[$range]['interval'];
     }
 }

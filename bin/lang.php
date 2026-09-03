@@ -11,6 +11,9 @@ declare(strict_types=1);
  *   php bin/lang.php --all               Kern und alle Plugins
  *   php bin/lang.php --fix               fehlende Schluessel anlegen (leer)
  *
+ * Ohne --plugin wird zusaetzlich gemeldet, was gar nicht erst durch
+ * translate() geht - siehe pruefeFestenText().
+ *
  * Geprueft wird gegen lang/de.json - das ist die Grundlage, in der jeder
  * Schluessel stehen muss. Gemeldet wird:
  *
@@ -223,10 +226,19 @@ function schluesselDerVoraussetzungen(string $root, string $verzeichnis): array
 /**
  * @return int Anzahl der Beanstandungen
  */
-function pruefe(string $name, string $codeDir, string $langDir, bool $fix, array $zusaetzlich = []): int
+function pruefe(string $name, string|array $codeDir, string $langDir, bool $fix, array $zusaetzlich = []): int
 {
     $abweichungen = 0;
-    $benutzt = schluesselIn($codeDir);
+
+    // Mehrere Verzeichnisse: der Kern besteht aus core/ UND public/ -
+    // der Front-Controller uebersetzt auch. Ohne ihn galten seine
+    // Schluessel als unbenutzt.
+    $benutzt = [];
+    foreach ((array) $codeDir as $verzeichnis) {
+        foreach (schluesselIn($verzeichnis) as $key => $anzahl) {
+            $benutzt[$key] = ($benutzt[$key] ?? 0) + $anzahl;
+        }
+    }
     $basis = ladeJson($langDir . '/de.json');
 
     // Ein Plugin darf Kern-Schluessel mitbenutzen - die gelten hier als
@@ -316,6 +328,388 @@ function pruefe(string $name, string $codeDir, string $langDir, bool $fix, array
     return count($fehlend) + $abweichungen;
 }
 
+
+/**
+ * Fest verdrahtete Anzeigetexte.
+ *
+ * Der Teil oben fragt: steht jeder benutzte Schluessel in der
+ * Sprachdatei? Er kann nicht sehen, was gar nicht erst durch
+ * translate() geht. Genau dort lagen die letzten Luecken - eine
+ * Beschriftungstabelle aus Substantiven faellt keiner Wortsuche auf.
+ *
+ * Zwei Fragen, absichtlich getrennt:
+ *
+ *   in den Vorlagen   Text ausserhalb der PHP-Bloecke, also direkt als
+ *                     HTML. Ueber token_get_all(), nicht per Regex: in
+ *                     core/views/_confirm.php steht ein `?>` mitten in
+ *                     einem Kommentar, und jeder Zeichen-Scanner haelt
+ *                     danach den Rest der Datei fuer HTML.
+ *   im PHP-Code       Zeichenketten an Stellen, die beim Benutzer
+ *                     landen: 'label' => …, ->fail(…), Ausnahmen. Nach
+ *                     der STELLE gefragt und nicht nach der Sprache -
+ *                     so faellt auch ein englischer Text auf.
+ */
+
+/** Laeuft vor dem Uebersetzer oder geht nur ins Log. */
+const OHNE_UEBERSETZER = [
+    'core/Config/Env.php',       // liest die .env als erstes
+    'core/Http/View.php',        // fehlende Vorlage: Programmierfehler
+    'core/Plugin/Manifest.php',  // der Aufrufer faengt und loggt
+    'core/Hook/Hooks.php',       // melde() baut nur eine Logzeile
+    // Sprachnamen stehen immer in ihrer eigenen Sprache. «Türkçe» in
+    // «Türkisch» zu uebersetzen waere genau falsch: die Liste soll der
+    // lesen koennen, der die Oberflaeche noch nicht versteht.
+    'core/I18n/Translator.php',
+    'bin/worker.php',
+    'bin/lang.php',
+    'plugins/bin/pack.php',
+];
+
+/**
+ * Rumpf einer Maschinenantwort.
+ *
+ * Response::text() mit Statuscode liest kein Mensch: Twitch bekommt es
+ * beim Webhook, der Browser beim Nachladen einer Plugin-Datei. Wer es
+ * doch zu sehen bekommt, sieht die Fehlerseite des Browsers. Sie
+ * bleiben bei der Schreibweise aus dem HTTP-Standard.
+ */
+const PROTOKOLLTEXTE = ['Not Found', 'Method Not Allowed', 'Bad signature'];
+
+/**
+ * Was Twitch selbst so schreibt.
+ *
+ * Wer im Stream «Tier 1» sagt, sagt es auf Deutsch auch so - eine
+ * Uebersetzung waere eine Erfindung. Beschreibende Woerter im selben
+ * Filterbaum («Gesendet», «Empfangen») sind dagegen uebersetzt.
+ */
+const TWITCH_BEGRIFFE = ['Tier 1', 'Tier 2', 'Tier 3'];
+
+const DEUTSCH = '/[\x{00e4}\x{00f6}\x{00fc}\x{00c4}\x{00d6}\x{00dc}\x{00df}]'
+    . '|(?:^|\s)(?:der|die|das|den|dem|des|nicht|ist|sind|wird|werden|kann|'
+    . 'muss|bitte|und|oder|noch|schon|dann|wenn|weil|wurde|keine|kein|dir|'
+    . 'dich|deine|eine|einen|einem|fuer|mit|ohne|vom|zum|zur|bei|auf|aus|'
+    . 'nach|jetzt|bereits|Fehler|Hinweis)(?:\s|[.,!?:;]|$)/iu';
+
+/** Stellen, an denen ein Text beim Benutzer landet. */
+const ANZEIGESTELLEN = [
+    ['/\'(?:label|title|heading|message|detail|summary|question|confirm|placeholder)\'\s*=>\s*\'([^\']{2,})\'/', 'Anzeigefeld'],
+    ['/->back\([^)]*?\'([^\']{4,})\'/', 'Meldung'],
+    ['/->fail\(\'([^\']{4,})\'/', 'Meldung'],
+    ['/Response::text\(\'([^\']{4,})\'/', 'Antworttext'],
+    ['/new (?:RuntimeException|InvalidArgumentException|LogicException)\(\'([^\']{4,})\'/', 'Ausnahme'],
+];
+
+/** Schluessel, Klassennamen, Zahlen - kein Anzeigetext. */
+const HARMLOS = '/^(?:[a-z0-9_.:\/-]+|[A-Z][A-Za-z0-9_]*|%\{[a-z_]+\}|[0-9.,\s-]+)$/';
+
+/**
+ * PHP-Dateien unter den Wurzeln, ohne die ausgenommenen.
+ *
+ * @param list<string> $wurzeln
+ * @return list<string>
+ */
+function dateien(array $wurzeln, string $mussEnthalten): array
+{
+    $root = str_replace(DIRECTORY_SEPARATOR, '/', dirname(__DIR__));
+    $gefunden = [];
+
+    foreach ($wurzeln as $wurzel) {
+        if (!is_dir($wurzel)) {
+            continue;
+        }
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($wurzel, FilesystemIterator::SKIP_DOTS)
+        );
+
+        foreach ($iterator as $eintrag) {
+            $pfad = str_replace(DIRECTORY_SEPARATOR, '/', $eintrag->getPathname());
+
+            if (!str_ends_with($pfad, '.php') || str_contains($pfad, '/.git/')) {
+                continue;
+            }
+            if ($mussEnthalten !== '' && !str_contains($pfad, $mussEnthalten)) {
+                continue;
+            }
+
+            $relativ = str_starts_with($pfad, $root . '/')
+                ? substr($pfad, strlen($root) + 1)
+                : $pfad;
+
+            if (in_array($relativ, OHNE_UEBERSETZER, true)) {
+                continue;
+            }
+
+            $gefunden[] = $pfad;
+        }
+    }
+
+    sort($gefunden);
+
+    return $gefunden;
+}
+
+/**
+ * Deutscher Text in einer Vorlage, ausserhalb der PHP-Bloecke.
+ *
+ * @param list<string> $wurzeln
+ * @return list<array{0: string, 1: int, 2: string}>
+ */
+function vorlagenTexte(array $wurzeln): array
+{
+    $treffer = [];
+
+    foreach (dateien($wurzeln, '/views/') as $pfad) {
+        $zeilen = [];
+
+        foreach (token_get_all((string) file_get_contents($pfad)) as $token) {
+            if (!is_array($token) || $token[0] !== T_INLINE_HTML) {
+                continue;
+            }
+
+            foreach (explode("\n", $token[1]) as $i => $stueck) {
+                $nummer = $token[2] + $i;
+                $zeilen[$nummer] = ($zeilen[$nummer] ?? '') . $stueck;
+            }
+        }
+
+        ksort($zeilen);
+
+        // Skript- und Stilbloecke ueberspringen: dort steht CSS oder
+        // JavaScript, und Text kommt ueber json_encode(translate(…)).
+        $imBlock = false;
+
+        foreach ($zeilen as $nummer => $html) {
+            $oeffnet = (bool) preg_match('/<(script|style)\b[^>]*>(?!.*<\/\1>)/is', $html);
+            $schliesst = (bool) preg_match('/<\/(script|style)>/i', $html);
+
+            if ($imBlock) {
+                $imBlock = !$schliesst;
+                continue;
+            }
+            if ($oeffnet) {
+                $imBlock = true;
+                continue;
+            }
+
+            $html = (string) preg_replace('/<(script|style)\b.*?<\/\1>/is', ' ', $html);
+            $html = (string) preg_replace('/<!--.*?-->/s', ' ', $html);
+            $html = (string) preg_replace('/<[^>]*>/', ' ', $html);
+            $html = (string) preg_replace('/&[a-zA-Z]+;|&#\d+;/', ' ', $html);
+            $html = trim($html);
+
+            if (strlen($html) < 3 || !preg_match(DEUTSCH, $html)) {
+                continue;
+            }
+
+            $treffer[] = [$pfad, $nummer, $html];
+        }
+    }
+
+    return $treffer;
+}
+
+/**
+ * Zeichenketten an Stellen, die beim Benutzer landen.
+ *
+ * @param list<string> $wurzeln
+ * @return list<array{0: string, 1: int, 2: string}>
+ */
+function anzeigeTexte(array $wurzeln): array
+{
+    $treffer = [];
+
+    foreach (dateien($wurzeln, '') as $pfad) {
+        $imBlock = false;
+
+        foreach (explode("\n", (string) file_get_contents($pfad)) as $i => $zeile) {
+            $nackt = trim($zeile);
+
+            if ($imBlock) {
+                $imBlock = !str_contains($nackt, '*/');
+                continue;
+            }
+            if ($nackt === '' || $nackt[0] === '*'
+                || str_starts_with($nackt, '//') || str_starts_with($nackt, '#')) {
+                continue;
+            }
+            if (str_contains($nackt, '/*') && !str_contains($nackt, '*/')) {
+                $imBlock = true;
+                continue;
+            }
+            // Logzeilen gehen ins Log des Containers, nicht zum Benutzer.
+            if (str_contains($zeile, '->log(')) {
+                continue;
+            }
+
+            foreach (ANZEIGESTELLEN as [$regex, $art]) {
+                if (!preg_match_all($regex, $zeile, $saetze, PREG_SET_ORDER)) {
+                    continue;
+                }
+
+                foreach ($saetze as $satz) {
+                    $wert = $satz[1];
+
+                    if (preg_match(HARMLOS, $wert)) {
+                        continue;
+                    }
+                    if ($art === 'Antworttext' && in_array($wert, PROTOKOLLTEXTE, true)) {
+                        continue;
+                    }
+                    if (in_array($wert, TWITCH_BEGRIFFE, true)) {
+                        continue;
+                    }
+
+                    $treffer[] = [$pfad, $i + 1, $art . ': ' . $wert];
+                }
+            }
+        }
+    }
+
+    return $treffer;
+}
+
+/**
+ * Deutsche Woerter in einer beliebigen Zeichenkette.
+ *
+ * Die Stellenliste oben kennt nur bekannte Muster. Ein nacktes
+ * `return 'Alles ist bereits aktuell.';` faellt durch - das hat die
+ * Gegenprobe gezeigt. Diese Pruefung fragt darum wieder nach der
+ * Sprache, aber ueber die Tokens: Kommentare sind damit von sich aus
+ * draussen, und nur das steht drin, was PHP als Zeichenkette liest.
+ *
+ * @param list<string> $wurzeln
+ * @return list<array{0: string, 1: int, 2: string}>
+ */
+function deutscheTexte(array $wurzeln): array
+{
+    $treffer = [];
+
+    foreach (dateien($wurzeln, '') as $pfad) {
+        $tokens = token_get_all((string) file_get_contents($pfad));
+
+        // Argumente von log() ueberspringen: die gehen ins Log des
+        // Containers, nicht zum Benutzer.
+        $imLog = 0;
+        $klammern = 0;
+
+        foreach ($tokens as $i => $token) {
+            if ($token === '(') {
+                $klammern++;
+                continue;
+            }
+            if ($token === ')') {
+                $klammern--;
+                if ($imLog > 0 && $klammern < $imLog) {
+                    $imLog = 0;
+                }
+                continue;
+            }
+
+            if (is_array($token) && $token[0] === T_STRING && $token[1] === 'log') {
+                $imLog = $klammern + 1;
+                continue;
+            }
+
+            if (!is_array($token) || $token[0] !== T_CONSTANT_ENCAPSED_STRING) {
+                continue;
+            }
+            if ($imLog > 0) {
+                continue;
+            }
+
+            $wert = substr($token[1], 1, -1);
+
+            if (strlen($wert) < 8 || !preg_match(DEUTSCH, $wert)) {
+                continue;
+            }
+            // SQL und Pfade sind kein Anzeigetext.
+            if (preg_match('/^(?:SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/i', $wert)) {
+                continue;
+            }
+            if (str_contains($wert, '/') || str_contains($wert, DIRECTORY_SEPARATOR)) {
+                continue;
+            }
+            // Schon uebersetzt: der Schluessel steht direkt hinter
+            // translate( - dann ist die Zeichenkette der Schluessel.
+            if (istSchluessel($tokens, $i)) {
+                continue;
+            }
+
+            $treffer[] = [$pfad, $token[2], 'Text: ' . $wert];
+        }
+    }
+
+    return $treffer;
+}
+
+/**
+ * Steht diese Zeichenkette als erstes Argument in translate()?
+ *
+ * @param list<array{0: int, 1: string, 2: int}|string> $tokens
+ */
+function istSchluessel(array $tokens, int $stelle): bool
+{
+    for ($i = $stelle - 1; $i >= 0 && $i >= $stelle - 3; $i--) {
+        $token = $tokens[$i];
+
+        if (is_array($token) && in_array($token[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)) {
+            continue;
+        }
+        if ($token === '(') {
+            continue;
+        }
+        if (is_array($token) && $token[0] === T_STRING && $token[1] === 'translate') {
+            return true;
+        }
+
+        return false;
+    }
+
+    return false;
+}
+
+/**
+ * @return int Anzahl der Beanstandungen
+ */
+function pruefeFestenText(string $root): int
+{
+    $wurzeln = [
+        $root . '/core',
+        $root . '/public',
+        $root . '/bin',
+        $root . '/plugins',
+    ];
+
+    $treffer = array_merge(
+        vorlagenTexte($wurzeln),
+        anzeigeTexte($wurzeln),
+        deutscheTexte($wurzeln)
+    );
+
+    // Dieselbe Stelle kann in zwei Pruefungen auffallen.
+    $treffer = array_values(array_unique($treffer, SORT_REGULAR));
+    usort($treffer, static fn (array $a, array $b): int => [$a[0], $a[1]] <=> [$b[0], $b[1]]);
+
+    printf("\nFest verdrahtete Texte\n");
+
+    if ($treffer === []) {
+        printf("  keine - alle Anzeigetexte laufen über translate()\n");
+
+        return 0;
+    }
+
+    foreach ($treffer as [$pfad, $nummer, $text]) {
+        $relativ = str_starts_with($pfad, $root . '/')
+            ? substr($pfad, strlen($root) + 1)
+            : $pfad;
+
+        printf("  %s:%d  %s\n", $relativ, $nummer, $text);
+    }
+
+    return count($treffer);
+}
+
 $beanstandungen = 0;
 
 if ($plugin !== '') {
@@ -331,7 +725,12 @@ if ($plugin !== '') {
             + schluesselDerVoraussetzungen($root, $verzeichnis)
     );
 } else {
-    $beanstandungen += pruefe('Kern', $root . '/core', $root . '/lang', $fix);
+    $beanstandungen += pruefe(
+        'Kern',
+        [$root . '/core', $root . '/public'],
+        $root . '/lang',
+        $fix
+    );
 
     if ($alle) {
         $kern = ladeJson($root . '/lang/de.json');
@@ -364,8 +763,16 @@ if ($plugin !== '') {
     }
 }
 
+// Ohne --plugin auch das pruefen, was gar nicht erst durch
+// translate() geht.
+if ($plugin === '') {
+    $beanstandungen += pruefeFestenText(
+        str_replace(DIRECTORY_SEPARATOR, '/', $root)
+    );
+}
+
 printf("\n%s\n", $beanstandungen === 0
-    ? 'Keine fehlenden Schlüssel.'
-    : sprintf('%d Schlüssel fehlen.', $beanstandungen));
+    ? 'Nichts zu beanstanden.'
+    : sprintf('%d Beanstandung(en).', $beanstandungen));
 
 exit($beanstandungen === 0 ? 0 : 1);

@@ -25,7 +25,7 @@ final class FeedController
 {
     private const DEFAULT_LIMIT = 100;
 
-    /** Takt zum Nachladen in Sekunden. Ueber ?takt= aenderbar. */
+    /** Takt zum Nachladen in Sekunden. Ueber ?refresh= aenderbar. */
     private const DEFAULT_REFRESH = 5;
 
     public function __construct(private readonly App $app)
@@ -40,12 +40,12 @@ final class FeedController
         $selected = $filters->selected($request->query);
         $range = $filters->range($request->query);
         $limit = self::limit($request);
-        $page = max(1, (int) ($request->get('seite') ?: '1'));
+        $page = max(1, (int) ($request->get('page') ?: '1'));
 
         $result = $this->collect($selected, $range, $limit, ($page - 1) * $limit);
 
         return Response::html($this->app->view->render('feed', [
-            'title'      => 'Aktivitäten',
+            'title'      => translate('nav.activity_title'),
             'events'     => $result['events'],
             'latest'     => $result['latest'],
             'total'      => $result['total'],
@@ -53,13 +53,13 @@ final class FeedController
             'leaves'     => $filters->leaves(),
             'selected'   => $selected,
             'allSelected' => $filters->isAll($selected),
-            'ranges'     => Filters::RANGES,
+            'ranges'     => Filters::ranges(),
             'range'      => $range,
             'limit'      => $limit,
             'page'       => $page,
             'pages'      => max(1, (int) ceil($result['total'] / $limit)),
             'refresh'    => self::refresh($request),
-            'compact'    => $request->get('kompakt') !== '',
+            'compact'    => $request->get('compact') !== '',
             'badges'     => $badges->resolved(),
             'query'      => $request->query,
         ], null));
@@ -161,7 +161,7 @@ final class FeedController
 
     private static function refresh(Request $request): int
     {
-        $refresh = (int) ($request->get('takt') ?: (string) self::DEFAULT_REFRESH);
+        $refresh = (int) ($request->get('refresh') ?: (string) self::DEFAULT_REFRESH);
 
         // 0 heisst "nicht nachladen". Sonst nicht schneller als alle
         // zwei Sekunden, damit der Server nicht unnoetig arbeitet.

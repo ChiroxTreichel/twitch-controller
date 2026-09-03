@@ -316,8 +316,11 @@ Pfades. Handler-Signatur: `fn(Request $request, array $params): Response`.
 
 **Pfade sind englisch.** `/account/settings`, nicht
 `/konto/einstellungen`. Das gilt für Segmente ebenso wie für
-Query-Parameter (`?notice=`, `?error=`, `?filter=`) und für den Slug eines
-Plugins, weil der im Pfad landet. Sichtbare Texte kommen dagegen aus der
+Query-Parameter (`?notice=`, `?error=`, `?filter=`, `?range=`, `?page=`,
+`?compact=`, `?refresh=`, `?welcome=`) und für den Slug eines
+Plugins, weil der im Pfad landet. Ein alter Link mit `?zeitraum=7d`
+bleibt gültig — der Parameter greift dann nicht mehr, und es gilt
+wieder die Voreinstellung. Sichtbare Texte kommen dagegen aus der
 Sprachdatei, und die Rechte-Namen bleiben deutsch (`Konto.Plugins.View`) --
 sie stehen pro Benutzer in der Datenbank und lassen sich nicht umbenennen,
 ohne bestehende Installationen mitzuziehen.
@@ -417,15 +420,61 @@ Die Sprache kommt aus der Einstellung `language`, sonst aus `APP_LANG`,
 sonst Deutsch. Umgestellt wird sie unter *Konto > Einstellungen*.
 
 
+Das `lang`-Attribut gehört ebenfalls dazu. `View::render()` legt
+`$language` in jede Vorlage — mit Netz, damit die Fehlerseite auch bei
+weggebrochener Datenbank noch rendert:
+
+```php
+<html lang="<?= $e($language) ?>">
+```
+
+In vier Vorlagen stand dort fest `lang="de"`. Das fällt niemandem auf,
+weil die Seite trotzdem richtig aussieht — nur Vorleseprogramme und
+Übersetzungshilfen lesen weiter Deutsch.
+
+#### Was der Prüflauf sonst noch findet
+
+Die Schlüsselprüfung beantwortet nur eine Frage: steht jeder benutzte
+Schlüssel in der Sprachdatei? Sie kann nicht sehen, was **gar nicht
+erst** durch `translate()` geht. Genau dort lagen die letzten Lücken:
+eine Beschriftungstabelle aus Substantiven (`'Neues Abo'`, `'Sub Ende'`)
+fällt keiner Wortsuche auf, und `<html lang="de">` stand fest in vier
+Vorlagen. Ohne `--plugin` läuft darum ein zweiter Abschnitt mit, der
+aus drei Richtungen fragt:
+
+| Prüfung | Frage |
+| --- | --- |
+| Vorlagen | deutscher Text ausserhalb der PHP-Blöcke, also direkt als HTML |
+| Anzeigestellen | Zeichenkette in `'label' => …`, `->fail(…)`, `Response::text(…)`, `new RuntimeException(…)` — nach der **Stelle** gefragt, nicht nach der Sprache, damit auch ein englischer Text auffällt |
+| Zeichenketten | deutsche Wörter in beliebigen Zeichenketten, für Fälle wie `return 'Alles ist bereits aktuell.';`, die keiner Stelle entsprechen |
+
+Der Vorlagenteil liest die PHP-Tokens und nicht die Zeichen: in
+`core/views/_confirm.php` steht ein `?>` mitten in einem Kommentar, und
+jeder Regex hält danach den Rest der Datei für HTML.
+
+
 **Kein deutscher Text im Code.** Auch nicht in Ausnahmen: die landen
-über `$e->getMessage()` in der Oberfläche. Drei Ausnahmen von der
-Ausnahme, und die sind es wirklich:
+über `$e->getMessage()` in der Oberfläche. Die Ausnahmen von der
+Ausnahme stehen als Liste in `bin/lang.php` und nicht nur hier:
 
 | Datei | warum |
 | --- | --- |
 | `Config/Env.php` | liest die `.env`, bevor der Übersetzer gebootet ist |
 | `Http/View.php` | fehlende Vorlage ist ein Programmierfehler, kein Benutzertext |
-| `Plugin/Manifest.php` | wird nur über `log()` sichtbar |
+| `Plugin/Manifest.php` | der Aufrufer fängt die Ausnahme und loggt sie |
+| `Hook/Hooks.php` | `melde()` baut nur eine Logzeile |
+| `I18n/Translator.php` | Sprachnamen stehen in ihrer eigenen Sprache — «Türkçe» zu übersetzen wäre genau falsch, die Liste soll der lesen können, der die Oberfläche noch nicht versteht |
+| `bin/*`, `plugins/bin/pack.php` | Kommandozeile, dort läuft kein Übersetzer |
+
+Zwei weitere Gruppen bleiben absichtlich, wie sie sind:
+
+- **Rumpf einer Maschinenantwort.** `Response::text('Not Found', 404)`
+  liest kein Mensch: Twitch bekommt es beim Webhook, der Browser beim
+  Nachladen einer Plugin-Datei. Sie bleiben bei der Schreibweise aus
+  dem HTTP-Standard.
+- **Was Twitch selbst so schreibt.** Wer im Stream «Tier 1» sagt, sagt
+  es auf Deutsch auch so. Beschreibende Wörter im selben Filterbaum
+  («Gesendet», «Empfangen») sind dagegen übersetzt.
 
 Ebenso ausgenommen: Argumente von `$app->log()`. Die gehen ins Log des
 Containers, nicht zum Benutzer — und dort ist eine feste Sprache
@@ -435,6 +484,16 @@ Ein `translate()` in einem `<script>`-Block wäre ein Laufzeitfehler:
 dort gibt es die Funktion nicht. Richtig ist
 `<?= json_encode(translate('…')) ?>` — PHP setzt den Text ein,
 `json_encode` kümmert sich um die Anführungszeichen.
+
+#### Übersetzen heisst nicht umformulieren
+
+Beim Herausziehen eines festen Textes gehört in `de.json` **genau das
+Wort, das vorher im Code stand**. Beim ersten Durchgang hatte ich in
+`Obs/Badges.php` aus `'Sub'` ein «Abo» und aus `'Gift erhalten'` ein
+«Geschenk erhalten» gemacht — der Feed sah danach anders aus als die
+Legacy, und der Vergleichstest fiel zu Recht durch. Der Auftrag ist das
+Hardcoding, nicht die Formulierung. Wer die Wortwahl ändern will,
+ändert `de.json` — dafür ist sie da.
 
 ### Statische Dateien
 

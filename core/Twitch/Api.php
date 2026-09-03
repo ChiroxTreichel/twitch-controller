@@ -86,12 +86,11 @@ final class Api
     {
         $result = $this->get($endpoint, $query);
         if (!$result->ok()) {
-            throw new RuntimeException(sprintf(
-                'Twitch-Fehler bei %s (%d): %s',
-                $endpoint,
-                $result->status,
-                $result->error()
-            ));
+            throw new RuntimeException(translate('twitch.api_error', [
+                'endpoint' => $endpoint,
+                'status'   => $result->status,
+                'reason'   => $result->error(),
+            ]));
         }
 
         $data = $result->json['data'] ?? [];

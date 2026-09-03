@@ -25,7 +25,7 @@ $currentIndex = array_search($step ?? '', $keys, true);
 $currentIndex = $currentIndex === false ? 0 : $currentIndex;
 ?>
 <!doctype html>
-<html lang="de">
+<html lang="<?= $e($language) ?>">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">

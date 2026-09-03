@@ -341,7 +341,7 @@ final class AccountController
                     $this->app->settings->forget('twitch_app_token');
                     $this->app->settings->forget('twitch_app_token_expires');
 
-                    return $this->back('/account/settings', 'Zugangsdaten gespeichert.');
+                    return $this->back('/account/settings', translate('settings.credentials_saved'));
 
                 case 'eventsub':
                     $report = $this->app->twitch->eventSub()->sync();
@@ -366,12 +366,11 @@ final class AccountController
                         );
                     }
 
-                    return $this->back('/account/settings', sprintf(
-                        'Abos abgeglichen: %d neu, %d bestanden, %d entfernt.',
-                        count($report['created']),
-                        count($report['kept']),
-                        count($report['deleted'])
-                    ));
+                    return $this->back('/account/settings', translate('settings.events.synced', [
+                        'new'     => count($report['created']),
+                        'kept'    => count($report['kept']),
+                        'removed' => count($report['deleted']),
+                    ]));
 
                 case 'disconnect_channel':
                     $this->app->twitch->tokens()->delete(TokenStore::BROADCASTER);
@@ -387,7 +386,9 @@ final class AccountController
                     $this->app->settings->set('timezone', $timezone);
                     $this->app->applyTimezone();
 
-                    return $this->back('/account/settings', 'Zeitzone gespeichert: ' . $timezone);
+                    return $this->back('/account/settings', translate('settings.timezone_saved', [
+                        'zone' => $timezone,
+                    ]));
 
                 case 'nav_order':
                     $verschoben = (new Nav($this->app))->move(

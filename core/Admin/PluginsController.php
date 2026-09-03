@@ -98,7 +98,7 @@ final class PluginsController
             'csrf'      => $this->app->auth->csrfToken(),
             'notice'    => $request->get('notice'),
             'error'     => $request->get('error'),
-            'welcome'   => $request->get('willkommen') !== '',
+            'welcome'   => $request->get('welcome') !== '',
         ]));
     }
 
@@ -188,7 +188,7 @@ final class PluginsController
             return $this->back('/account/plugins', null, $e->getMessage());
         }
 
-        return $this->back('/account/plugins', null, 'Unbekannte Aktion.');
+        return $this->back('/account/plugins', null, translate('common.error.unknown_action'));
     }
 
     // -----------------------------------------------------------------
@@ -231,7 +231,7 @@ final class PluginsController
         }
 
         return Response::html($this->app->view->render('account/plugins_find', [
-            'title'      => 'Plugins finden',
+            'title' => translate('account.plugins.tab_find'),
             'active'     => 'account/plugins',
             'tab'        => 'finden',
             'plugins'    => $plugins,
@@ -318,7 +318,7 @@ final class PluginsController
             return $this->back($back, null, $e->getMessage());
         }
 
-        return $this->back($back, null, 'Unbekannte Aktion.');
+        return $this->back($back, null, translate('common.error.unknown_action'));
     }
 
     // -----------------------------------------------------------------

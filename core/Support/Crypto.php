@@ -92,7 +92,7 @@ final class Crypto
         }
 
         if (!extension_loaded('sodium')) {
-            throw new RuntimeException('Die PHP-Erweiterung "sodium" fehlt - ohne sie koennen Geheimnisse nicht verschluesselt werden.');
+            throw new RuntimeException(translate('crypto.sodium_missing'));
         }
 
         $key = $this->normalize((string) $this->env->require('APP_KEY'));

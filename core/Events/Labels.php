@@ -21,23 +21,23 @@ final class Labels
     public static function all(?Hooks $hooks = null): array
     {
         $labels = [
-            'channel.follow'                => 'Follow',
-            'channel.subscribe'             => 'Neues Abo',
+            'channel.follow'                => translate('events.follow'),
+            'channel.subscribe'             => translate('events.new_sub'),
             'channel.subscription.message'  => translate('events.sub_renewed'),
-            'channel.subscription.gift'     => 'Abo verschenkt',
-            'channel.subscription.end'      => 'Abo beendet',
-            'channel.cheer'                 => 'Bits',
-            'channel.raid'                  => 'Raid',
-            'stream.online'                 => 'Stream gestartet',
-            'stream.offline'                => 'Stream beendet',
+            'channel.subscription.gift'     => translate('events.sub_gifted'),
+            'channel.subscription.end'      => translate('events.sub_ended'),
+            'channel.cheer'                 => translate('events.bits'),
+            'channel.raid'                  => translate('events.raid'),
+            'stream.online'                 => translate('events.stream_start'),
+            'stream.offline'                => translate('events.stream_end'),
             'channel.channel_points_custom_reward_redemption.add'    => translate('events.channel_points'),
-            'channel.channel_points_automatic_reward_redemption.add' => 'Kanalpunkte (automatisch)',
-            'channel.hype_train.begin'      => 'Hype-Train gestartet',
+            'channel.channel_points_automatic_reward_redemption.add' => translate('events.points_auto'),
+            'channel.hype_train.begin'      => translate('events.hype_start'),
             'channel.hype_train.progress'   => translate('events.hype_train'),
-            'channel.hype_train.end'        => 'Hype-Train beendet',
-            'channel.goal.begin'            => 'Twitch-Ziel gestartet',
-            'channel.goal.progress'         => 'Twitch-Ziel Fortschritt',
-            'channel.goal.end'              => 'Twitch-Ziel beendet',
+            'channel.hype_train.end'        => translate('events.hype_end'),
+            'channel.goal.begin'            => translate('events.goal_start'),
+            'channel.goal.progress'         => translate('events.goal_progress'),
+            'channel.goal.end'              => translate('events.goal_end'),
         ];
 
         if ($hooks === null) {

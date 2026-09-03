@@ -49,9 +49,9 @@ $app->router->setGuard(static function (array $options, Request $request) use ($
     if ($permission !== '' && !$app->auth->can($permission)) {
         return Response::html(
             $app->view->render('error', [
-                'title'   => 'Kein Zugriff',
-                'heading' => 'Kein Zugriff',
-                'message' => 'Für diesen Bereich fehlt dir die Berechtigung. Der Kanalinhaber kann sie freischalten.',
+                'title'   => translate('error.forbidden'),
+                'heading' => translate('error.forbidden'),
+                'message' => translate('error.forbidden_hint'),
             ], 'plain'),
             403
         );
@@ -100,9 +100,9 @@ try {
 
     $response = Response::html(
         $app->view->render('error', [
-            'title'   => 'Fehler',
-            'heading' => 'Da ist etwas schiefgegangen',
-            'message' => 'Die Einzelheiten stehen im Log des Containers: docker compose logs -f web',
+            'title'   => translate('error.title'),
+            'heading' => translate('error.heading'),
+            'message' => translate('error.hint'),
             // Wer angemeldet ist, bekommt hier den Notausgang - damit ein
             // Fehler auf einer Verwaltungsseite nicht auch das Update
             // unerreichbar macht.

@@ -133,7 +133,7 @@ final class Auth
         $displayName = (string) ($twitchUser['display_name'] ?? $login);
 
         if ($twitchId === '' || $login === '') {
-            throw new RuntimeException('Twitch hat keinen verwertbaren Benutzer geliefert.');
+            throw new RuntimeException(translate('auth.no_user'));
         }
 
         $existing = $this->find($twitchId);

@@ -29,7 +29,7 @@ final class ActivityController
         $badges = new Badges($this->app);
 
         return Response::html($this->app->view->render('account/activities', [
-            'title'     => 'Aktivitäten',
+            'title'     => translate('nav.activity_title'),
             'active'    => 'account/activities',
             'badges'    => $badges->resolved(),
             'presets'   => $badges->catalog(),
@@ -60,7 +60,7 @@ final class ActivityController
 
             $saved = (new Badges($this->app))->save($request->post);
 
-            return $this->back(sprintf('Gespeichert (%d Farben).', $saved));
+            return $this->back(translate('account.activity.colors_saved', ['count' => $saved]));
         } catch (Throwable $e) {
             return $this->back(null, $e->getMessage());
         }

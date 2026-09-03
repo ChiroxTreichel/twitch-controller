@@ -81,41 +81,43 @@ final class Presenter
 
         switch ($eventType) {
             case 'twitch.channel.follow':
-                return ['badge' => 'Follow', 'style' => 'follow', 'title' => $actor, 'filter' => 'follows.new'];
+                return ['badge' => translate('badge.follow'), 'style' => 'follow', 'title' => self::name($actor), 'filter' => 'follows.new'];
 
             case 'twitch.channel.cheer':
                 $anonymous = Payload::bool($payload, ['is_anonymous', 'anonymous']);
 
                 return [
-                    'badge'  => max(1, $amount) . ' Bits',
+                    'badge'  => translate('badge.bits.count', ['count' => max(1, $amount)]),
                     'style'  => 'bits',
-                    'title'  => $anonymous ? 'Anonymer Cheer' : $actor,
+                    'title'  => $anonymous
+                        ? translate('feed.anonymous_cheer')
+                        : self::name($actor),
                     'filter' => 'bits',
                 ];
 
             case 'twitch.channel.subscribe':
                 if (Payload::bool($payload, ['is_gift'])) {
                     return [
-                        'badge'  => 'Gift erhalten' . $suffix,
+                        'badge'  => translate('badge.gift_received') . $suffix,
                         'style'  => 'gift_received',
-                        'title'  => $actor,
+                        'title'  => self::name($actor),
                         'filter' => 'subs.gifted.received',
                     ];
                 }
 
                 if (Payload::isPrime($row, $payload)) {
-                    return ['badge' => 'Sub' . $suffix, 'style' => 'prime', 'title' => $actor, 'filter' => 'subs.prime'];
+                    return ['badge' => translate('badge.sub') . $suffix, 'style' => 'prime', 'title' => self::name($actor), 'filter' => 'subs.prime'];
                 }
 
                 return [
-                    'badge'  => 'Sub' . $suffix,
+                    'badge'  => translate('badge.sub') . $suffix,
                     'style'  => 'sub',
-                    'title'  => $actor,
+                    'title'  => self::name($actor),
                     'filter' => 'subs.tiered.' . Payload::tierSlug($payload),
                 ];
 
             case 'twitch.channel.subscription.message':
-                $badge = 'Resub' . $suffix;
+                $badge = translate('badge.resub') . $suffix;
 
                 // Streak schlaegt Gesamtmonate: "12x" heisst hier
                 // "12 Monate in Folge", falls Twitch das mitliefert.
@@ -130,7 +132,7 @@ final class Presenter
                 return [
                     'badge'  => $badge,
                     'style'  => Payload::isPrime($row, $payload) ? 'prime' : 'resub',
-                    'title'  => $actor,
+                    'title'  => self::name($actor),
                     'filter' => Payload::isPrime($row, $payload)
                         ? 'subs.prime'
                         : 'subs.tiered.' . Payload::tierSlug($payload),
@@ -144,29 +146,35 @@ final class Presenter
                 ]);
 
                 return [
-                    'badge'  => max(1, $amount) . 'x Gift' . $suffix,
+                    'badge'  => translate('badge.gift.count', [
+                        'count' => max(1, $amount),
+                    ]) . $suffix,
                     'style'  => $anonymous ? 'gift_anon' : 'gift',
-                    'title'  => ($anonymous ? 'Anonymer Gifter' : $actor)
+                    'title'  => ($anonymous
+                        ? translate('feed.anonymous_gifter')
+                        : self::name($actor))
                         . ($receiver !== '' ? ' → ' . $receiver : ''),
                     'filter' => 'subs.gifted.sent',
                 ];
 
             case 'twitch.channel.subscription.end':
-                return ['badge' => 'Sub Ende', 'style' => 'sub_end', 'title' => $actor, 'filter' => 'subs.end'];
+                return ['badge' => translate('badge.sub_end'), 'style' => 'sub_end', 'title' => self::name($actor), 'filter' => 'subs.end'];
 
             case 'twitch.channel.raid':
                 return [
-                    'badge'  => 'Raid ' . max(1, $amount) . 'x',
+                    'badge'  => translate('badge.raid.count', ['count' => max(1, $amount)]),
                     'style'  => 'raid',
-                    'title'  => $actor === self::UNKNOWN ? 'Unbekannter Raider' : $actor,
+                    'title'  => $actor === self::UNKNOWN
+                        ? translate('feed.unknown_raider')
+                        : $actor,
                     'filter' => 'raids',
                 ];
 
             case 'twitch.stream.online':
-                return ['badge' => 'Stream an', 'style' => 'stream_online', 'title' => $actor, 'filter' => 'system.stream'];
+                return ['badge' => translate('badge.stream_online'), 'style' => 'stream_online', 'title' => self::name($actor), 'filter' => 'system.stream'];
 
             case 'twitch.stream.offline':
-                return ['badge' => 'Stream aus', 'style' => 'stream_offline', 'title' => $actor, 'filter' => 'system.stream'];
+                return ['badge' => translate('badge.stream_offline'), 'style' => 'stream_offline', 'title' => self::name($actor), 'filter' => 'system.stream'];
         }
 
         // Unbekannt: sichtbar, aber unauffaellig - damit man merkt, dass
@@ -174,12 +182,26 @@ final class Presenter
         return [
             'badge'  => \TwitchController\Core\Events\Labels::of($eventType, $this->app->hooks),
             'style'  => 'system',
-            'title'  => $actor,
+            'title'  => self::name($actor),
             'filter' => 'system.other',
         ];
     }
 
-    private const UNKNOWN = 'Unbekannt';
+    /**
+     * Merker fuer «im Ereignis stand kein Name».
+     *
+     * Absichtlich kein Anzeigetext: die Vergleiche weiter oben pruefen
+     * darauf, und ein uebersetzter Text wuerde diese Pruefung von der
+     * eingestellten Sprache abhaengig machen. Sichtbar wird daraus erst
+     * das, was name() daraus macht.
+     */
+    private const UNKNOWN = "\x00unknown";
+
+    /** Aus dem Merker wird hier der Text, der im Feed steht. */
+    private static function name(string $actor): string
+    {
+        return $actor === self::UNKNOWN ? translate('feed.unknown') : $actor;
+    }
 
     /**
      * @param array<string, mixed> $row

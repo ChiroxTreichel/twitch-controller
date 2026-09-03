@@ -17,7 +17,7 @@
  */
 ?>
 <!doctype html>
-<html lang="<?= $e($language ?? 'de') ?>">
+<html lang="<?= $e($language) ?>">
 <head>
     <meta charset="utf-8">
     <title>Overlay</title>

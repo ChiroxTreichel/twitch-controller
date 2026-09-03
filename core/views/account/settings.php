@@ -148,7 +148,7 @@ use TwitchController\Core\Support\Dates;
                     </option>
                 <?php endforeach; ?>
             </select>
-            <button class="btn btn-ghost btn-small" type="submit">Übernehmen</button>
+            <button class="btn btn-ghost btn-small" type="submit"><?= $e(translate('common.apply')) ?></button>
         </form>
 
         <form method="post" action="<?= $e($url('/account/settings')) ?>" class="row"
@@ -163,7 +163,7 @@ use TwitchController\Core\Support\Dates;
                     </option>
                 <?php endforeach; ?>
             </select>
-            <button class="btn btn-ghost btn-small" type="submit">Übernehmen</button>
+            <button class="btn btn-ghost btn-small" type="submit"><?= $e(translate('common.apply')) ?></button>
         </form>
         <p class="hint" style="margin-top:8px;">
             <?= translate('settings.language_hint', ['file' => '<span class="mono">lang/&lt;code&gt;.json</span>']) ?>
