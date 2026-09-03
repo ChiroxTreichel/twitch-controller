@@ -421,9 +421,9 @@ final class PluginManager
 
         $dependents = $this->activeDependents($slug);
         if ($dependents !== []) {
-            throw new RuntimeException(
-                'Zuerst deaktivieren: ' . implode(', ', $dependents) . ' - haengt davon ab.'
-            );
+            throw new RuntimeException(translate('plugin.disable_blocked', [
+                'names' => implode(', ', $dependents),
+            ]));
         }
 
         $this->app->db->run(

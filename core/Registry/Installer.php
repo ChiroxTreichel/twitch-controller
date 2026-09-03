@@ -65,10 +65,7 @@ final class Installer
         $slug = (string) $package['slug'];
 
         if (!$this->canWrite()) {
-            throw new RuntimeException(
-                'Das Verzeichnis plugins/ ist für den Webserver nicht beschreibbar. '
-                . 'Einmal "sudo ./install.sh" auf dem Server behebt das.'
-            );
+            throw new RuntimeException(translate('install.not_writable'));
         }
 
         $this->assertSameHost((string) $package['download']);

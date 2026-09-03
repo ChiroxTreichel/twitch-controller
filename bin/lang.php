@@ -248,6 +248,18 @@ function pruefe(string $name, string|array $codeDir, string $langDir, bool $fix,
     $fehlend = array_keys(array_diff_key($benutzt, $vorhanden));
     $unbenutzt = array_keys(array_diff_key($basis, $benutzt));
 
+    // Umschriebene Umlaute in einem deutschen Anzeigetext.
+    //
+    // Im Code sind "ae, oe, ue" Absicht - Kommentare und Bezeichner
+    // bleiben bei ASCII. In einem Text, den ein Streamer liest, ist es
+    // ein Mangel: "haengt davon ab" statt "hängt davon ab".
+    $umschrieben = [];
+    foreach ($basis as $key => $wert) {
+        if (preg_match(UMSCHRIEBEN, (string) $wert)) {
+            $umschrieben[] = $key;
+        }
+    }
+
     printf("\n%s\n", $name);
     printf("  %d Schlüssel im Code, %d in de.json\n", count($benutzt), count($basis));
 
@@ -265,6 +277,15 @@ function pruefe(string $name, string|array $codeDir, string $langDir, bool $fix,
             schreibeJson($langDir . '/de.json', $basis);
             printf("  -> mit leerem Wert in de.json angelegt\n");
         }
+    }
+
+    if ($umschrieben !== []) {
+        printf("  %d mit umschriebenen Umlauten in de.json:\n", count($umschrieben));
+        sort($umschrieben);
+        foreach ($umschrieben as $key) {
+            printf("      %s: %s\n", $key, (string) $basis[$key]);
+        }
+        $abweichungen += count($umschrieben);
     }
 
     if ($unbenutzt !== []) {
@@ -405,15 +426,37 @@ const DEUTSCH = '/[\x{00e4}\x{00f6}\x{00fc}\x{00c4}\x{00d6}\x{00dc}\x{00df}]'
     . '|(?:^|\s)(?:der|die|das|den|dem|des|nicht|ist|sind|wird|werden|kann|'
     . 'muss|bitte|und|oder|noch|schon|dann|wenn|weil|wurde|keine|kein|dir|'
     . 'dich|deine|eine|einen|einem|fuer|mit|ohne|vom|zum|zur|bei|auf|aus|'
-    . 'nach|jetzt|bereits|Fehler|Hinweis)(?:\s|[.,!?:;]|$)/iu';
+    . 'nach|jetzt|bereits|zuerst|davon|dabei|Fehler|Hinweis)(?:\s|[.,!?:;]|$)/iu';
+
+/**
+ * Umschriebene Umlaute - ae, oe, ue statt ä, ö, ü.
+ *
+ * In einer Zeichenkette ist das ein starkes Zeichen: die Werte in den
+ * Sprachdateien schreiben Umlaute richtig, also stammt so ein Wort aus
+ * einem Text, der nie durch die Sprachdatei gegangen ist. Genau so ist
+ * "Zuerst deaktivieren: … - haengt davon ab." durchgerutscht - kein
+ * Umlaut, keines der Woerter oben, und der Aufruf stand eine Zeile
+ * ueber der Zeichenkette.
+ *
+ * In Kommentaren ist die Umschreibung dagegen Absicht und erlaubt -
+ * geprueft werden nur Zeichenketten, die PHP als solche liest.
+ */
+const UMSCHRIEBEN = '/(?:^|[^a-z])(?:'
+    . 'haengt|haengen|angehaengt|faellt|faellig|waehl|waehr|maessig|'
+    . 'moeglich|noetig|oeffn|loesch|groess|hoeh|schoen|koenn|nachtraeglich|'
+    . 'fuer|ueber|muess|zurueck|spaet|naechst|aendern|geaendert|'
+    . 'ungueltig|gueltig|urspruenglich|beruecksicht|zusaetzlich|'
+    . 'natuerlich|verfuegbar|ausfuehr|einfuehr|durchfuehr|gehoert|'
+    . 'stuetz|schliess|heisst|weiss|grosse|Groesse'
+    . ')/iu';
 
 /** Stellen, an denen ein Text beim Benutzer landet. */
 const ANZEIGESTELLEN = [
     ['/\'(?:label|title|heading|message|detail|summary|question|confirm|placeholder)\'\s*=>\s*\'([^\']{2,})\'/', 'Anzeigefeld'],
     ['/->back\([^)]*?\'([^\']{4,})\'/', 'Meldung'],
-    ['/->fail\(\'([^\']{4,})\'/', 'Meldung'],
-    ['/Response::text\(\'([^\']{4,})\'/', 'Antworttext'],
-    ['/new (?:RuntimeException|InvalidArgumentException|LogicException)\(\'([^\']{4,})\'/', 'Ausnahme'],
+    ['/->fail\(\s*\'([^\']{4,})\'/', 'Meldung'],
+    ['/Response::text\(\s*\'([^\']{4,})\'/', 'Antworttext'],
+    ['/new (?:RuntimeException|InvalidArgumentException|LogicException)\(\s*\'([^\']{4,})\'/', 'Ausnahme'],
 ];
 
 /** Schluessel, Klassennamen, Zahlen - kein Anzeigetext. */
@@ -537,6 +580,55 @@ function vorlagenTexte(array $wurzeln): array
 }
 
 /**
+ * Die Datei ohne Kommentare, mit gleichen Zeilennummern.
+ *
+ * Kommentare sind absichtlich deutsch und duerfen nicht mitgemeldet
+ * werden. Die Zeilenumbrueche bleiben erhalten, damit die gemeldete
+ * Zeile die aus der Datei ist.
+ */
+function ohneKommentare(string $quelle): string
+{
+    $tokens = @token_get_all($quelle);
+    if (!is_array($tokens)) {
+        return $quelle;
+    }
+
+    $aus = '';
+
+    foreach ($tokens as $token) {
+        if (is_array($token) && in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)) {
+            $aus .= str_repeat("
+", substr_count($token[1], "
+"));
+            continue;
+        }
+
+        $aus .= is_array($token) ? $token[1] : $token;
+    }
+
+    return $aus;
+}
+
+/**
+ * Gehoert diese Zeile zu einem log()-Aufruf?
+ *
+ * Angesehen wird die Zeile selbst und die beiden darueber: in diesem
+ * Code steht ein Aufruf sehr oft ueber seinem Argument.
+ */
+function istLogzeile(string $quelle, int $zeile): bool
+{
+    $zeilen = explode("\n", $quelle);
+
+    for ($i = $zeile - 1; $i >= 0 && $i >= $zeile - 3; $i--) {
+        if (str_contains($zeilen[$i] ?? '', '->log(')) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
  * Zeichenketten an Stellen, die beim Benutzer landen.
  *
  * @param list<string> $wurzeln
@@ -547,53 +639,53 @@ function anzeigeTexte(array $wurzeln): array
     $treffer = [];
 
     foreach (dateien($wurzeln, '') as $pfad) {
-        $imBlock = false;
+        // Ueber die ganze Datei und nicht Zeile fuer Zeile.
+        //
+        // Zeilenweise fand der Pruefer nur, was mit dem Aufruf in
+        // derselben Zeile stand. Genau daran ist
+        //
+        //     throw new RuntimeException(
+        //         'Zuerst deaktivieren: ' . … . ' - haengt davon ab.'
+        //     );
+        //
+        // vorbeigelaufen - und in diesem Code steht ein Aufruf sehr oft
+        // ueber seinem Argument.
+        $quelle = ohneKommentare((string) file_get_contents($pfad));
 
-        foreach (explode("\n", (string) file_get_contents($pfad)) as $i => $zeile) {
-            $nackt = trim($zeile);
-
-            if ($imBlock) {
-                $imBlock = !str_contains($nackt, '*/');
-                continue;
-            }
-            if ($nackt === '' || $nackt[0] === '*'
-                || str_starts_with($nackt, '//') || str_starts_with($nackt, '#')) {
-                continue;
-            }
-            if (str_contains($nackt, '/*') && !str_contains($nackt, '*/')) {
-                $imBlock = true;
-                continue;
-            }
-            // Logzeilen gehen ins Log des Containers, nicht zum Benutzer.
-            if (str_contains($zeile, '->log(')) {
+        foreach (ANZEIGESTELLEN as [$regex, $art]) {
+            if (!preg_match_all($regex, $quelle, $saetze, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
                 continue;
             }
 
-            foreach (ANZEIGESTELLEN as [$regex, $art]) {
-                if (!preg_match_all($regex, $zeile, $saetze, PREG_SET_ORDER)) {
+            foreach ($saetze as $satz) {
+                [$wert, $stelle] = $satz[1];
+
+                $harmlos = $art === 'Anzeigefeld' ? HARMLOS_BESCHRIFTUNG : HARMLOS;
+
+                if (preg_match($harmlos, $wert)) {
+                    continue;
+                }
+                if ($art === 'Antworttext' && in_array($wert, PROTOKOLLTEXTE, true)) {
+                    continue;
+                }
+                if (in_array($wert, TWITCH_BEGRIFFE, true)) {
+                    continue;
+                }
+                if (in_array($wert, TECHNISCHE_NAMEN, true)) {
                     continue;
                 }
 
-                foreach ($saetze as $satz) {
-                    $wert = $satz[1];
+                $zeile = substr_count($quelle, "\n", 0, $stelle) + 1;
 
-                    $harmlos = $art === 'Anzeigefeld' ? HARMLOS_BESCHRIFTUNG : HARMLOS;
-
-                    if (preg_match($harmlos, $wert)) {
-                        continue;
-                    }
-                    if ($art === 'Antworttext' && in_array($wert, PROTOKOLLTEXTE, true)) {
-                        continue;
-                    }
-                    if (in_array($wert, TWITCH_BEGRIFFE, true)) {
-                        continue;
-                    }
-                    if (in_array($wert, TECHNISCHE_NAMEN, true)) {
-                        continue;
-                    }
-
-                    $treffer[] = [$pfad, $i + 1, $art . ': ' . $wert];
+                // Logzeilen gehen ins Log des Containers, nicht zum
+                // Benutzer. Geprueft wird die Zeile des Treffers und die
+                // darueber - ein Aufruf ueber seinem Argument ist hier
+                // die Regel.
+                if (istLogzeile($quelle, $zeile)) {
+                    continue;
                 }
+
+                $treffer[] = [$pfad, $zeile, $art . ': ' . $wert];
             }
         }
     }
@@ -652,7 +744,10 @@ function deutscheTexte(array $wurzeln): array
 
             $wert = substr($token[1], 1, -1);
 
-            if (strlen($wert) < 8 || !preg_match(DEUTSCH, $wert)) {
+            $deutsch = preg_match(DEUTSCH, $wert) === 1
+                || preg_match(UMSCHRIEBEN, $wert) === 1;
+
+            if (strlen($wert) < 8 || !$deutsch) {
                 continue;
             }
             // SQL und Pfade sind kein Anzeigetext.
@@ -719,8 +814,20 @@ function pruefeFestenText(string $root): int
         deutscheTexte($wurzeln)
     );
 
-    // Dieselbe Stelle kann in zwei Pruefungen auffallen.
-    $treffer = array_values(array_unique($treffer, SORT_REGULAR));
+    // Dieselbe Stelle kann in zwei Pruefungen auffallen - die
+    // Stellensuche und die Wortsuche finden denselben Text. Gemeldet
+    // wird sie einmal, sonst liest sich der Bericht doppelt so lang
+    // wie die Arbeit ist.
+    $einmalig = [];
+    foreach ($treffer as $eintrag) {
+        [$pfad, $zeile, $text] = $eintrag;
+
+        // Ohne die Art davor: "Ausnahme: X" und "Text: X" sind
+        // dieselbe Stelle.
+        $ohneArt = (string) preg_replace('/^[A-Za-zäöü]+: /', '', $text);
+        $einmalig[$pfad . '|' . $zeile . '|' . $ohneArt] = $eintrag;
+    }
+    $treffer = array_values($einmalig);
     usort($treffer, static fn (array $a, array $b): int => [$a[0], $a[1]] <=> [$b[0], $b[1]]);
 
     printf("\nFest verdrahtete Texte\n");
