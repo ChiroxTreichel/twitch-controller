@@ -125,6 +125,8 @@ final class AccountController
             'desired'          => $this->app->twitch->eventSub()->desired(),
             'report'           => null,
             'update'           => $updater->status(),
+            'timezone'         => $this->app->timezone(),
+            'timezones'        => self::timezones(),
             'updateVersion'    => $updater->currentVersion(),
             'updatePossible'   => $updater->isGitCheckout() && $updater->gitAvailable(),
         ]));
@@ -204,6 +206,17 @@ final class AccountController
 
                     return $this->back('/konto/einstellungen', 'Kanal-Verbindung getrennt.');
 
+                case 'timezone':
+                    $timezone = $request->input('timezone');
+                    if (!in_array($timezone, timezone_identifiers_list(), true)) {
+                        return $this->back('/konto/einstellungen', null, 'Unbekannte Zeitzone.');
+                    }
+
+                    $this->app->settings->set('timezone', $timezone);
+                    $this->app->applyTimezone();
+
+                    return $this->back('/konto/einstellungen', 'Zeitzone gespeichert: ' . $timezone);
+
                 case 'update_check':
                     $check = (new \Overlays\Core\Update\Updater($this->app))->check();
 
@@ -247,6 +260,24 @@ final class AccountController
     }
 
     // -----------------------------------------------------------------
+
+    /**
+     * Nur die europaeischen Zonen plus UTC - die vollstaendige Liste hat
+     * ueber 400 Eintraege und macht die Auswahl unbenutzbar.
+     *
+     * @return list<string>
+     */
+    private static function timezones(): array
+    {
+        $zones = array_values(array_filter(
+            timezone_identifiers_list(),
+            static fn (string $zone): bool => str_starts_with($zone, 'Europe/')
+        ));
+
+        array_unshift($zones, 'UTC');
+
+        return $zones;
+    }
 
     private function guardPost(Request $request, string $permission, string $back): ?Response
     {

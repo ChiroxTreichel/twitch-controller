@@ -14,16 +14,19 @@ use Overlays\Core\Http\Response;
  * (Ansicht > Docks > Eigenes Browser-Dock) - ein Dock teilt die Cookies
  * mit dem Browser, deshalb funktioniert die Anmeldung dort.
  *
- * Adresse: /aktivitaeten
+ * Adresse: /obs
  * Einstellungen dazu: Konto > Aktivitaeten
  *
- * Nachladen laeuft ueber dieselbe Adresse mit ?format=json&since_id=…
+ * Nachladen laeuft ueber /obs/neu?since_id=…
  * Die Seite fragt in einem festen Takt nach und haengt Neues oben an,
  * ohne neu zu laden.
  */
 final class FeedController
 {
     private const DEFAULT_LIMIT = 100;
+
+    /** Takt zum Nachladen in Sekunden. Ueber ?takt= aenderbar. */
+    private const DEFAULT_REFRESH = 5;
 
     public function __construct(private readonly App $app)
     {
@@ -46,15 +49,17 @@ final class FeedController
             'events'     => $result['events'],
             'latest'     => $result['latest'],
             'total'      => $result['total'],
-            'groups'     => $filters->groups(),
+            'tree'       => $filters->tree(),
+            'leaves'     => $filters->leaves(),
             'selected'   => $selected,
+            'allSelected' => $filters->isAll($selected),
             'ranges'     => Filters::RANGES,
             'range'      => $range,
             'limit'      => $limit,
             'page'       => $page,
             'pages'      => max(1, (int) ceil($result['total'] / $limit)),
-            'refresh'    => self::refresh($request, $this->app->settings->int('obs_feed_refresh', 5)),
-            'compact'    => $request->get('kompakt') !== '' || $this->app->settings->bool('obs_feed_compact', false),
+            'refresh'    => self::refresh($request),
+            'compact'    => $request->get('kompakt') !== '',
             'badges'     => $badges->resolved(),
             'query'      => $request->query,
         ], null));
@@ -99,15 +104,25 @@ final class FeedController
         int $offset,
         int $sinceId = 0,
     ): array {
-        $presenter = new Presenter($this->app);
-        $interval = (new Filters($this->app))->interval($range);
+        $filters = new Filters($this->app);
 
-        $storeFilters = ['interval' => $interval];
+        // Leere Auswahl heisst "alles abgewaehlt" - dann gibt es nichts
+        // zu holen. "Kein Filter in der Adresse" liefert dagegen alle
+        // Blaetter, das entscheidet Filters::selected().
+        if ($selected === []) {
+            return ['events' => [], 'latest' => $sinceId, 'total' => 0];
+        }
+
+        $presenter = new Presenter($this->app);
+
+        $storeFilters = ['interval' => $filters->interval($range)];
         if ($sinceId > 0) {
             $storeFilters['min_id'] = $sinceId;
         }
 
-        $fetch = $selected === [] ? $limit : min(500, max($limit * 5, 200));
+        // Bei eingeschraenkter Auswahl ein groesseres Fenster lesen,
+        // weil erst nach dem Aufbereiten gefiltert werden kann.
+        $fetch = $filters->isAll($selected) ? $limit : min(500, max($limit * 5, 200));
 
         $rows = $this->app->events->recent($fetch, $offset, $storeFilters);
         $total = $this->app->events->count($storeFilters);
@@ -123,7 +138,7 @@ final class FeedController
                 continue;
             }
 
-            if ($selected !== [] && !in_array($view['filter'], $selected, true)) {
+            if (!in_array($view['filter'], $selected, true)) {
                 continue;
             }
 
@@ -144,9 +159,9 @@ final class FeedController
         return max(10, min(500, $limit));
     }
 
-    private static function refresh(Request $request, int $default): int
+    private static function refresh(Request $request): int
     {
-        $refresh = (int) ($request->get('takt') ?: (string) $default);
+        $refresh = (int) ($request->get('takt') ?: (string) self::DEFAULT_REFRESH);
 
         // 0 heisst "nicht nachladen". Sonst nicht schneller als alle
         // zwei Sekunden, damit der Server nicht unnoetig arbeitet.

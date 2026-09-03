@@ -7,8 +7,6 @@
  * @var array<string, array{label: string, bg: string, text: string}> $badges
  * @var array<string, array{label: string, bg: string, text: string}> $presets
  * @var string $feedUrl
- * @var int $refresh
- * @var bool $compact
  * @var bool $canManage
  * @var string $csrf
  * @var string $notice
@@ -17,7 +15,7 @@
 ?>
 <h1>Aktivitäten</h1>
 <p class="lead">
-    Der Feed zeigt, was im Kanal passiert. Hier wird eingestellt, wie er aussieht.
+    Der Feed zeigt, was im Kanal passiert. Hier stellst du seine Farben ein.
 </p>
 
 <?php if ($notice !== ''): ?>
@@ -51,51 +49,6 @@
 
 <form method="post" action="<?= $e($url('/konto/aktivitaeten')) ?>">
     <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-
-    <div class="card">
-        <h2>Anzeige</h2>
-
-        <div class="field">
-            <label for="refresh">Nachladen alle</label>
-            <select class="input" id="refresh" name="refresh" <?= $canManage ? '' : 'disabled' ?>>
-                <?php foreach ([0 => 'nicht automatisch', 2 => '2 Sekunden', 5 => '5 Sekunden',
-                                10 => '10 Sekunden', 30 => '30 Sekunden', 60 => '1 Minute'] as $value => $label): ?>
-                    <option value="<?= $e((string) $value) ?>" <?= $refresh === $value ? 'selected' : '' ?>>
-                        <?= $e($label) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <p class="hint">
-                Neue Ereignisse erscheinen dann von selbst oben, ohne die Seite neu zu laden.
-            </p>
-        </div>
-
-        <div class="field">
-            <label for="timezone">Zeitzone</label>
-            <select class="input" id="timezone" name="timezone" <?= $canManage ? '' : 'disabled' ?>>
-                <?php foreach ($timezones as $zone): ?>
-                    <option value="<?= $e($zone) ?>" <?= $timezone === $zone ? 'selected' : '' ?>>
-                        <?= $e($zone) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-            <p class="hint">
-                Bestimmt, welche Uhrzeiten überall angezeigt werden. Der Server rechnet intern
-                in UTC &mdash; ohne die richtige Zeitzone stehen im Feed Zeiten, die daneben liegen.
-            </p>
-        </div>
-
-        <div class="field">
-            <label class="perm" style="padding:0;">
-                <input type="checkbox" name="compact" value="1"
-                    <?= $compact ? 'checked' : '' ?> <?= $canManage ? '' : 'disabled' ?>>
-                <span>
-                    Kompakte Ansicht als Standard
-                    <br><span class="hint">Engere Zeilen ohne Nachrichtentext &mdash; passt in ein schmales Dock.</span>
-                </span>
-            </label>
-        </div>
-    </div>
 
     <div class="card">
         <div class="card-head">

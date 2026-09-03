@@ -163,10 +163,10 @@ final class Presenter
                 ];
 
             case 'twitch.stream.online':
-                return ['badge' => 'Stream an', 'style' => 'stream_online', 'title' => $actor, 'filter' => 'stream.online'];
+                return ['badge' => 'Stream an', 'style' => 'stream_online', 'title' => $actor, 'filter' => 'system.stream'];
 
             case 'twitch.stream.offline':
-                return ['badge' => 'Stream aus', 'style' => 'stream_offline', 'title' => $actor, 'filter' => 'stream.offline'];
+                return ['badge' => 'Stream aus', 'style' => 'stream_offline', 'title' => $actor, 'filter' => 'system.stream'];
         }
 
         // Unbekannt: sichtbar, aber unauffaellig - damit man merkt, dass
@@ -175,7 +175,7 @@ final class Presenter
             'badge'  => \Overlays\Core\Events\Labels::of($eventType, $this->app->hooks),
             'style'  => 'system',
             'title'  => $actor,
-            'filter' => 'system',
+            'filter' => 'system.other',
         ];
     }
 

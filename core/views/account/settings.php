@@ -120,6 +120,27 @@
             </form>
         <?php endif; ?>
     <?php endif; ?>
+
+    <?php if ($canManage): ?>
+        <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>" class="row"
+              style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line);">
+            <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
+            <input type="hidden" name="action" value="timezone">
+            <label for="timezone" style="margin:0;">Zeitzone</label>
+            <select class="input" id="timezone" name="timezone" style="width:auto;">
+                <?php foreach ($timezones as $zone): ?>
+                    <option value="<?= $e($zone) ?>" <?= $timezone === $zone ? 'selected' : '' ?>>
+                        <?= $e($zone) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <button class="btn btn-ghost btn-small" type="submit">Übernehmen</button>
+        </form>
+        <p class="hint" style="margin-top:8px;">
+            Bestimmt, welche Uhrzeiten überall angezeigt werden. Der Server rechnet intern in
+            UTC &mdash; ohne die richtige Zone stehen im Feed Zeiten, die daneben liegen.
+        </p>
+    <?php endif; ?>
 </div>
 
 <?php if ($notice !== ''): ?>

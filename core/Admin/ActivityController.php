@@ -33,11 +33,7 @@ final class ActivityController
             'active'    => 'konto/aktivitaeten',
             'badges'    => $badges->resolved(),
             'presets'   => $badges->catalog(),
-            'feedUrl'   => $this->app->url('/aktivitaeten'),
-            'refresh'   => $this->app->settings->int('obs_feed_refresh', 5),
-            'timezone'  => $this->app->timezone(),
-            'timezones' => self::timezones(),
-            'compact'   => $this->app->settings->bool('obs_feed_compact', false),
+            'feedUrl'   => $this->app->url('/obs'),
             'canManage' => $this->app->auth->can('Konto.Aktivitaeten.Manage'),
             'csrf'      => $this->app->auth->csrfToken(),
             'notice'    => $request->get('hinweis'),
@@ -64,39 +60,10 @@ final class ActivityController
 
             $saved = (new Badges($this->app))->save($request->post);
 
-            // 0 heisst "nicht nachladen" - alles andere zwischen 2 und 120.
-            $refresh = (int) $request->input('refresh');
-            $this->app->settings->set('obs_feed_refresh', $refresh === 0 ? 0 : max(2, min(120, $refresh)));
-            $this->app->settings->set('obs_feed_compact', $request->input('compact') !== '');
-
-            $timezone = $request->input('timezone');
-            if ($timezone !== '' && in_array($timezone, timezone_identifiers_list(), true)) {
-                $this->app->settings->set('timezone', $timezone);
-                $this->app->applyTimezone();
-            }
-
             return $this->back(sprintf('Gespeichert (%d Farben).', $saved));
         } catch (Throwable $e) {
             return $this->back(null, $e->getMessage());
         }
-    }
-
-    /**
-     * Nur die europaeischen Zonen plus UTC - die vollstaendige Liste hat
-     * ueber 400 Eintraege und macht die Auswahl unbenutzbar.
-     *
-     * @return list<string>
-     */
-    private static function timezones(): array
-    {
-        $zones = array_values(array_filter(
-            timezone_identifiers_list(),
-            static fn (string $zone): bool => str_starts_with($zone, 'Europe/')
-        ));
-
-        array_unshift($zones, 'UTC');
-
-        return $zones;
     }
 
     private function back(?string $notice = null, ?string $error = null): Response

@@ -77,19 +77,21 @@ final class Routes
         ]);
         $router->post('/konto/benutzer', [$account, 'usersAction'], ['auth' => true]);
 
-        // Aktivitäten: Einstellungen im Konto, der Feed selbst daneben
-        // unter /aktivitaeten (gedacht als Browser-Dock in OBS).
+        // Aktivitäten: Einstellungen im Konto, der Feed selbst unter
+        // /obs (gedacht als Browser-Dock in OBS).
         $router->get('/konto/aktivitaeten', [$activity, 'show'], [
             'auth' => true,
             'permission' => 'Konto.Aktivitaeten.View',
         ]);
         $router->post('/konto/aktivitaeten', [$activity, 'save'], ['auth' => true]);
 
-        $router->get('/aktivitaeten', [$feed, 'show'], [
+        // Kurze Adresse, weil der Link in OBS eingetragen und
+        // gelegentlich von Hand getippt wird.
+        $router->get('/obs', [$feed, 'show'], [
             'auth' => true,
             'permission' => 'Konto.Aktivitaeten.View',
         ]);
-        $router->get('/aktivitaeten/neu', [$feed, 'updates'], [
+        $router->get('/obs/neu', [$feed, 'updates'], [
             'auth' => true,
             'permission' => 'Konto.Aktivitaeten.View',
         ]);

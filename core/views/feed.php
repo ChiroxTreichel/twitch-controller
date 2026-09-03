@@ -1,7 +1,11 @@
 <?php
 /**
- * Der Aktivitaeten-Feed. Eigenstaendige Seite ohne Adminrahmen, damit
- * sie als schmales Fenster oder als Browser-Dock in OBS taugt.
+ * Der Aktivitaeten-Feed (/obs). Eigenstaendige Seite ohne Adminrahmen,
+ * damit sie als Browser-Dock in OBS taugt.
+ *
+ * Der Kopf ist absichtlich eine einzige Zeile: kein Titel, kein
+ * Statustext, der Filter sitzt als Knopf mit drin. In einem schmalen
+ * Dock ist jede gesparte Zeile eine Zeile mehr Feed.
  *
  * @var \Overlays\Core\App $app
  * @var callable $e
@@ -9,8 +13,10 @@
  * @var list<array<string, mixed>> $events
  * @var int $latest
  * @var int $total
- * @var array<string, array{label: string, order: int, items: array<string, string>}> $groups
+ * @var list<array{key: string, label: string, children: list<array<string, mixed>>}> $tree
+ * @var list<string> $leaves
  * @var list<string> $selected
+ * @var bool $allSelected
  * @var array<string, array{label: string, interval: ?string}> $ranges
  * @var string $range
  * @var int $limit
@@ -24,13 +30,37 @@
 
 /** Adresse mit geänderten Parametern, alles andere bleibt stehen. */
 $link = static function (array $changes) use ($url, $query): string {
-    $params = array_filter(
-        array_merge($query, $changes),
-        static fn (mixed $v): bool => $v !== '' && $v !== null
-    );
-    unset($params['format']);
+    $params = array_merge($query, $changes);
+    $params = array_filter($params, static fn (mixed $v): bool => $v !== '' && $v !== null);
 
-    return $url('/aktivitaeten') . ($params === [] ? '' : '?' . http_build_query($params));
+    return $url('/obs') . ($params === [] ? '' : '?' . http_build_query($params));
+};
+
+/** Filterbaum als verschachtelte Liste. */
+$zweig = static function (array $knoten, int $tiefe) use (&$zweig, $e, $selected): string {
+    $html = '<ul class="tree' . ($tiefe > 0 ? ' is-nested' : '') . '">';
+
+    foreach ($knoten as $node) {
+        $hatKinder = $node['children'] !== [];
+        $angehakt = !$hatKinder && in_array($node['key'], $selected, true);
+
+        $html .= '<li>';
+        $html .= '<label>';
+        $html .= '<input type="checkbox" data-key="' . $e($node['key']) . '"';
+        $html .= $hatKinder ? ' data-parent="1"' : ' name="filter[]" value="' . $e($node['key']) . '"';
+        $html .= $angehakt ? ' checked' : '';
+        $html .= '>';
+        $html .= '<span>' . $e($node['label']) . '</span>';
+        $html .= '</label>';
+
+        if ($hatKinder) {
+            $html .= $zweig($node['children'], $tiefe + 1);
+        }
+
+        $html .= '</li>';
+    }
+
+    return $html . '</ul>';
 };
 ?>
 <!doctype html>
@@ -48,6 +78,8 @@ $link = static function (array $changes) use ($url, $query): string {
             --ink: #e9ecf1;
             --muted: #98a1b0;
             --accent: #9146ff;
+            --ok: #3ecf8e;
+            --error: #ef4d4d;
             color-scheme: dark;
         }
 
@@ -60,93 +92,111 @@ $link = static function (array $changes) use ($url, $query): string {
             font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
-        /* --- Kopf --- */
+        /* --- Kopf: genau eine Zeile ------------------------------------ */
 
         header {
             position: sticky;
             top: 0;
-            z-index: 5;
+            z-index: 20;
             display: flex;
-            gap: 10px;
+            gap: 6px;
             align-items: center;
-            flex-wrap: wrap;
-            padding: 10px 14px;
+            padding: 6px 8px;
             background: var(--panel);
             border-bottom: 1px solid var(--line);
         }
 
         header .grow { flex: 1; }
 
-        .title { font-weight: 600; }
-        .muted { color: var(--muted); font-size: 0.85rem; }
-
-        select, .btn {
-            padding: 6px 10px;
+        select, .btn, summary.btn {
+            padding: 4px 9px;
             background: var(--bg);
             border: 1px solid var(--line);
-            border-radius: 8px;
+            border-radius: 7px;
             color: var(--ink);
             font: inherit;
-            font-size: 0.86rem;
+            font-size: 0.84rem;
             cursor: pointer;
             text-decoration: none;
+            white-space: nowrap;
         }
 
-        .btn:hover, select:hover { border-color: var(--accent); }
-        .btn.is-on { background: rgba(145, 70, 255, 0.18); border-color: var(--accent); }
+        .btn:hover, select:hover, summary.btn:hover { border-color: var(--accent); }
+        .btn.is-on, summary.btn.is-on { background: rgba(145, 70, 255, 0.18); border-color: var(--accent); }
 
-        /* --- Filter --- */
+        /* Verbindungsanzeige als Punkt statt als Textzeile. */
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--ok);
+            flex: none;
+        }
 
-        details.filters {
-            padding: 0 14px 10px;
+        .dot.is-off { background: var(--muted); }
+        .dot.is-error { background: var(--error); }
+
+        /* --- Filter als Klappfeld im Kopf ------------------------------ */
+
+        details.filter { position: relative; }
+        details.filter summary { list-style: none; }
+        details.filter summary::-webkit-details-marker { display: none; }
+
+        .filter-panel {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            z-index: 30;
+            width: max(260px, 80vw);
+            max-width: 420px;
+            max-height: 70vh;
+            overflow: auto;
+            padding: 12px;
             background: var(--panel);
-            border-bottom: 1px solid var(--line);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
         }
 
-        details.filters summary {
-            cursor: pointer;
-            color: var(--muted);
-            font-size: 0.86rem;
-            padding: 8px 0;
-        }
+        ul.tree { list-style: none; margin: 0; padding: 0; }
+        ul.tree.is-nested { padding-left: 18px; }
+        ul.tree li { margin: 1px 0; }
 
-        .filter-groups {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-            gap: 12px;
-            padding-bottom: 10px;
-        }
-
-        .filter-group strong {
-            display: block;
-            font-size: 0.76rem;
-            text-transform: uppercase;
-            letter-spacing: 0.07em;
-            color: var(--muted);
-            margin-bottom: 5px;
-        }
-
-        .filter-group label {
+        ul.tree label {
             display: flex;
             gap: 7px;
             align-items: center;
             padding: 2px 0;
             font-size: 0.88rem;
+            cursor: pointer;
         }
 
-        /* --- Liste --- */
+        /* Elternknoten etwas hervorheben, damit die Ebene erkennbar ist. */
+        ul.tree > li > label > span { font-weight: 500; }
+        ul.tree.is-nested > li > label > span { font-weight: 400; }
 
-        main { padding: 12px 14px 40px; }
+        .panel-actions {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px solid var(--line);
+        }
+
+        /* --- Liste ----------------------------------------------------- */
+
+        main { padding: 8px; }
 
         .event {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             align-items: baseline;
-            padding: 9px 12px;
+            padding: 7px 10px;
             background: var(--panel);
             border: 1px solid var(--line);
-            border-radius: 10px;
-            margin-bottom: 7px;
+            border-radius: 9px;
+            margin-bottom: 5px;
         }
 
         .event.is-new { animation: einblenden 0.9s ease-out; }
@@ -158,16 +208,16 @@ $link = static function (array $changes) use ($url, $query): string {
 
         .event time {
             color: var(--muted);
-            font-size: 0.8rem;
+            font-size: 0.79rem;
             white-space: nowrap;
             font-variant-numeric: tabular-nums;
         }
 
         .badge {
             display: inline-block;
-            padding: 3px 9px;
+            padding: 2px 8px;
             border-radius: 999px;
-            font-size: 0.78rem;
+            font-size: 0.77rem;
             font-weight: 600;
             white-space: nowrap;
             background: var(--panel-2);
@@ -177,25 +227,27 @@ $link = static function (array $changes) use ($url, $query): string {
         .who { font-weight: 600; }
         .msg { color: var(--muted); flex: 1; word-break: break-word; }
 
-        /* --- Kompakte Ansicht fuer schmale Docks --- */
+        /* --- Kompakt fuer schmale Docks -------------------------------- */
 
-        body.is-compact main { padding: 6px 8px 20px; }
+        body.is-compact main { padding: 4px; }
         body.is-compact .event {
-            padding: 5px 8px;
-            margin-bottom: 3px;
-            border-radius: 7px;
-            gap: 8px;
+            padding: 4px 7px;
+            margin-bottom: 2px;
+            border-radius: 6px;
+            gap: 7px;
         }
         body.is-compact .msg { display: none; }
-        body.is-compact time { font-size: 0.74rem; }
+        body.is-compact time { font-size: 0.73rem; }
 
-        .empty { padding: 40px 20px; text-align: center; color: var(--muted); }
+        .empty { padding: 36px 16px; text-align: center; color: var(--muted); }
 
         .pager {
             display: flex;
-            gap: 10px;
+            gap: 8px;
             align-items: center;
-            margin-top: 16px;
+            margin-top: 12px;
+            color: var(--muted);
+            font-size: 0.84rem;
         }
 
         @media (max-width: 620px) {
@@ -209,11 +261,30 @@ $link = static function (array $changes) use ($url, $query): string {
 <body class="<?= $compact ? 'is-compact' : '' ?>">
 
 <header>
-    <span class="title">Aktivitäten</span>
-    <span class="muted" id="status"><?= $e((string) $total) ?> im Zeitraum</span>
-    <span class="grow"></span>
+    <details class="filter" id="filter">
+        <summary class="btn <?= $allSelected ? '' : 'is-on' ?>" title="Filter">
+            Filter<?= $allSelected ? '' : ' (' . $e((string) count($selected)) . ')' ?>
+        </summary>
 
-    <select onchange="location.href=this.value">
+        <div class="filter-panel">
+            <form method="get" action="<?= $e($url('/obs')) ?>" id="filter-form">
+                <input type="hidden" name="zeitraum" value="<?= $e($range) ?>">
+                <?php if ($compact): ?>
+                    <input type="hidden" name="kompakt" value="1">
+                <?php endif; ?>
+
+                <?= $zweig($tree, 0) ?>
+
+                <div class="panel-actions">
+                    <button class="btn" type="submit">Anwenden</button>
+                    <button class="btn" type="button" data-all>Alles</button>
+                    <button class="btn" type="button" data-none>Nichts</button>
+                </div>
+            </form>
+        </div>
+    </details>
+
+    <select onchange="location.href=this.value" title="Zeitraum">
         <?php foreach ($ranges as $key => $option): ?>
             <option value="<?= $e($link(['zeitraum' => $key, 'seite' => null])) ?>"
                 <?= $range === $key ? 'selected' : '' ?>><?= $e($option['label']) ?></option>
@@ -221,55 +292,26 @@ $link = static function (array $changes) use ($url, $query): string {
     </select>
 
     <a class="btn <?= $compact ? 'is-on' : '' ?>"
-       href="<?= $e($link(['kompakt' => $compact ? null : '1'])) ?>">Kompakt</a>
+       href="<?= $e($link(['kompakt' => $compact ? null : '1'])) ?>" title="Kompakte Ansicht">Kompakt</a>
+
+    <span class="grow"></span>
 
     <?php if ($refresh > 0): ?>
-        <button class="btn is-on" id="pause" type="button">Pause</button>
+        <span class="dot" id="dot" title="Verbindung"></span>
+        <button class="btn is-on" id="pause" type="button" title="Nachladen anhalten">Pause</button>
     <?php endif; ?>
 </header>
-
-<details class="filters" <?= $selected !== [] ? 'open' : '' ?>>
-    <summary>
-        Filter<?= $selected !== [] ? ' (' . $e((string) count($selected)) . ' aktiv)' : '' ?>
-    </summary>
-
-    <form method="get" action="<?= $e($url('/aktivitaeten')) ?>">
-        <input type="hidden" name="zeitraum" value="<?= $e($range) ?>">
-        <?php if ($compact): ?>
-            <input type="hidden" name="kompakt" value="1">
-        <?php endif; ?>
-
-        <div class="filter-groups">
-            <?php foreach ($groups as $group): ?>
-                <div class="filter-group">
-                    <strong><?= $e($group['label']) ?></strong>
-                    <?php foreach ($group['items'] as $key => $label): ?>
-                        <label>
-                            <input type="checkbox" name="fk[]" value="<?= $e((string) $key) ?>"
-                                <?= in_array((string) $key, $selected, true) ? 'checked' : '' ?>>
-                            <span><?= $e($label) ?></span>
-                        </label>
-                    <?php endforeach; ?>
-                </div>
-            <?php endforeach; ?>
-        </div>
-
-        <div class="pager" style="margin:0 0 8px;">
-            <button class="btn" type="submit">Anwenden</button>
-            <?php if ($selected !== []): ?>
-                <a class="btn" href="<?= $e($link(['f' => null, 'seite' => null])) ?>">Alles zeigen</a>
-            <?php endif; ?>
-            <span class="muted">Nichts angehakt heißt: alles zeigen.</span>
-        </div>
-    </form>
-</details>
 
 <main>
     <div id="liste">
         <?php if ($events === []): ?>
             <div class="empty">
-                Keine Aktivitäten in diesem Zeitraum.<br>
-                <span class="muted">Sobald Twitch etwas schickt, erscheint es hier von selbst.</span>
+                <?php if ($selected === []): ?>
+                    Alles abgewählt &mdash; im Filter etwas anhaken.
+                <?php else: ?>
+                    Keine Aktivitäten in diesem Zeitraum.<br>
+                    Sobald Twitch etwas schickt, erscheint es hier von selbst.
+                <?php endif; ?>
             </div>
         <?php endif; ?>
 
@@ -290,7 +332,7 @@ $link = static function (array $changes) use ($url, $query): string {
             <?php if ($page > 1): ?>
                 <a class="btn" href="<?= $e($link(['seite' => $page - 1])) ?>">Neuer</a>
             <?php endif; ?>
-            <span class="muted">Seite <?= $e((string) $page) ?> von <?= $e((string) $pages) ?></span>
+            <span>Seite <?= $e((string) $page) ?> von <?= $e((string) $pages) ?></span>
             <?php if ($page < $pages): ?>
                 <a class="btn" href="<?= $e($link(['seite' => $page + 1])) ?>">Älter</a>
             <?php endif; ?>
@@ -302,39 +344,113 @@ $link = static function (array $changes) use ($url, $query): string {
 (function () {
     'use strict';
 
-    // Checkboxen zu einem einzigen Parameter "f" zusammenfassen - das
-    // haelt die Adresse kurz und teilbar.
-    var form = document.querySelector('form');
+    var ziel = <?= json_encode($url('/obs')) ?>;
+    var alleBlaetter = <?= json_encode($leaves) ?>;
+
+    // ---- Filterbaum: Eltern schalten ihre Kinder -------------------
+
+    var form = document.getElementById('filter-form');
+
+    function kinderVon(li) {
+        return Array.prototype.slice.call(li.querySelectorAll('input[type=checkbox]'))
+            .filter(function (box) { return !box.hasAttribute('data-parent'); });
+    }
+
+    function elternAktualisieren() {
+        // Von innen nach aussen, damit verschachtelte Eltern stimmen.
+        var eltern = Array.prototype.slice.call(form.querySelectorAll('input[data-parent]')).reverse();
+
+        eltern.forEach(function (box) {
+            var blaetter = kinderVon(box.closest('li'));
+            var an = blaetter.filter(function (b) { return b.checked; }).length;
+
+            box.checked = an === blaetter.length && an > 0;
+            box.indeterminate = an > 0 && an < blaetter.length;
+        });
+    }
+
     if (form) {
+        form.addEventListener('change', function (event) {
+            var box = event.target;
+            if (box.type !== 'checkbox') { return; }
+
+            if (box.hasAttribute('data-parent')) {
+                kinderVon(box.closest('li')).forEach(function (kind) {
+                    kind.checked = box.checked;
+                });
+            }
+
+            elternAktualisieren();
+        });
+
+        form.querySelector('[data-all]').addEventListener('click', function () {
+            form.querySelectorAll('input[type=checkbox]').forEach(function (box) {
+                box.checked = true;
+                box.indeterminate = false;
+            });
+        });
+
+        form.querySelector('[data-none]').addEventListener('click', function () {
+            form.querySelectorAll('input[type=checkbox]').forEach(function (box) {
+                box.checked = false;
+                box.indeterminate = false;
+            });
+        });
+
+        // Auswahl zu einem kurzen Parameter zusammenfassen. Ist alles
+        // angehakt, kommt gar kein Parameter in die Adresse - dann
+        // bleibt der Link auch gueltig, wenn spaeter neue Arten
+        // dazukommen.
         form.addEventListener('submit', function (event) {
             event.preventDefault();
 
-            var keys = Array.prototype.slice
-                .call(form.querySelectorAll('input[name="fk[]"]:checked'))
+            var gewaehlt = Array.prototype.slice
+                .call(form.querySelectorAll('input[name="filter[]"]:checked'))
                 .map(function (box) { return box.value; });
 
             var params = new URLSearchParams();
-            params.set('zeitraum', form.querySelector('[name="zeitraum"]').value);
-            if (keys.length) { params.set('f', keys.join(',')); }
-            if (form.querySelector('[name="kompakt"]')) { params.set('kompakt', '1'); }
+            params.set('zeitraum', form.querySelector('[name=zeitraum]').value);
+            if (form.querySelector('[name=kompakt]')) { params.set('kompakt', '1'); }
 
-            location.href = <?= json_encode($url('/aktivitaeten')) ?> + '?' + params.toString();
+            if (gewaehlt.length !== alleBlaetter.length) {
+                params.set('filter', gewaehlt.join(','));
+            }
+
+            location.href = ziel + '?' + params.toString();
         });
+
+        elternAktualisieren();
     }
+
+    // Klick daneben schliesst das Klappfeld.
+    var klappfeld = document.getElementById('filter');
+    document.addEventListener('click', function (event) {
+        if (klappfeld.open && !klappfeld.contains(event.target)) {
+            klappfeld.open = false;
+        }
+    });
+
+    // ---- Nachladen -------------------------------------------------
 
     var refresh = <?= (int) $refresh ?>;
     if (!refresh) { return; }
 
     var liste = document.getElementById('liste');
-    var status = document.getElementById('status');
+    var dot = document.getElementById('dot');
     var pause = document.getElementById('pause');
     var latest = <?= (int) $latest ?>;
     var laeuft = true;
     var timer = null;
 
-    var quelle = <?= json_encode($url('/aktivitaeten/neu')) ?>
+    var quelle = <?= json_encode($url('/obs/neu')) ?>
         + '?zeitraum=' + encodeURIComponent(<?= json_encode($range) ?>)
-        + (<?= json_encode(implode(',', $selected)) ?> ? '&f=' + encodeURIComponent(<?= json_encode(implode(',', $selected)) ?>) : '');
+        + <?= $allSelected ? "''" : "'&filter=' + encodeURIComponent(" . json_encode(implode(',', $selected)) . ")" ?>;
+
+    function zustand(klasse, titel) {
+        if (!dot) { return; }
+        dot.className = 'dot' + (klasse ? ' ' + klasse : '');
+        dot.title = titel;
+    }
 
     function zeile(event) {
         var el = document.createElement('div');
@@ -372,36 +488,33 @@ $link = static function (array $changes) use ($url, $query): string {
                 return antwort.json();
             })
             .then(function (daten) {
+                zustand('', 'verbunden');
+
                 if (typeof daten.latest === 'number' && daten.latest > latest) {
                     latest = daten.latest;
                 }
 
                 if (!daten.events || !daten.events.length) { return; }
 
-                // Antwort ist neueste zuerst - von hinten einfuegen,
-                // damit die Reihenfolge oben stimmt.
                 var leer = liste.querySelector('.empty');
                 if (leer) { leer.remove(); }
 
+                // Antwort ist neueste zuerst - von hinten einfuegen,
+                // damit die Reihenfolge oben stimmt.
                 for (var i = daten.events.length - 1; i >= 0; i--) {
                     liste.insertBefore(zeile(daten.events[i]), liste.firstChild);
                 }
 
-                // Nicht unbegrenzt wachsen lassen.
                 while (liste.children.length > 400) {
                     liste.removeChild(liste.lastChild);
                 }
-
-                if (status) { status.textContent = 'aktualisiert ' + new Date().toLocaleTimeString('de-DE'); }
             })
             .catch(function (fehler) {
-                if (status) { status.textContent = 'Verbindung gestört: ' + fehler.message; }
+                zustand('is-error', 'Verbindung gestört: ' + fehler.message);
             });
     }
 
-    function starten() {
-        timer = setInterval(holen, refresh * 1000);
-    }
+    function starten() { timer = setInterval(holen, refresh * 1000); }
 
     if (pause) {
         pause.addEventListener('click', function () {
@@ -414,7 +527,7 @@ $link = static function (array $changes) use ($url, $query): string {
                 holen();
             } else {
                 clearInterval(timer);
-                if (status) { status.textContent = 'angehalten'; }
+                zustand('is-off', 'angehalten');
             }
         });
     }

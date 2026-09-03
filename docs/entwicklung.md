@@ -144,11 +144,11 @@ Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
 | `plugin.settings` | filter | Einstellungsseite in der Plugin-Liste verlinken |
 | `permissions.catalog` | filter | eigene Rechte anmelden |
 | `core.event.stored` | dispatch | auf ein eingegangenes Event reagieren |
-| `core.events.normalize` | filter | eigene Event-Qüllen vereinheitlichen |
+| `core.events.normalize` | filter | eigene Event-Quellen vereinheitlichen |
 | `core.events.labels` | filter | Klarnamen für eigene Event-Typen |
 | `core.obs.present` | filter | eigene Ereignisse im Feed darstellen (null blendet aus) |
 | `core.obs.badges` | filter | eigene Badges samt Standardfarben anmelden |
-| `core.obs.filters` | filter | eigene Filtergruppen im Feed |
+| `core.obs.filters` | filter | eigene Filterknoten im Feed, auch in vorhandene Zweige |
 | `core.twitch.scope_labels` | filter | Klartext für eigene Twitch-Berechtigungen |
 | `core.eventsub.subscriptions` | filter | zusätzliche Twitch-Abos anfordern |
 | `core.eventsub.revoked` | dispatch | Twitch hat ein Abo entzogen |
@@ -220,8 +220,8 @@ Zwei Seiten:
 
 | Adresse | Zweck |
 | --- | --- |
-| `/konto/aktivitaeten` | Einstellungen: Badge-Farben, Takt, Zeitzone |
-| `/aktivitaeten` | der Feed selbst, gedacht als Browser-Dock in OBS |
+| `/konto/aktivitaeten` | Einstellungen: Badge-Farben |
+| `/obs` | der Feed selbst, gedacht als Browser-Dock in OBS |
 
 Der Feed ist angemeldet-only (`Konto.Aktivitaeten.View`). Das ist kein
 Widerspruch zur Nutzung in OBS: ein **eigenes Browser-Dock** teilt die
@@ -243,7 +243,7 @@ erst aus dem Payload ergibt (eine Abostufe steht nicht als Spalte in der
 Datenbank). Bei aktiver Auswahl liest der Controller deshalb ein
 groesseres Fenster und schneidet danach zu.
 
-Nachgeladen wird ueber `/aktivitaeten/neu?since_id=…`, das nur die neuen
+Nachgeladen wird ueber `/obs/neu?since_id=…`, das nur die neuen
 Ereignisse als JSON zurueckgibt; die Seite haengt sie oben an.
 
 Ein Plugin mit eigener Ereignisart braucht drei Hooks:
@@ -269,15 +269,51 @@ $hooks->on('core.obs.badges', function (array $badges) {
 });
 
 // 3. Wo es im Filter auftaucht
-$hooks->on('core.obs.filters', function (array $groups) {
-    $groups['spenden'] = [
-        'label' => 'Spenden',
-        'order' => 30,
-        'items' => ['paypal.named' => 'Mit Namen', 'paypal.anonymous' => 'Anonym'],
-    ];
-    return $groups;
+$hooks->on('core.obs.filters', function (array $nodes) {
+    $nodes[] = ['key' => 'paypal', 'label' => 'PayPal', 'order' => 35];
+    $nodes[] = ['key' => 'paypal.named',     'label' => 'Mit Twitch-Name', 'parent' => 'paypal'];
+    $nodes[] = ['key' => 'paypal.anonymous', 'label' => 'Anonym',          'parent' => 'paypal'];
+    return $nodes;
 });
 ```
+
+### Der Filterbaum
+
+Knoten werden **flach** angemeldet, mit Verweis auf den Elternknoten. Der
+Kern baut daraus den Baum. Damit kann ein Plugin auch in einen
+vorhandenen Zweig einhaengen und nicht nur oben etwas anfuegen - das
+Follow-Plugin haengt seine Unfollows unter `follows`, ohne dass der Kern
+davon wissen muss:
+
+```php
+$nodes[] = ['key' => 'follows.unfollow', 'label' => 'Unfollow',
+            'parent' => 'follows', 'order' => 20];
+```
+
+Ob ein Knoten **Blatt** ist, ergibt sich daraus, ob ihn jemand als
+Elternknoten nennt. Ein Plugin kann so aus `bits` nachtraeglich eine
+Gruppe machen. Nur Blaetter kommen in die Adresse; Elternknoten sind
+Bedienhilfe und schalten beim Anklicken alle Blaetter darunter.
+
+Zwei Zustaende, die man nicht verwechseln darf:
+
+| Adresse | Bedeutung |
+| --- | --- |
+| `/obs` | kein Filter - alles zeigen |
+| `/obs?filter=bits,raids` | nur diese Blaetter |
+| `/obs?filter=` | alles abgewaehlt - nichts zeigen |
+
+Deshalb prueft `Filters::selected()` mit `array_key_exists` und nicht auf
+"leer". Ist alles angehakt, laesst die Oberflaeche den Parameter weg -
+dann bleibt ein gespeicherter Link auch gueltig, wenn spaeter neue
+Ereignisarten dazukommen.
+
+Ein Elternknoten in der Adresse wird zu seinen Blaettern aufgeloest,
+`?filter=subs` funktioniert also von Hand geschrieben.
+
+Die Schluessel sind bewusst dieselben wie im alten `obs.php`
+(`subs.tiered.tier1`, `system.stream`, ...), damit gespeicherte
+Feed-Links weiter funktionieren.
 
 `core.obs.present` darf `null` zurueckgeben - dann erscheint das
 Ereignis nicht im Feed. So blendet man Zwischenmeldungen aus, etwa den

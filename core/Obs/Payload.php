@@ -140,16 +140,18 @@ final class Payload
     }
 
     /**
-     * Kurzform der Stufe fuer Filterschluessel: 1000 -> "t1".
+     * Kurzform der Stufe fuer Filterschluessel: 1000 -> "tier1".
+     * Die Namen sind bewusst dieselben wie im alten obs.php, damit
+     * gespeicherte Feed-Links weiter funktionieren.
      *
      * @param array<string, mixed> $payload
      */
     public static function tierSlug(array $payload): string
     {
         return match (self::tier($payload)) {
-            '2000' => 't2',
-            '3000' => 't3',
-            default => 't1',
+            '2000' => 'tier2',
+            '3000' => 'tier3',
+            default => 'tier1',
         };
     }
 }
