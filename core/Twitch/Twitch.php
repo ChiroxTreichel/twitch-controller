@@ -37,7 +37,7 @@ final class Twitch
     {
         $clientId = $this->app->settings->string('twitch_client_id');
         if ($clientId === '') {
-            throw new RuntimeException('Twitch-Client-ID ist nicht gesetzt. Bitte die Einrichtung abschliessen.');
+            throw new RuntimeException(translate('twitch.no_client_id'));
         }
 
         return $clientId;
@@ -47,7 +47,7 @@ final class Twitch
     {
         $secret = $this->app->settings->secret('twitch_client_secret');
         if ($secret === '') {
-            throw new RuntimeException('Twitch-Client-Secret ist nicht gesetzt. Bitte die Einrichtung abschliessen.');
+            throw new RuntimeException(translate('twitch.no_client_secret'));
         }
 
         return $secret;

@@ -416,6 +416,26 @@ nicht sehen - im Code deshalb immer ausschreiben.
 Die Sprache kommt aus der Einstellung `language`, sonst aus `APP_LANG`,
 sonst Deutsch. Umgestellt wird sie unter *Konto > Einstellungen*.
 
+
+**Kein deutscher Text im Code.** Auch nicht in Ausnahmen: die landen
+über `$e->getMessage()` in der Oberfläche. Drei Ausnahmen von der
+Ausnahme, und die sind es wirklich:
+
+| Datei | warum |
+| --- | --- |
+| `Config/Env.php` | liest die `.env`, bevor der Übersetzer gebootet ist |
+| `Http/View.php` | fehlende Vorlage ist ein Programmierfehler, kein Benutzertext |
+| `Plugin/Manifest.php` | wird nur über `log()` sichtbar |
+
+Ebenso ausgenommen: Argumente von `$app->log()`. Die gehen ins Log des
+Containers, nicht zum Benutzer — und dort ist eine feste Sprache
+angenehmer als eine wechselnde.
+
+Ein `translate()` in einem `<script>`-Block wäre ein Laufzeitfehler:
+dort gibt es die Funktion nicht. Richtig ist
+`<?= json_encode(translate('…')) ?>` — PHP setzt den Text ein,
+`json_encode` kümmert sich um die Anführungszeichen.
+
 ### Statische Dateien
 
 Immer ueber `$asset()` einbinden, nie ueber `$url()`:

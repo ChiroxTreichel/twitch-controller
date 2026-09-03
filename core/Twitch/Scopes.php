@@ -46,56 +46,56 @@ final class Scopes
     {
         return [
             'moderator:read:followers' => [
-                'label'  => 'Follower sehen',
-                'reason' => 'damit neue Follows im Stream ankommen',
+                'label'  => translate('scope.followers'),
+                'reason' => translate('scope.followers.why'),
             ],
             'channel:read:subscriptions' => [
-                'label'  => 'Abos sehen',
-                'reason' => 'für Abo-Alerts und Abo-Ziele',
+                'label'  => translate('scope.subs'),
+                'reason' => translate('scope.subs.why'),
             ],
             'bits:read' => [
-                'label'  => 'Bits sehen',
-                'reason' => 'damit gespendete Bits gemeldet werden',
+                'label'  => translate('scope.bits'),
+                'reason' => translate('scope.bits.why'),
             ],
             'channel:read:redemptions' => [
-                'label'  => 'Kanalpunkte sehen',
-                'reason' => 'um auf eingelöste Belohnungen zu reagieren',
+                'label'  => translate('scope.points'),
+                'reason' => translate('scope.points.why'),
             ],
             'channel:read:goals' => [
-                'label'  => 'Twitch-Ziele lesen',
-                'reason' => 'für die Fortschrittsbalken von Twitch',
+                'label'  => translate('scope.goals'),
+                'reason' => translate('scope.goals.why'),
             ],
             'channel:read:hype_train' => [
-                'label'  => 'Hype-Train sehen',
-                'reason' => 'um den Hype-Train im Overlay anzuzeigen',
+                'label'  => translate('scope.hype'),
+                'reason' => translate('scope.hype.why'),
             ],
             'channel:manage:broadcast' => [
-                'label'  => 'Titel und Kategorie ändern',
-                'reason' => 'um die Stream-Infos aus der Oberfläche zu setzen',
+                'label'  => translate('scope.broadcast'),
+                'reason' => translate('scope.broadcast.why'),
             ],
             'channel:manage:raids' => [
-                'label'  => 'Raids starten',
-                'reason' => 'um Raids aus der Oberfläche auszulösen',
+                'label'  => translate('scope.raids'),
+                'reason' => translate('scope.raids.why'),
             ],
             'chat:read' => [
-                'label'  => 'Chat mitlesen',
-                'reason' => 'damit Chat-Befehle erkannt werden',
+                'label'  => translate('scope.chat_read'),
+                'reason' => translate('scope.chat_read.why'),
             ],
             'chat:edit' => [
-                'label'  => 'Im Chat schreiben',
-                'reason' => 'damit der Bot antworten kann',
+                'label'  => translate('scope.chat_write'),
+                'reason' => translate('scope.chat_write.why'),
             ],
             'moderator:manage:banned_users' => [
-                'label'  => 'Timeouts und Sperren setzen',
-                'reason' => 'für die automatische Moderation',
+                'label'  => translate('scope.ban'),
+                'reason' => translate('scope.ban.why'),
             ],
             'moderator:manage:chat_messages' => [
-                'label'  => 'Chat-Nachrichten löschen',
-                'reason' => 'um unerwünschte Nachrichten zu entfernen',
+                'label'  => translate('scope.delete'),
+                'reason' => translate('scope.delete.why'),
             ],
             'user:read:email' => [
-                'label'  => 'E-Mail-Adresse lesen',
-                'reason' => 'wird zur Zuordnung des Accounts benutzt',
+                'label'  => translate('scope.email'),
+                'reason' => translate('scope.email.why'),
             ],
         ];
     }

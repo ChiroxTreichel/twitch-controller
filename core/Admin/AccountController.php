@@ -332,7 +332,7 @@ final class AccountController
                             return $this->back(
                                 '/account/settings',
                                 null,
-                                'Das Webhook-Secret muss 10 bis 100 Zeichen haben.'
+                                translate('settings.webhook_length')
                             );
                         }
                         $this->app->settings->setSecret('twitch_webhook_secret', $webhookSecret);
@@ -502,7 +502,7 @@ final class AccountController
     public function reconnectChannel(Request $request): Response
     {
         if (!$this->app->auth->isSuperadmin()) {
-            return $this->back('/account/settings', null, 'Das darf nur der Kanalinhaber.');
+            return $this->back('/account/settings', null, translate('common.error.owner_only'));
         }
 
         return Response::redirect($this->app->twitch->oauth()->authorizeUrl(
@@ -535,11 +535,11 @@ final class AccountController
     private function guardPost(Request $request, string $permission, string $back): ?Response
     {
         if (!$this->app->auth->checkCsrf($request->input('csrf'))) {
-            return $this->back($back, null, 'Das Formular ist abgelaufen. Bitte erneut versuchen.');
+            return $this->back($back, null, translate('common.error.form_expired'));
         }
 
         if (!$this->app->auth->can($permission)) {
-            return $this->back($back, null, 'Dafür fehlt dir die Berechtigung.');
+            return $this->back($back, null, translate('common.error.no_permission'));
         }
 
         return null;

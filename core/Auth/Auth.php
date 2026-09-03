@@ -143,7 +143,7 @@ final class Auth
 
             if (!$isFirstUser && !$this->redeemInvite($inviteCode, $twitchId)) {
                 throw new RuntimeException(
-                    'Fuer diesen Account liegt keine Einladung vor. Bitte den Kanalinhaber um einen Einladungslink bitten.'
+                    translate('auth.no_invite')
                 );
             }
 
@@ -174,7 +174,7 @@ final class Auth
 
         $user = $this->find($twitchId);
         if ($user === null) {
-            throw new RuntimeException('Benutzer konnte nach dem Login nicht gelesen werden.');
+            throw new RuntimeException(translate('auth.user_unreadable'));
         }
 
         $this->app->hooks->dispatch('user.login', $twitchId);
@@ -289,12 +289,12 @@ final class Auth
     public function removeUser(string $twitchId): void
     {
         if (($this->user()['twitch_id'] ?? null) === $twitchId) {
-            throw new RuntimeException('Der eigene Account kann nicht entfernt werden.');
+            throw new RuntimeException(translate('account.users.cannot_remove_self'));
         }
 
         $user = $this->find($twitchId);
         if ($user !== null && ($user['role'] ?? '') === self::ROLE_SUPERADMIN) {
-            throw new RuntimeException('Der Kanalinhaber kann nicht entfernt werden.');
+            throw new RuntimeException(translate('account.users.cannot_remove_owner'));
         }
 
         $this->app->db->run('DELETE FROM users WHERE twitch_id = :id', ['id' => $twitchId]);

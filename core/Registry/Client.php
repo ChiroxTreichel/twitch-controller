@@ -162,15 +162,19 @@ final class Client
             $result = Http::get($url, ['Accept' => 'application/json'], 20);
         } catch (\Throwable $e) {
             $this->app->settings->set('registry_error', $e->getMessage());
-            throw new RuntimeException('Katalog nicht erreichbar: ' . $e->getMessage());
+            throw new RuntimeException(translate('market.catalog_unreachable_error', [
+                'reason' => $e->getMessage(),
+            ]));
         }
 
         if (!$result->ok()) {
-            $message = sprintf('%s antwortet mit %d.', $url, $result->status);
+            $message = translate('market.catalog_status', [
+                'url'    => $url,
+                'status' => $result->status,
+            ]);
 
             if ($result->status === 404) {
-                $message .= ' Liegt der Katalogserver wirklich unter dieser Adresse,'
-                    . ' und ist index.php dort erreichbar?';
+                $message .= translate('market.catalog_404_hint');
             }
 
             $this->app->settings->set('registry_error', $message);
@@ -184,11 +188,10 @@ final class Client
         $decoded = json_decode($result->body, true);
 
         if (!is_array($decoded)) {
-            $message = sprintf(
-                '%s antwortet nicht mit JSON. Anfang der Antwort: %s',
-                $url,
-                self::anriss($result->body)
-            );
+            $message = translate('market.catalog_not_json', [
+                'url'   => $url,
+                'start' => self::anriss($result->body),
+            ]);
             $this->app->settings->set('registry_error', $message);
             throw new RuntimeException($message);
         }

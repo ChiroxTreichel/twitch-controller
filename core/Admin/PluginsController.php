@@ -118,8 +118,7 @@ final class PluginsController
                     $this->app->plugins->enable($slug);
 
                     return $this->back('/account/plugins',
-                        'Plugin aktiviert. Falls es Twitch-Events braucht: einmal '
-                        . 'Einstellungen → Abos abgleichen.');
+                        translate('account.plugins.enabled_hint'));
 
                 case 'disable':
                     $this->app->plugins->disable($slug);
@@ -263,9 +262,9 @@ final class PluginsController
 
         if ($plugin === null) {
             return Response::html($this->app->view->render('error', [
-                'title'   => 'Nicht gefunden',
-                'heading' => 'Dieses Plugin gibt es nicht',
-                'message' => 'Es steht nicht im Katalog. Vielleicht wurde es zurückgezogen.',
+                'title'   => translate('common.error.not_found'),
+                'heading' => translate('market.no_such_plugin'),
+                'message' => translate('market.no_such_plugin_hint'),
             ], 'plain'), 404);
         }
 
@@ -647,11 +646,11 @@ final class PluginsController
     private function guard(Request $request, string $back = '/account/plugins'): ?Response
     {
         if (!$this->app->auth->checkCsrf($request->input('csrf'))) {
-            return $this->back($back, null, 'Das Formular ist abgelaufen. Bitte erneut versuchen.');
+            return $this->back($back, null, translate('common.error.form_expired'));
         }
 
         if (!$this->app->auth->can('Konto.Plugins.Manage')) {
-            return $this->back($back, null, 'Dafür fehlt dir die Berechtigung.');
+            return $this->back($back, null, translate('common.error.no_permission'));
         }
 
         return null;

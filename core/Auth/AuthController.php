@@ -60,7 +60,7 @@ final class AuthController
 
         $code = $request->get('code');
         if ($code === '') {
-            return $this->fail('Twitch hat keinen Code zurückgegeben.');
+            return $this->fail(translate('auth.no_code'));
         }
 
         try {
@@ -113,7 +113,7 @@ final class AuthController
     public function logout(Request $request): Response
     {
         if (!$this->app->auth->checkCsrf($request->input('csrf'))) {
-            return Response::text('Ungültiges Formular-Token.', 400);
+            return Response::text(translate('auth.bad_csrf'), 400);
         }
 
         $this->app->auth->logout();

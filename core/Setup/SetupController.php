@@ -123,7 +123,9 @@ final class SetupController
         try {
             $this->app->installCore();
         } catch (Throwable $e) {
-            return $this->renderCheck('Schema konnte nicht angelegt werden: ' . $e->getMessage());
+            return $this->renderCheck(translate('setup.schema_failed', [
+                'reason' => $e->getMessage(),
+            ]));
         }
 
         return Response::redirect($this->app->url('/setup'));
@@ -143,12 +145,19 @@ final class SetupController
             'detail'   => PHP_VERSION . ' (benötigt: 8.2 oder neuer)',
         ];
 
-        foreach (['pdo_pgsql' => 'Datenbank', 'curl' => 'Twitch-API', 'sodium' => 'Verschlüsselung', 'json' => 'Datenformat'] as $extension => $why) {
+        $erweiterungen = [
+            'pdo_pgsql' => translate('setup.ext.database'),
+            'curl'      => translate('setup.ext.twitch_api'),
+            'sodium'    => translate('setup.ext.encryption'),
+            'json'      => translate('setup.ext.dataformat'),
+        ];
+
+        foreach ($erweiterungen as $extension => $why) {
             $checks[] = [
-                'label'    => 'PHP-Erweiterung ' . $extension,
+                'label'    => translate('setup.ext.label', ['name' => $extension]),
                 'ok'       => extension_loaded($extension),
                 'required' => true,
-                'detail'   => 'gebraucht für: ' . $why,
+                'detail'   => translate('setup.ext.needed_for', ['why' => $why]),
             ];
         }
 
@@ -157,7 +166,7 @@ final class SetupController
             'label'    => 'APP_URL',
             'ok'       => $appUrl !== '',
             'required' => true,
-            'detail'   => $appUrl === '' ? 'fehlt in der .env' : $appUrl,
+            'detail'   => $appUrl === '' ? translate('setup.env_missing') : $appUrl,
         ];
 
         $checks[] = [
@@ -166,7 +175,7 @@ final class SetupController
             'required' => false,
             'detail'   => str_starts_with($appUrl, 'https://')
                 ? 'APP_URL nutzt HTTPS'
-                : 'Twitch akzeptiert für EventSub und OAuth nur HTTPS-Adressen.',
+                : translate('setup.https_required'),
         ];
 
         $checks[] = [
@@ -175,7 +184,7 @@ final class SetupController
             'required' => true,
             'detail'   => $this->app->crypto->isConfigured()
                 ? 'gesetzt'
-                : 'fehlt oder ist keine 32 Byte. Erzeugen: openssl rand -hex 32',
+                : translate('setup.appkey_bad'),
         ];
 
         $dbReachable = $this->app->db->isReachable();
@@ -185,7 +194,7 @@ final class SetupController
             'required' => true,
             'detail'   => $dbReachable
                 ? 'erreichbar (' . $this->app->env->get('DB_NAME', '?') . ')'
-                : 'nicht erreichbar. DB_HOST, DB_NAME, DB_USER und DB_PASS in der .env prüfen.',
+                : translate('setup.db_unreachable'),
         ];
 
         $pluginsWritable = is_dir($this->app->root . '/plugins') && is_writable($this->app->root . '/plugins');
@@ -194,8 +203,8 @@ final class SetupController
             'ok'       => $pluginsWritable,
             'required' => false,
             'detail'   => $pluginsWritable
-                ? 'Plugins können installiert werden'
-                : 'Nur nötig, um Plugins über die Oberfläche zu installieren.',
+                ? translate('setup.plugins_writable')
+                : translate('setup.plugins_writable_hint'),
         ];
 
         return $checks;
@@ -230,12 +239,12 @@ final class SetupController
         $webhookSecret = $request->input('webhook_secret');
 
         if ($clientId === '' || $clientSecret === '') {
-            return $this->renderCredentials('Client-ID und Client-Secret sind beide nötig.');
+            return $this->renderCredentials(translate('setup.credentials_both'));
         }
 
         if (strlen($webhookSecret) < 10 || strlen($webhookSecret) > 100) {
             return $this->renderCredentials(
-                'Das Webhook-Secret muss zwischen 10 und 100 Zeichen lang sein (Twitch-Vorgabe).'
+                translate('setup.webhook_length_setup')
             );
         }
 

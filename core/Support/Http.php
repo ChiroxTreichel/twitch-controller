@@ -66,7 +66,7 @@ final class Http
     ): HttpResult {
         $handle = curl_init($url);
         if ($handle === false) {
-            throw new RuntimeException('curl konnte nicht initialisiert werden.');
+            throw new RuntimeException(translate('http.curl_failed'));
         }
 
         $headerLines = [];

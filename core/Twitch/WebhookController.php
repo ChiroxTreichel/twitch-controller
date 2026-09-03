@@ -31,7 +31,7 @@ final class WebhookController
         $eventSub = $this->app->twitch->eventSub();
 
         if (!$eventSub->verify($request, $secret)) {
-            $this->app->log('EventSub: Signatur ungültig oder Header fehlen.');
+            $this->app->log(translate('twitch.bad_signature'));
 
             return Response::text('Bad signature', 403);
         }

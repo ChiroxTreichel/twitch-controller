@@ -162,12 +162,10 @@ final class Installer
         $downloadHost = strtolower((string) ($download['host'] ?? ''));
 
         if ($registryHost === '' || $downloadHost === '' || $registryHost !== $downloadHost) {
-            throw new RuntimeException(sprintf(
-                'Das Paket liegt auf einem anderen Server (%s) als der Katalog (%s). '
-                . 'Aus Sicherheitsgründen wird das nicht installiert.',
-                $downloadHost !== '' ? $downloadHost : '?',
-                $registryHost !== '' ? $registryHost : '?'
-            ));
+            throw new RuntimeException(translate('install.foreign_host', [
+                'download' => $downloadHost !== '' ? $downloadHost : '?',
+                'catalog'  => $registryHost !== '' ? $registryHost : '?',
+            ]));
         }
     }
 
@@ -175,13 +173,13 @@ final class Installer
     {
         $target = tempnam(sys_get_temp_dir(), 'ovplug');
         if ($target === false) {
-            throw new RuntimeException('Konnte keine temporäre Datei anlegen.');
+            throw new RuntimeException(translate('install.no_tempfile'));
         }
 
         $handle = fopen($target, 'wb');
         if ($handle === false) {
             @unlink($target);
-            throw new RuntimeException('Konnte die temporäre Datei nicht öffnen.');
+            throw new RuntimeException(translate('install.tempfile_unreadable'));
         }
 
         $curl = curl_init($url);
@@ -210,7 +208,7 @@ final class Installer
         if ($ok === false) {
             @unlink($target);
             throw new RuntimeException(
-                $error !== '' ? 'Download fehlgeschlagen: ' . $error : 'Download abgebrochen (Paket zu groß?).'
+                $error !== '' ? 'Download fehlgeschlagen: ' . $error : translate('install.download_aborted')
             );
         }
 
@@ -221,7 +219,7 @@ final class Installer
 
         if ((int) filesize($target) === 0) {
             @unlink($target);
-            throw new RuntimeException('Das Paket ist leer.');
+            throw new RuntimeException(translate('install.empty'));
         }
 
         return $target;
@@ -231,7 +229,7 @@ final class Installer
     {
         if ($expected === '') {
             throw new RuntimeException(
-                'Der Katalog nennt keine Prüfsumme für dieses Paket. Ohne Prüfsumme wird nicht installiert.'
+                translate('install.no_checksum')
             );
         }
 
@@ -239,7 +237,7 @@ final class Installer
 
         if (!is_string($actual) || !hash_equals($expected, $actual)) {
             throw new RuntimeException(
-                'Die Prüfsumme stimmt nicht. Das Paket ist beschädigt oder wurde verändert.'
+                translate('install.checksum_mismatch')
             );
         }
     }
@@ -257,12 +255,12 @@ final class Installer
         }
 
         if (!extension_loaded('sodium')) {
-            throw new RuntimeException('Signaturprüfung verlangt die PHP-Erweiterung sodium.');
+            throw new RuntimeException(translate('install.sodium_missing'));
         }
 
         if ($signature === '') {
             throw new RuntimeException(
-                'Für diese Installation ist Signaturprüfung eingeschaltet, das Paket ist aber nicht signiert.'
+                translate('install.unsigned')
             );
         }
 
@@ -271,13 +269,13 @@ final class Installer
         $contents = file_get_contents($file);
 
         if ($publicKey === false || strlen($publicKey) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
-            throw new RuntimeException('Der hinterlegte öffentliche Schlüssel ist unbrauchbar.');
+            throw new RuntimeException(translate('install.bad_key'));
         }
 
         if ($signatureBytes === false || $contents === false
             || !sodium_crypto_sign_verify_detached($signatureBytes, $contents, $publicKey)
         ) {
-            throw new RuntimeException('Die Signatur des Pakets ist ungültig.');
+            throw new RuntimeException(translate('install.bad_signature'));
         }
     }
 
@@ -293,12 +291,12 @@ final class Installer
     {
         $zip = new ZipArchive();
         if ($zip->open($archive) !== true) {
-            throw new RuntimeException('Das Paket ist kein lesbares ZIP-Archiv.');
+            throw new RuntimeException(translate('install.not_zip'));
         }
 
         if ($zip->numFiles > self::MAX_FILES) {
             $zip->close();
-            throw new RuntimeException('Das Paket enthält zu viele Dateien.');
+            throw new RuntimeException(translate('install.too_many_files'));
         }
 
         $unpacked = 0;
@@ -306,7 +304,7 @@ final class Installer
             $stat = $zip->statIndex($i);
             if ($stat === false) {
                 $zip->close();
-                throw new RuntimeException('Das Paket ist beschädigt.');
+                throw new RuntimeException(translate('install.damaged'));
             }
 
             self::assertSafeName((string) $stat['name']);
@@ -314,14 +312,14 @@ final class Installer
             $unpacked += (int) $stat['size'];
             if ($unpacked > self::MAX_UNPACKED_BYTES) {
                 $zip->close();
-                throw new RuntimeException('Das Paket ist entpackt zu groß.');
+                throw new RuntimeException(translate('install.too_large_unpacked'));
             }
         }
 
         $staging = $this->app->root . '/plugins/.staging-' . $slug . '-' . bin2hex(random_bytes(4));
         if (!mkdir($staging, 0775, true) && !is_dir($staging)) {
             $zip->close();
-            throw new RuntimeException('Konnte kein Arbeitsverzeichnis anlegen.');
+            throw new RuntimeException(translate('install.no_workdir'));
         }
 
         if (!$zip->extractTo($staging)) {
@@ -347,7 +345,7 @@ final class Installer
         if (!is_file($root . '/plugin.json') || !is_file($root . '/plugin.php')) {
             self::removeTree($staging);
             throw new RuntimeException(
-                'Im Paket fehlen plugin.json oder plugin.php. Das ist kein gültiges Plugin.'
+                translate('install.not_a_plugin')
             );
         }
 
@@ -369,7 +367,7 @@ final class Installer
             $lifted = $staging . '.lifted';
             if (!rename($root, $lifted)) {
                 self::removeTree($staging);
-                throw new RuntimeException('Konnte das Paket nicht auspacken.');
+                throw new RuntimeException(translate('install.unpack_failed'));
             }
             self::removeTree($staging);
             return $lifted;
@@ -390,7 +388,7 @@ final class Installer
             || preg_match('#(^|/)\.\.(/|$)#', $normalized) === 1
             || preg_match('#^[a-zA-Z]:#', $normalized) === 1
         ) {
-            throw new RuntimeException('Das Paket enthält einen unerlaubten Pfad: ' . $name);
+            throw new RuntimeException(translate('install.bad_path', ['path' => $name]));
         }
     }
 
@@ -404,14 +402,14 @@ final class Installer
         $backup = $target . '.alt-' . bin2hex(random_bytes(4));
 
         if (is_dir($target) && !rename($target, $backup)) {
-            throw new RuntimeException('Konnte die vorhandene Version nicht beiseite schieben.');
+            throw new RuntimeException(translate('install.backup_failed'));
         }
 
         if (!rename($staging, $target)) {
             if (is_dir($backup)) {
                 @rename($backup, $target);
             }
-            throw new RuntimeException('Konnte die neuen Dateien nicht ablegen.');
+            throw new RuntimeException(translate('install.move_failed'));
         }
 
         if (is_dir($backup)) {

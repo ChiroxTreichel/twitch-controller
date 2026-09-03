@@ -263,7 +263,7 @@ final class EventSub
         // gebraucht - typisch nach dem Deaktivieren eines Plugins.
         foreach ($existingKeys as $id) {
             if ($this->unsubscribe($id)) {
-                $report['deleted'][] = 'nicht mehr benoetigt';
+                $report['deleted'][] = translate('twitch.eventsub.obsolete');
             }
         }
 
@@ -285,7 +285,7 @@ final class EventSub
     {
         $secret = $this->app->settings->secret('twitch_webhook_secret');
         if ($secret === '') {
-            return 'Kein Webhook-Secret gesetzt.';
+            return translate('twitch.no_webhook_secret');
         }
 
         $result = $this->app->twitch->api()->post('eventsub/subscriptions', [], [

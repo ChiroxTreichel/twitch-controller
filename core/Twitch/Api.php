@@ -134,7 +134,9 @@ final class Api
 
         $user = $result->json['data'][0] ?? null;
         if (!$result->ok() || !is_array($user)) {
-            throw new RuntimeException('Twitch-Benutzer konnte nicht geladen werden: ' . $result->error());
+            throw new RuntimeException(translate('twitch.user_unreadable', [
+                'reason' => $result->error(),
+            ]));
         }
 
         return $user;

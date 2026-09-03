@@ -115,12 +115,12 @@ final class OAuth
         }
 
         if (abs(time() - (int) ($decoded['ts'] ?? 0)) > 900) {
-            throw new RuntimeException('Login-Vorgang ist abgelaufen. Bitte erneut versuchen.');
+            throw new RuntimeException(translate('auth.login_expired'));
         }
 
         if ($cookieNonce === '' || !hash_equals((string) ($decoded['nonce'] ?? ''), $cookieNonce)) {
             throw new RuntimeException(
-                'Login-Rueckweg ungueltig. Cookies erlauben und den Login in demselben Browser abschliessen.'
+                translate('auth.bad_return')
             );
         }
 
@@ -199,7 +199,9 @@ final class OAuth
 
         $token = (string) ($result->json['access_token'] ?? '');
         if (!$result->ok() || $token === '') {
-            throw new RuntimeException('App-Token konnte nicht geholt werden: ' . $result->error());
+            throw new RuntimeException(translate('twitch.app_token_failed', [
+                'reason' => $result->error(),
+            ]));
         }
 
         $this->app->settings->setSecret('twitch_app_token', $token);

@@ -64,7 +64,7 @@ final class Crypto
 
         $raw = base64_decode(substr($value, strlen(self::PREFIX)), true);
         if ($raw === false || strlen($raw) <= self::NONCE_BYTES) {
-            throw new RuntimeException('Verschluesselter Wert ist unbrauchbar.');
+            throw new RuntimeException(translate('crypto.unusable'));
         }
 
         $nonce = substr($raw, 0, self::NONCE_BYTES);
@@ -73,7 +73,7 @@ final class Crypto
         $plain = sodium_crypto_secretbox_open($cipher, $nonce, $this->key());
         if ($plain === false) {
             throw new RuntimeException(
-                'Geheimnis konnte nicht entschluesselt werden. Wurde APP_KEY geaendert?'
+                translate('crypto.undecryptable')
             );
         }
 
@@ -98,7 +98,7 @@ final class Crypto
         $key = $this->normalize((string) $this->env->require('APP_KEY'));
         if ($key === null || strlen($key) !== self::KEY_BYTES) {
             throw new RuntimeException(
-                'APP_KEY muss 32 Byte lang sein (64 Hex-Zeichen). Erzeugen: openssl rand -hex 32'
+                translate('crypto.appkey_length')
             );
         }
 

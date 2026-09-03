@@ -44,18 +44,18 @@ final class ActivityController
     public function save(Request $request): Response
     {
         if (!$this->app->auth->checkCsrf($request->input('csrf'))) {
-            return $this->back(null, 'Das Formular ist abgelaufen. Bitte erneut versuchen.');
+            return $this->back(null, translate('common.error.form_expired'));
         }
 
         if (!$this->app->auth->can('Konto.Aktivitaeten.Manage')) {
-            return $this->back(null, 'Dafür fehlt dir die Berechtigung.');
+            return $this->back(null, translate('common.error.no_permission'));
         }
 
         try {
             if ($request->input('action') === 'reset') {
                 (new Badges($this->app))->reset();
 
-                return $this->back('Farben auf die Vorgaben zurückgesetzt.');
+                return $this->back(translate('account.activity.colors_reset'));
             }
 
             $saved = (new Badges($this->app))->save($request->post);

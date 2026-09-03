@@ -510,7 +510,7 @@ $zweig = static function (array $knoten, int $tiefe) use (&$zweig, $e, $selected
                 }
             })
             .catch(function (fehler) {
-                zustand('is-error', 'Verbindung gestört: ' + fehler.message);
+                zustand('is-error', <?= json_encode(translate('feed.connection_lost')) ?> + fehler.message);
             });
     }
 

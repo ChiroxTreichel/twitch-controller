@@ -139,18 +139,17 @@ final class PluginManager
     {
         $manifest = $this->manifest($slug);
         if ($manifest === null) {
-            return ['Plugin nicht gefunden.'];
+            return [translate('account.plugins.not_found')];
         }
 
         $problems = [];
 
         $coreConstraint = $manifest->coreConstraint();
         if ($coreConstraint !== null && !VersionConstraint::satisfies(App::VERSION, $coreConstraint)) {
-            $problems[] = sprintf(
-                'Braucht Kern %s, installiert ist %s.',
-                $coreConstraint,
-                App::VERSION
-            );
+            $problems[] = translate('account.plugins.needs_core', [
+                'needed' => $coreConstraint,
+                'have'   => App::VERSION,
+            ]);
         }
 
         foreach ($manifest->requiredPlugins() as $needed => $constraint) {
@@ -354,7 +353,7 @@ final class PluginManager
     {
         $manifest = $this->manifest($slug);
         if ($manifest === null) {
-            throw new RuntimeException("Plugin \"{$slug}\" nicht gefunden.");
+            throw new RuntimeException(translate('account.plugins.no_such', ['slug' => $slug]));
         }
 
         if ($this->isInstalled($manifest->slug)) {
@@ -386,7 +385,7 @@ final class PluginManager
     {
         $manifest = $this->manifest($slug);
         if ($manifest === null) {
-            throw new RuntimeException("Plugin \"{$slug}\" nicht gefunden.");
+            throw new RuntimeException(translate('account.plugins.no_such', ['slug' => $slug]));
         }
 
         if (!$this->isInstalled($manifest->slug)) {

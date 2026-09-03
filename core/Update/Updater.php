@@ -119,15 +119,14 @@ final class Updater
         if (!$this->isGitCheckout()) {
             return [
                 'ok' => false,
-                'message' => 'Diese Installation ist keine Git-Kopie. '
-                    . 'Updates müssen dann von Hand eingespielt werden.',
+                'message' => translate('update.not_git'),
             ];
         }
 
         if (!$this->gitAvailable()) {
             return [
                 'ok' => false,
-                'message' => 'Im Container fehlt das Programm git. '
+                'message' => translate('update.no_git_binary')
                     . 'Einmal "sudo ./install.sh" auf dem Server behebt das.',
             ];
         }
@@ -138,7 +137,7 @@ final class Updater
         if (!$fetchOk) {
             return [
                 'ok' => false,
-                'message' => 'Konnte GitHub nicht erreichen: ' . $fetchOut,
+                'message' => translate('update.github_unreachable_prefix') . $fetchOut,
             ];
         }
 
@@ -173,7 +172,7 @@ final class Updater
         return [
             'ok' => true,
             'message' => $behind > 0
-                ? sprintf('Es gibt %d neue Änderung(en).', $behind)
+                ? translate('update.behind', ['count' => $behind])
                 : 'Alles auf dem neuesten Stand.',
         ];
     }
@@ -216,7 +215,7 @@ final class Updater
 
             [$fetchOk, $fetchOut] = $this->git(['fetch', '--quiet', 'origin', $branch]);
             if (!$fetchOk) {
-                throw new \RuntimeException('GitHub nicht erreichbar: ' . $fetchOut);
+                throw new \RuntimeException(translate('update.github_unreachable_prefix') . $fetchOut);
             }
 
             // Nur vorspulen. Gibt es lokale Abweichungen, wird nichts
@@ -224,7 +223,7 @@ final class Updater
             [$mergeOk, $mergeOut] = $this->git(['merge', '--ff-only', 'FETCH_HEAD']);
             if (!$mergeOk) {
                 throw new \RuntimeException(
-                    'Der Ordner lässt sich nicht einfach vorspulen (eigene Änderungen?): ' . $mergeOut
+                    translate('update.not_fast_forward') . $mergeOut
                 );
             }
 
