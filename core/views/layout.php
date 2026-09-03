@@ -77,8 +77,31 @@ try {
                     <summary class="nav-label"><?= $e($group['label']) ?></summary>
                     <div class="nav-links">
                         <?php foreach ($group['items'] as $item): ?>
-                            <a class="nav-item<?= $active === $item['key'] ? ' is-active' : '' ?>"
-                               href="<?= $e($url($item['href'])) ?>"><?= $e($item['label']) ?></a>
+                            <?php if (($item['toggle'] ?? null) === null): ?>
+                                <a class="nav-item<?= $active === $item['key'] ? ' is-active' : '' ?>"
+                                   href="<?= $e($url($item['href'])) ?>"><?= $e($item['label']) ?></a>
+                            <?php else: ?>
+                                <?php /*
+                                    Menuepunkt mit Schnellschalter: damit
+                                    laesst sich ein Plugin von jeder Seite
+                                    aus abschalten, ohne erst dorthin zu
+                                    navigieren.
+                                */ ?>
+                                <div class="nav-row">
+                                    <a class="nav-item grow<?= $active === $item['key'] ? ' is-active' : '' ?>"
+                                       href="<?= $e($url($item['href'])) ?>"><?= $e($item['label']) ?></a>
+                                    <form method="post" action="<?= $e($url($item['toggle']['action'])) ?>">
+                                        <input type="hidden" name="csrf" value="<?= $e($app->auth->csrfToken()) ?>">
+                                        <input type="hidden" name="action" value="<?= $e($item['toggle']['value']) ?>">
+                                        <button class="switch switch-small<?= $item['toggle']['on'] ? ' is-on' : '' ?>"
+                                                type="submit"
+                                                title="<?= $e($item['toggle']['title']) ?>"
+                                                aria-label="<?= $e($item['toggle']['title']) ?>">
+                                            <span class="switch-track"><span class="switch-knob"></span></span>
+                                        </button>
+                                    </form>
+                                </div>
+                            <?php endif ?>
                         <?php endforeach; ?>
                     </div>
                 </details>
@@ -176,6 +199,53 @@ try {
         if (ereignis.key === 'Escape') {
             alleZu(null);
         }
+    });
+}());
+</script>
+
+<script>
+// Dateiauswahl: der eigene Knopf loest den verborgenen
+// <input type="file"> aus. Steht im Kern und nicht im Plugin - das
+// Feld ist ein allgemeiner Baustein, und ein Plugin-Skript kann
+// fehlen. Ohne JavaScript bleibt das Textfeld bedienbar; der Knopf
+// ist eine Zugabe.
+(function () {
+    'use strict';
+
+    document.addEventListener('click', function (ereignis) {
+        var knopf = ereignis.target.closest('.file-field-button');
+        if (!knopf) {
+            return;
+        }
+
+        var feld = knopf.closest('.file-field');
+        var auswahl = feld ? feld.querySelector('.file-field-native') : null;
+        if (auswahl) {
+            auswahl.click();
+        }
+    });
+
+    document.addEventListener('change', function (ereignis) {
+        var auswahl = ereignis.target;
+        if (!auswahl.classList || !auswahl.classList.contains('file-field-native')) {
+            return;
+        }
+
+        if (!auswahl.files || auswahl.files.length === 0) {
+            return;
+        }
+
+        var feld = auswahl.closest('.file-field');
+        var text = feld ? feld.querySelector('input[type="text"]') : null;
+        if (!text) {
+            return;
+        }
+
+        // Nur der Name. Den Pfad kennt der Browser nicht, und
+        // hochgeladen wird hier nichts - die Datei muss schon auf dem
+        // Server liegen. Deshalb der Hinweis im Platzhalter.
+        text.value = '/uploads/alerts/' + auswahl.files[0].name;
+        text.dispatchEvent(new Event('input', { bubbles: true }));
     });
 }());
 </script>

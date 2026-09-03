@@ -192,6 +192,7 @@ Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
 | `core.obs.badges` | filter | eigene Badges samt Standardfarben anmelden |
 | `core.obs.filters` | filter | eigene Filterknoten im Feed, auch in vorhandene Zweige |
 | `overlay.slots` | filter | eigenen Platz in der Overlay-Flaeche anmelden |
+| `admin.assets` | filter | eigenes CSS und JavaScript in die Verwaltungsseiten |
 | `overlay.assets` | filter | eigenes CSS und JavaScript in die Overlay-Flaeche |
 | `core.twitch.scope_labels` | filter | Klartext für eigene Twitch-Berechtigungen |
 | `core.eventsub.subscriptions` | filter | zusätzliche Twitch-Abos anfordern |
@@ -234,6 +235,56 @@ haben, ein PHP-Namensraum nicht — aus `twitch-alerts` wird also
 `TwitchAlerts`. Diese Richtung rechnet der Autoloader zurück und
 probiert beide Formen (`twitchalerts`, `twitch-alerts`), weil er nicht
 wissen kann, welche gemeint war.
+
+### Bedienelemente des Kerns
+
+Ein Plugin soll für gewöhnliche Bausteine kein eigenes Stylesheet
+brauchen — das kann fehlen, und dann sieht die Seite kaputt aus. Im
+Kern liegen deshalb:
+
+| Klasse | Zweck |
+| --- | --- |
+| `.switch` | Kippschalter als Absende-Knopf — wirkt sofort |
+| `.switch-field` | Kippschalter als Checkbox — wirkt beim Speichern |
+| `.head-row` | Titel links, Bedienelement rechts |
+| `.file-field` | Adresse eintippen oder Datei wählen |
+| `.case` / `.case-body` | aufklappbarer Block |
+| `.tabs` / `.tab` | Reiterleiste |
+| `_confirm.php` | Rückfrage als Aufklapp-Kasten (Vorlage) |
+
+Für alles darüber hinaus gibt es `admin.assets`.
+
+### Schnellschalter im Menü
+
+Ein Menüpunkt darf einen Schalter tragen, mit dem sich das Plugin von
+**jeder** Seite aus abschalten lässt:
+
+```php
+$nav['display'] = [
+    'label' => translate('alerts.nav.display'),
+    'items' => [[
+        'label'      => translate('alerts.name'),
+        'href'       => '/display/alerts',
+        'permission' => 'Alerts.Global.View',
+        'toggle'     => [
+            'on'         => Alerts::enabled($app),
+            'action'     => '/display/alerts',   // eigene Adresse, POST
+            'value'      => 'toggle',            // Wert für "action"
+            'permission' => 'Alerts.Global.Toggle',
+            'title'      => translate('alerts.toggle_hint'),
+        ],
+    ]],
+];
+```
+
+Den CSRF-Wert setzt der Kern. Fehlt das Recht, erscheint kein Schalter
+— der Menüpunkt bleibt. Das Ziel muss mit `/` beginnen: der Schalter
+steht auf jeder Seite, ein fremdes Ziel wäre ein Formular, das
+ungefragt nach draußen schickt.
+
+Die POST-Route sollte danach dorthin zurückführen, wo der Klick kam
+(`Referer`, geprüft gegen die eigene Adresse) — sonst wirft der
+Schalter einen von der Seite, auf der man gerade war.
 
 ### Einstellungen und Daten
 

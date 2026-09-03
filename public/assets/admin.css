@@ -393,6 +393,218 @@ td.actions { text-align: right; white-space: nowrap; }
     .content { padding: 22px 18px 48px; }
 }
 
+/* Menuepunkt mit Schnellschalter daneben. */
+.nav-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nav-row .nav-item {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Kleine Ausfuehrung fuer die Seitenleiste - der grosse Schalter
+   wuerde dort den Platz sprengen. */
+.switch-small .switch-track { width: 34px; height: 19px; }
+.switch-small .switch-knob { width: 15px; height: 15px; top: 2px; left: 2px; }
+.switch-small.is-on .switch-knob { transform: translateX(15px); }
+
+/*
+ * Zweite Bauform: ein Schalter, der zu einem Formular gehoert und erst
+ * beim Speichern wirkt. Innen eine gewoehnliche Checkbox - sie schickt
+ * ihren Wert mit, ist mit der Tastatur bedienbar und braucht kein
+ * JavaScript. Sichtbar ist nur die Pille davor.
+ *
+ * Die erste Bauform (.switch als Absende-Knopf) wirkt sofort. Beide
+ * sehen gleich aus, damit "an/aus" ueberall dasselbe Bild hat.
+ */
+.switch-field {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.switch-field input {
+    /* Nicht display:none - dann waere sie nicht mehr fokussierbar. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    margin: 0;
+}
+
+.switch-field .switch-track {
+    flex: 0 0 auto;
+    margin-top: 2px;
+}
+
+.switch-field input:checked + .switch-track {
+    background: var(--accent);
+}
+
+.switch-field input:checked + .switch-track .switch-knob {
+    transform: translateX(24px);
+}
+
+.switch-field input:focus-visible + .switch-track {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+
+.switch-field input:disabled + .switch-track {
+    opacity: 0.5;
+    cursor: default;
+}
+
+/* --- Kopfzeile mit Bedienelement ----------------------------------- */
+
+/*
+ * Titel links, ein Schalter oder Knopf rechts. Steht im Kern und nicht
+ * im Plugin: es ist eine Anordnung, kein Alert-Detail - und ein
+ * Plugin-Stylesheet kann fehlen.
+ */
+.head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 0 0 6px;
+}
+
+.head-row > h1,
+.head-row > h2,
+.head-row > h3 {
+    margin: 0;
+}
+
+/* --- Feld mit Dateiauswahl ----------------------------------------- */
+
+/*
+ * Adresse eintippen oder eine Datei wählen - beides an derselben
+ * Stelle. Der Knopf sitzt rechts am Feld und löst die verborgene
+ * Dateiauswahl aus; das Original von <input type="file"> ist
+ * ausgeblendet, weil "Choose File / No file chosen" nichts erklärt und
+ * sich nicht gestalten lässt.
+ */
+.file-field {
+    display: flex;
+    align-items: stretch;
+
+    /* Ein Feld, nicht zwei Elemente: der Rahmen umschliesst beides. */
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--bg);
+    overflow: hidden;
+}
+
+.file-field:focus-within {
+    border-color: var(--accent);
+}
+
+/* Das Textfeld gibt seinen eigenen Rahmen ab - den hat jetzt die
+   Umhuellung. */
+.file-field .input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+}
+
+.file-field .input:focus {
+    outline: none;
+}
+
+.file-field-button {
+    flex: 0 0 auto;
+    width: 40px;
+    border: 0;
+    border-left: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--muted);
+    cursor: pointer;
+    font: inherit;
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
+.file-field-button:hover {
+    background: var(--accent);
+    color: var(--accent-ink);
+}
+
+.file-field-button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+}
+
+/* Der Browserknopf selbst bleibt unsichtbar - er wird über den
+   eigenen ausgelöst. */
+.file-field-native {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* --- Aufklappbarer Fall -------------------------------------------- */
+
+/*
+ * Ein Alert hat mehrere Fälle - erster Sub, Resub, Resub mit Streak -
+ * und jeder davon Text, Video, Ton und Dauer. Untereinander aufgeklappt
+ * wären das mehrere Bildschirmlängen.
+ */
+.case {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    background: var(--panel-2);
+}
+
+.case > summary {
+    padding: 11px 14px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.92rem;
+    list-style: none;
+}
+
+.case > summary::-webkit-details-marker,
+.case > summary::marker {
+    display: none;
+    content: "";
+}
+
+.case > summary::before {
+    content: "▸";
+    display: inline-block;
+    width: 1em;
+    color: var(--muted);
+}
+
+.case[open] > summary::before {
+    content: "▾";
+}
+
+.case-body {
+    padding: 4px 14px 14px;
+    border-top: 1px solid var(--line);
+}
+
+/* Platzhalter-Zeile über den Fällen. */
+.placeholders code {
+    margin-right: 6px;
+}
+
 /* --- Kippschalter -------------------------------------------------- */
 
 /*

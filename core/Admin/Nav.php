@@ -74,9 +74,10 @@ final class Nav
                 }
 
                 $items[] = [
-                    'label' => (string) ($item['label'] ?? $item['href']),
-                    'href'  => (string) $item['href'],
-                    'key'   => (string) ($item['key'] ?? trim((string) $item['href'], '/')),
+                    'label'  => (string) ($item['label'] ?? $item['href']),
+                    'href'   => (string) $item['href'],
+                    'key'    => (string) ($item['key'] ?? trim((string) $item['href'], '/')),
+                    'toggle' => $this->normalizeToggle($item['toggle'] ?? null),
                 ];
             }
 
@@ -94,6 +95,58 @@ final class Nav
         uasort($result, static fn (array $a, array $b): int => $a['order'] <=> $b['order']);
 
         return $result;
+    }
+
+    /**
+     * Schnellschalter eines Menuepunktes.
+     *
+     * Damit kann ein Plugin sich von jeder Seite aus abschalten
+     * lassen - praktisch, wenn im Stream gerade Ruhe sein soll und man
+     * nicht erst zur Einstellungsseite navigieren will.
+     *
+     * Ein Plugin meldet ihn am Menuepunkt an:
+     *
+     *   'toggle' => [
+     *       'on'         => Alerts::enabled($app),
+     *       'action'     => '/display/alerts',   // Ziel des Formulars
+     *       'value'      => 'toggle',            // Wert fuer "action"
+     *       'permission' => 'Alerts.Global.Toggle',
+     *       'title'      => translate('alerts.toggle_hint'),
+     *   ]
+     *
+     * Ohne das Recht erscheint kein Schalter - der Menuepunkt selbst
+     * bleibt. Das Formular schickt der Kern samt CSRF-Kennung ab; das
+     * Plugin muss nur seine POST-Route haben, die es fuer die eigene
+     * Seite ohnehin hat.
+     *
+     * @return array{action: string, value: string, on: bool, title: string}|null
+     */
+    private function normalizeToggle(mixed $toggle): ?array
+    {
+        if (!is_array($toggle)) {
+            return null;
+        }
+
+        $action = trim((string) ($toggle['action'] ?? ''));
+
+        // Nur eigene Adressen: der Schalter steht auf jeder Seite, ein
+        // fremdes Ziel waere ein Formular, das ungefragt nach draussen
+        // schickt.
+        if ($action === '' || !str_starts_with($action, '/')) {
+            return null;
+        }
+
+        $permission = (string) ($toggle['permission'] ?? '');
+        if ($permission !== '' && !$this->app->auth->can($permission)) {
+            return null;
+        }
+
+        return [
+            'action' => $action,
+            'value'  => trim((string) ($toggle['value'] ?? 'toggle')),
+            'on'     => (bool) ($toggle['on'] ?? false),
+            'title'  => trim((string) ($toggle['title'] ?? '')),
+        ];
     }
 
     /**

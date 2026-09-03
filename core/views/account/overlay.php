@@ -69,9 +69,10 @@
             </label>
         </div>
 
-        <label class="row" style="margin-top:12px;">
+        <label class="switch-field" style="margin-top:16px;">
             <input type="checkbox" name="debug" value="1"
                    <?= $debug ? 'checked' : '' ?> <?= $canManage ? '' : 'disabled' ?>>
+            <span class="switch-track"><span class="switch-knob"></span></span>
             <span>
                 <?= $e(translate('overlay.debug')) ?><br>
                 <span class="hint"><?= $e(translate('overlay.debug_hint')) ?></span>
