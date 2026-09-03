@@ -216,7 +216,11 @@ final class Presenter
         $message = trim((string) preg_replace('/\s+/u', ' ', $message));
 
         if (function_exists('mb_strlen') && mb_strlen($message) > 300) {
-            return mb_substr($message, 0, 300) . '…';
+            // Ohne Netz nicht mb_substr: fehlt die Erweiterung, waere
+            // das ein Fatal Error mitten im Feed.
+            return function_exists('mb_substr')
+                ? mb_substr($message, 0, 300) . '…'
+                : substr($message, 0, 300) . '…';
         }
 
         return strlen($message) > 300 ? substr($message, 0, 300) . '…' : $message;

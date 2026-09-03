@@ -162,7 +162,6 @@ final class PluginsController
             'query'      => $query,
             'tag'        => $tag,
             'registry'   => $registry->baseUrl(),
-            'fetchedAt'  => $registry->fetchedAt(),
             'canManage'  => $this->app->auth->can('Konto.Plugins.Manage'),
             'canWrite'   => (new Installer($this->app))->canWrite(),
             'csrf'       => $this->app->auth->csrfToken(),
@@ -193,8 +192,14 @@ final class PluginsController
 
         $states = $this->installStates();
 
+        // Der Langtext haengt an einer eigenen Adresse und wird erst
+        // hier geholt - nicht beim Laden des Katalogs.
+        $readme = $registry->readme($plugin);
+
         return Response::html($this->app->view->render('account/plugins_detail', [
             'title'     => $plugin['name'],
+            'readme'    => $readme['html'],
+            'readmeErr' => $readme['error'],
             'active'    => 'konto/plugins',
             'tab'       => 'finden',
             'plugin'    => $plugin,
@@ -223,14 +228,6 @@ final class PluginsController
 
         try {
             switch ($action) {
-                case 'refresh':
-                    $count = count((new Client($this->app))->refresh());
-
-                    return $this->back('/account/plugins/find', sprintf(
-                        'Katalog neu geladen: %d Plugins verfügbar.',
-                        $count
-                    ));
-
                 case 'install':
                     return $this->installFromRegistry($slug, $back);
             }

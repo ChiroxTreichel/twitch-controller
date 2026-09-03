@@ -6,15 +6,20 @@ namespace Overlays\Core\Registry;
 
 use Overlays\Core\App;
 use Overlays\Core\Support\Http;
+use Overlays\Core\Support\Markdown;
 use RuntimeException;
 
 /**
  * Zugriff auf den Plugin-Katalog (Standard: plugins.talutah.de).
  *
- * Der Katalog ist eine einzige JSON-Datei. Sie wird geholt, in den
- * Einstellungen zwischengespeichert und danach lokal durchsucht - das
- * spart einen Suchdienst auf der Gegenseite und funktioniert auch, wenn
- * der Katalogserver mal nicht erreichbar ist.
+ * Der Katalog wird bei jedem Aufruf live geholt, und gesucht wird auf
+ * dem Katalogserver (?search=) - er kennt seinen Bestand. So sieht der
+ * Marktplatz sofort, was dort veroeffentlicht wurde.
+ *
+ * Zwischengespeichert wird nur eines: die letzte vollstaendige Antwort,
+ * als Rueckfall fuer die Liste der installierten Plugins. Die wird bei
+ * jedem Seitenaufruf gebraucht und darf nicht auf einen fremden Server
+ * warten. Siehe cached().
  *
  * Erwartetes Format siehe registry/README.md.
  */
@@ -25,7 +30,10 @@ final class Client
     /** Katalogformat, das dieses System versteht. */
     public const FORMAT = 1;
 
-    /** Wie lange der zwischengespeicherte Katalog als frisch gilt. */
+    /** Mehr als das ist keine Beschreibung mehr. */
+    private const MAX_README_BYTES = 262144;
+
+    /** Ab wann der Rueckfall-Katalog als veraltet gilt. */
     private const CACHE_SECONDS = 3600;
 
     /** @var list<array<string, mixed>>|null */
@@ -53,7 +61,12 @@ final class Client
     // -----------------------------------------------------------------
 
     /**
-     * Alle Plugins aus dem Katalog. Holt bei Bedarf nach.
+     * Alle Plugins aus dem Katalog - immer frisch vom Server.
+     *
+     * Der Katalog wird live abgefragt. Zwischengespeichert wird nur
+     * innerhalb eines Requests ($this->plugins) und als Rueckfall fuer
+     * die Liste der installierten Plugins (siehe cached()) - dort darf
+     * kein Seitenaufruf auf einen fremden Server warten.
      *
      * @return list<array<string, mixed>>
      */
@@ -61,13 +74,6 @@ final class Client
     {
         if ($this->plugins !== null && !$fresh) {
             return $this->plugins;
-        }
-
-        if (!$fresh && !$this->isStale()) {
-            $cached = $this->app->settings->get('registry_cache', null);
-            if (is_array($cached)) {
-                return $this->plugins = self::normalizeList($cached);
-            }
         }
 
         return $this->plugins = $this->refresh();
@@ -109,6 +115,10 @@ final class Client
         return null;
     }
 
+    /**
+     * Ist der Rueckfall-Katalog veraltet? Betrifft nur cached(); die
+     * Marktplatz-Ansichten holen ohnehin live.
+     */
     public function isStale(): bool
     {
         $at = $this->app->settings->int('registry_fetched_at', 0);
@@ -127,11 +137,13 @@ final class Client
     }
 
     /**
-     * Katalog neu holen.
+     * Katalog holen. Mit Suchbegriff sucht der Katalogserver, nicht
+     * dieser Rechner - dann geht nur ueber die Leitung, was gebraucht
+     * wird.
      *
      * @return list<array<string, mixed>>
      */
-    public function refresh(): array
+    public function refresh(string $search = ''): array
     {
         // Genau eine Adresse. Der Katalog wird nicht hier erzeugt, er
         // wird geladen - dafuer hat der Katalogserver zu sorgen.
@@ -140,6 +152,11 @@ final class Client
         // antwortet immer, auch bevor auf dem Katalogserver ein Paket
         // veroeffentlicht wurde und ohne dass dort mod_rewrite laeuft.
         $url = $this->baseUrl() . '/index.php';
+
+        $search = trim($search);
+        if ($search !== '') {
+            $url .= '?search=' . rawurlencode($search);
+        }
 
         try {
             $result = Http::get($url, ['Accept' => 'application/json'], 20);
@@ -153,7 +170,7 @@ final class Client
 
             if ($result->status === 404) {
                 $message .= ' Liegt der Katalogserver wirklich unter dieser Adresse,'
-                    . ' und ist sein DocumentRoot der Ordner "public"?';
+                    . ' und ist index.php dort erreichbar?';
             }
 
             $this->app->settings->set('registry_error', $message);
@@ -202,13 +219,102 @@ final class Client
 
         $plugins = self::normalizeList($raw);
 
-        $this->app->settings->setMany([
-            'registry_cache'       => $plugins,
-            'registry_fetched_at'  => time(),
-            'registry_error'       => '',
-        ]);
+        // Den Rueckfall-Katalog nur aus einer vollstaendigen Antwort
+        // schreiben. Ein Suchergebnis ist ausschnittsweise - stuende es
+        // hier, waere die Liste der installierten Plugins danach der
+        // Meinung, die uebrigen gaebe es nicht mehr.
+        if ($search === '') {
+            $this->app->settings->setMany([
+                'registry_cache'       => $plugins,
+                'registry_fetched_at'  => time(),
+                'registry_error'       => '',
+            ]);
+        } else {
+            $this->app->settings->set('registry_error', '');
+        }
 
         return $plugins;
+    }
+
+    /**
+     * Beschreibungstext eines Plugins, als HTML zum Ausgeben.
+     *
+     * Der Text steht nicht im Katalog, sondern hinter einer eigenen
+     * Adresse - so bleibt der Katalog klein, auch wenn eine README lang
+     * ist. Geholt wird er erst hier, also wenn jemand die
+     * Beschreibungsseite tatsaechlich oeffnet.
+     *
+     * Gerendert wird eine enge Markdown-Teilmenge, und zwar hier und
+     * nicht auf dem Katalogserver: der Text kommt von fremd, und ein
+     * Plugin-Autor soll kein HTML in diese Verwaltung schreiben
+     * koennen. Siehe Support\Markdown.
+     *
+     * @param array<string, mixed> $plugin Katalogeintrag
+     * @return array{html: string, error: string}
+     */
+    public function readme(array $plugin): array
+    {
+        $url = (string) ($plugin['readme'] ?? '');
+        if ($url === '') {
+            return ['html' => '', 'error' => ''];
+        }
+
+        // Nur von dem Host, der als Katalog eingestellt ist. Ein
+        // manipulierter Katalog kann diese Verwaltung sonst dazu
+        // bringen, eine beliebige Adresse abzurufen.
+        if (!$this->sameHost($url)) {
+            return ['html' => '', 'error' => translate('market.readme.foreign_host')];
+        }
+
+        $slug = (string) ($plugin['slug'] ?? '');
+        $stand = (string) ($plugin['updated_at'] ?? '');
+        $schluessel = 'registry_readme_' . $slug;
+
+        // Klein zwischenlagern, mit der Fassung als Schluessel: solange
+        // sich am Plugin nichts aendert, wird der Text nicht erneut
+        // geholt.
+        $gelagert = $this->app->settings->get($schluessel, null);
+        if (is_array($gelagert)
+            && ($gelagert['stand'] ?? '') === $stand
+            && is_string($gelagert['markdown'] ?? null)
+        ) {
+            return ['html' => Markdown::render($gelagert['markdown']), 'error' => ''];
+        }
+
+        try {
+            $ergebnis = Http::get($url, ['Accept' => 'text/markdown, text/plain'], 15);
+        } catch (\Throwable $e) {
+            return ['html' => '', 'error' => $e->getMessage()];
+        }
+
+        if (!$ergebnis->ok()) {
+            return [
+                'html'  => '',
+                'error' => translate('market.readme.unreachable', ['status' => $ergebnis->status]),
+            ];
+        }
+
+        $markdown = $ergebnis->body;
+        if (strlen($markdown) > self::MAX_README_BYTES) {
+            $markdown = substr($markdown, 0, self::MAX_README_BYTES);
+        }
+
+        $this->app->settings->set($schluessel, ['stand' => $stand, 'markdown' => $markdown]);
+
+        return ['html' => Markdown::render($markdown), 'error' => ''];
+    }
+
+    /**
+     * Zeigt die Adresse auf denselben Host wie der Katalog?
+     */
+    private function sameHost(string $url): bool
+    {
+        $ziel = parse_url($url, PHP_URL_HOST);
+        $katalog = parse_url($this->baseUrl(), PHP_URL_HOST);
+
+        return is_string($ziel)
+            && is_string($katalog)
+            && strcasecmp($ziel, $katalog) === 0;
     }
 
     /**
@@ -228,18 +334,26 @@ final class Client
     }
 
     /**
-     * Textsuche über Name, Slug, Kurzbeschreibung, Schlagworte und Autor.
+     * Suche im Katalog.
+     *
+     * Gesucht wird auf dem Katalogserver (?search=), nicht hier - er
+     * kennt seinen Bestand, und so geht nur das ueber die Leitung, was
+     * angezeigt wird.
+     *
+     * Danach wird trotzdem noch lokal gefiltert. Nicht aus Misstrauen,
+     * sondern weil ein Katalogserver den Parameter nicht kennen muss:
+     * ignoriert er ihn und liefert alles, stimmt die Anzeige dennoch.
      *
      * @return list<array<string, mixed>>
      */
     public function search(string $query): array
     {
         $query = trim($query);
-        $plugins = $this->all();
-
         if ($query === '') {
-            return $plugins;
+            return $this->all();
         }
+
+        $plugins = $this->plugins = $this->refresh($query);
 
         // Mehrere Wörter: alle müssen irgendwo vorkommen.
         $words = array_filter(preg_split('/\s+/', self::lower($query)) ?: []);
@@ -249,6 +363,7 @@ final class Client
                 (string) $plugin['slug'],
                 (string) $plugin['name'],
                 (string) $plugin['summary'],
+                (string) $plugin['description'],
                 (string) $plugin['author'],
                 implode(' ', $plugin['tags']),
             ]));
@@ -346,7 +461,12 @@ final class Client
             'slug'        => $slug,
             'name'        => trim((string) ($entry['name'] ?? $slug)),
             'version'     => $version,
-            'summary'     => trim((string) ($entry['summary'] ?? '')),
+            // Ein schlanker Katalogserver schickt nur description.
+            // Dann hier den ersten Satz als Kurzfassung nehmen, damit
+            // die Liste im Marktplatz nicht leer aussieht.
+            'summary'     => trim((string) ($entry['summary'] ?? '')) !== ''
+                ? trim((string) $entry['summary'])
+                : self::kurzfassung(trim((string) ($entry['description'] ?? ''))),
             'description' => trim((string) ($entry['description'] ?? '')),
             'author'      => trim((string) ($entry['author'] ?? '')),
             'homepage'    => self::isHttpUrl((string) ($entry['homepage'] ?? ''))
@@ -360,6 +480,12 @@ final class Client
             'requires'    => is_array($entry['requires'] ?? null) ? $entry['requires'] : [],
             'optional'    => is_array($entry['optional'] ?? null) ? $entry['optional'] : [],
             'download'    => $download,
+            // Adresse des Langtextes. Geholt wird er erst, wenn jemand
+            // die Beschreibungsseite oeffnet - so bleibt der Katalog
+            // klein, auch wenn eine README lang ist.
+            'readme'      => self::isHttpUrl((string) ($entry['readme'] ?? ''))
+                ? (string) $entry['readme']
+                : '',
             'sha256'      => strtolower(trim((string) ($entry['sha256'] ?? ''))),
             'signature'   => trim((string) ($entry['signature'] ?? '')),
             'size'        => (int) ($entry['size'] ?? 0),
@@ -375,6 +501,31 @@ final class Client
     private static function lower(string $text): string
     {
         return function_exists('mb_strtolower') ? mb_strtolower($text) : strtolower($text);
+    }
+
+    /**
+     * Erster Satz einer Beschreibung, fuer die Liste.
+     */
+    private static function kurzfassung(string $beschreibung): string
+    {
+        $zeile = trim(explode("\n", str_replace("\r", "\n", $beschreibung))[0]);
+        if ($zeile === '') {
+            return '';
+        }
+
+        if (preg_match('/^(.{20,180}?[.!?])\s/u', $zeile . ' ', $treffer) === 1) {
+            return $treffer[1];
+        }
+
+        // Nicht mb_strlen/mb_substr ohne Netz: die Erweiterung ist im
+        // mitgelieferten Image dabei, aber diese Klasse soll auch auf
+        // einer karg gebauten PHP-Installation nicht aussteigen. Siehe
+        // lower() weiter unten.
+        if (function_exists('mb_strlen')) {
+            return mb_strlen($zeile) > 180 ? mb_substr($zeile, 0, 177) . '...' : $zeile;
+        }
+
+        return strlen($zeile) > 180 ? substr($zeile, 0, 177) . '...' : $zeile;
     }
 
     private static function isHttpUrl(string $url): bool

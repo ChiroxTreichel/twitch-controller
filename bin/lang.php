@@ -263,10 +263,13 @@ function pruefe(string $name, string $codeDir, string $langDir, bool $fix, array
 $beanstandungen = 0;
 
 if ($plugin !== '') {
+    $ordner = $root . '/plugins/' . $plugin;
+    $verzeichnis = is_file($ordner . '/src/plugin.json') ? $ordner . '/src' : $ordner;
+
     $beanstandungen += pruefe(
         "Plugin {$plugin}",
-        $root . '/plugins/' . $plugin,
-        $root . '/plugins/' . $plugin . '/lang',
+        $verzeichnis,
+        $verzeichnis . '/lang',
         $fix,
         ladeJson($root . '/lang/de.json')
     );
@@ -276,18 +279,25 @@ if ($plugin !== '') {
     if ($alle) {
         $kern = ladeJson($root . '/lang/de.json');
 
-        // Die Vorlage unter docs/ gehoert mitgeprueft: sie liegt nicht
-        // in plugins/ (das ist nicht im Repository), soll aber nicht
-        // verrotten.
-        $verzeichnisse = glob($root . '/plugins/*/plugin.json') ?: [];
-        if (is_file($root . '/docs/example/plugin.json')) {
-            $verzeichnisse[] = $root . '/docs/example/plugin.json';
-        }
+        // plugins/ hat zwei Gestalten: auf einer Installation liegt
+        // dort das entpackte Plugin, waehrend der Entwicklung das
+        // Plugin-Repository mit dem Quellcode unter <slug>/src/. Je
+        // Plugin gilt genau ein Verzeichnis - sonst wird der Ordner
+        // daneben, der nur die Katalogangaben haelt, als Plugin ohne
+        // Sprachdatei gemeldet.
+        foreach (glob($root . '/plugins/*', GLOB_ONLYDIR) ?: [] as $ordner) {
+            $slug = basename($ordner);
 
-        foreach ($verzeichnisse as $manifest) {
-            $verzeichnis = dirname($manifest);
+            $verzeichnis = is_file($ordner . '/src/plugin.json')
+                ? $ordner . '/src'
+                : $ordner;
+
+            if (!is_file($verzeichnis . '/plugin.json')) {
+                continue;
+            }
+
             $beanstandungen += pruefe(
-                'Plugin ' . basename($verzeichnis),
+                'Plugin ' . $slug,
                 $verzeichnis,
                 $verzeichnis . '/lang',
                 $fix,

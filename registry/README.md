@@ -1,159 +1,75 @@
-# Plugin-Katalog
+# Katalogserver
 
-Die Gegenseite zu *Konto → Plugins → Plugins finden*. Läuft eigenständig,
-gehört nicht zur Installation auf dem Streamer-Server.
+Drei Endpunkte für den Plugin-Marktplatz. **Wer nur den
+Twitch-Controller betreibt, braucht diesen Ordner nicht** — er ist für
+den, der einen Katalog anbietet.
 
-## Aufstellen
+## Einrichten
 
-`registry/public/` ist das DocumentRoot. Alles darüber (`bin/`) gehört
-**nicht** ins Web.
+Die vier Dateien in den DocumentRoot legen, das Plugin-Repository
+daneben:
 
 ```
-plugins.example.com  ->  /pfad/zu/registry/public
+/srv/raid/plugins.talutah.de/
+    plugins/              git clone …/twitch-controller-plugins.git plugins
+    web/html/             <- DocumentRoot
+        _lib.php
+        index.php
+        download.php
+        readme.php
 ```
 
-Für Apache liegt eine `.htaccess` bei; sie braucht `AllowOverride All`
-oder die Regeln direkt im vHost. Nginx braucht stattdessen:
+Passt der Pfad nicht, ist `PLUGINS_DIR` oben in `_lib.php` die einzige
+Stelle zum Ändern.
 
-```nginx
-root /pfad/zu/registry/public;
-index index.php;
-location / { try_files $uri $uri/ /index.php?$query_string; }
-```
+Das Repository liegt **außerhalb** des DocumentRoots. Das ist keine
+Kosmetik: darin stehen `plugin.php` und `install.php` jedes Plugins, und
+Apache würde sie ausführen, wären sie erreichbar. Der einzige Weg an ein
+Paket ist `download.php`.
 
-> Wenn die Domain mit **403** antwortet, zeigt das DocumentRoot meist noch
-> aufs falsche Verzeichnis oder es fehlt eine Startdatei. Prüfen: liegt
-> `public/index.php` wirklich unter dem eingestellten Pfad?
->
-> Wenn `/index.php` mit **404** antwortet, zeigt das DocumentRoot nicht auf
-> `public/`. Das ist die Adresse, die der Client abfragt — sie muss gehen.
+## Endpunkte
 
-`public/index.json` liegt zusätzlich als leerer Katalog bei, damit auch die
-statische Adresse von Anfang an gültig antwortet. `bin/build.php`
-überschreibt sie mit dem echten Inhalt. Der Client erzeugt nichts, er lädt
-nur.
-
-PHP 8.2 oder neuer mit der Erweiterung `zip`. Mehr wird nicht gebraucht —
-keine Datenbank, kein Composer.
-
-## Ein Plugin veröffentlichen
-
-```bash
-# 1. Plugin-Ordner zu einem Paket packen
-php bin/pack.php /pfad/zum/plugin
-
-# 2. Katalog neu erzeugen
-php bin/build.php --base-url https://plugins.example.com
-```
-
-`pack.php` liest Slug und Version aus `plugin.json` und schreibt
-`public/pkg/<slug>-<version>.zip`. `build.php` geht alle Pakete durch,
-berechnet Prüfsummen und schreibt `public/index.json`.
-
-Liegen mehrere Versionen eines Plugins im Ordner, kommt die höchste in den
-Katalog. Alte Pakete kann man liegen lassen — sie bleiben abrufbar, werden
-aber nicht mehr angeboten.
-
-Statt `--base-url` geht auch `REGISTRY_BASE_URL` als Umgebungsvariable.
-
-## Zusätzliche Angaben
-
-Was nicht ins Plugin selbst gehört — Langtext, Bilder, Schlagworte —
-kommt nach `public/meta/<slug>.json`:
-
-```json
-{
-  "summary": "Eine Zeile, erscheint in der Liste",
-  "description": "Langtext für die Detailseite.\n\nUnterstützt **fett**, *kursiv*, `Code`, Aufzählungen mit \"- \" und [Links](https://example.com).",
-  "tags": ["alerts", "overlay"],
-  "homepage": "https://github.com/…",
-  "icon": "img/alerts.png",
-  "screenshots": ["img/alerts-1.png", "img/alerts-2.png"]
-}
-```
-
-Alles darin ist optional und überschreibt die Werte aus `plugin.json`.
-Relative Bildpfade werden beim Bauen zu vollständigen Adressen ergänzt;
-Bilder gehören nach `public/img/`.
-
-Der Langtext wird beim Streamer **nicht** als HTML eingebettet, sondern
-serverseitig durch einen kleinen Markdown-Ersatz geschickt, der vorher
-alles escaped. HTML im Text erscheint deshalb als Text.
-
-## Schnittstelle
-
-| Adresse | Zweck |
+| Adresse | Antwort |
 | --- | --- |
-| `GET /index.php` | der ganze Katalog — **das fragt der Client ab** |
-| `GET /index.json` | dasselbe, als statische Datei |
-| `GET /api/plugins` | dasselbe, mit `?q=` und `?tag=` filterbar |
-| `GET /api/plugins/<slug>` | ein Plugin |
-| `GET /pkg/<datei>.zip` | das Paket |
-| `GET /` | Übersicht im Browser |
+| `/index.php` | der Katalog als JSON — die Adresse, die der Client abfragt |
+| `/download.php?name=<slug>` | das ZIP |
+| `/readme.php?name=<slug>` | die README als Markdown |
 
-Der Client holt ausschließlich `/index.php` und sucht danach lokal. Diese
-Adresse ist gewählt, weil sie ohne Voraussetzungen funktioniert: kein
-`mod_rewrite`, und auch dann, wenn noch kein Paket veröffentlicht wurde.
+Kein Bauschritt: der Katalog wird bei jedem Abruf aus dem Repository
+gelesen. Nach einem `git -C plugins pull` ist er aktuell.
 
-`/index.json` liefert dasselbe. Existiert die Datei, kommt sie direkt vom
-Webserver; fehlt sie, antwortet `index.php` mit einem leeren Katalog —
-sofern eine Umschreibung greift.
-
-Die `/api/`-Endpunkte sind Bequemlichkeit für andere Werkzeuge.
-
-### Format von index.json
+## Der Katalog
 
 ```json
 {
   "format": 1,
-  "generated_at": "2026-09-02T13:55:49+00:00",
+  "generated_at": "2026-09-03T09:45:28+00:00",
   "plugins": [
     {
-      "slug": "alerts",
-      "name": "Alerts",
+      "slug": "example",
+      "name": "Beispiel",
       "version": "1.0.0",
-      "summary": "…",
       "description": "…",
-      "author": "…",
-      "homepage": "https://…",
-      "tags": ["alerts"],
-      "icon": "https://…/img/alerts.png",
-      "screenshots": ["https://…"],
+      "author": "Twitch-Controller",
+      "tags": ["beispiel"],
       "requires": { "core": ">=1.0.0" },
-      "optional": { "overlay": ">=1.0.0" },
-      "download": "https://…/pkg/alerts-1.0.0.zip",
-      "sha256": "…",
-      "size": 12345,
-      "updated_at": "2026-09-02T13:55:49+00:00"
+      "download": "https://plugins.talutah.de/download.php?name=example",
+      "readme": "https://plugins.talutah.de/readme.php?name=example",
+      "sha256": "7b8ef82d…",
+      "size": 6466,
+      "updated_at": "2026-09-03T09:37:09+00:00"
     }
   ]
 }
 ```
 
-`format` muss `1` sein, sonst lehnt der Client den Katalog ab. Einträge
-ohne gültigen `slug`, ohne `version` im Format `X.Y.Z` oder ohne
-`download` werden übersprungen.
+Pflicht sind `slug`, `version` und `download` — ohne die verwirft der
+Client den Eintrag. `sha256` braucht er zum Installieren: er lädt das
+Paket, vergleicht die Prüfsumme mit dem Katalog und entpackt erst dann.
 
-## Was der Client prüft, bevor er installiert
+Geladen wird ausschließlich von demselben Host, der im Client als
+Katalogadresse eingestellt ist. Ein manipulierter Katalog kann also
+nicht auf einen fremden Server umleiten.
 
-Wissenswert, weil es festlegt, was ein Paket erfüllen muss:
-
-- **Gleicher Host.** Die `download`-Adresse muss auf demselben Host liegen
-  wie der Katalog. Ein übernommener Katalog kann so nicht auf fremde
-  Pakete umleiten. Ein CDN unter anderem Namen funktioniert daher nicht.
-- **Prüfsumme.** `sha256` ist Pflicht. Fehlt sie, wird nicht installiert.
-- **Größe.** Download höchstens 32 MB, entpackt höchstens 128 MB,
-  höchstens 3000 Dateien.
-- **Pfade.** Kein Eintrag im Archiv darf aus seinem Verzeichnis
-  herausführen.
-- **Inhalt.** `plugin.json` und `plugin.php` müssen im Wurzelverzeichnis
-  des Archivs liegen (ein einzelner Unterordner wird toleriert), und der
-  `slug` im Manifest muss der angeforderte sein.
-
-Die Prüfsumme schützt gegen kaputte Übertragung, **nicht** gegen einen
-übernommenen Katalogserver — wer den Index kontrolliert, kontrolliert auch
-den Hash. Wer das absichern will, kann Signaturen einschalten: dazu ein
-Ed25519-Schlüsselpaar erzeugen, jedes Paket signieren, die Signatur als
-`signature` (base64) in den Index legen und beim Streamer den öffentlichen
-Schlüssel in der Einstellung `registry_public_key` hinterlegen. Ist dort
-ein Schlüssel gesetzt, wird die Signatur verbindlich geprüft.
+Ein Plugin erscheint nur, wenn Ordnername und `slug` übereinstimmen,
+die Version dreiteilig ist und `<slug>.zip` daneben liegt.

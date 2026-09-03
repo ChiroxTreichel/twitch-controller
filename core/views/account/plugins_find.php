@@ -11,7 +11,6 @@
  * @var string $query
  * @var string $tag
  * @var string $registry
- * @var int $fetchedAt
  * @var bool $canManage
  * @var bool $canWrite
  * @var string $csrf
@@ -70,20 +69,7 @@
     <?php endif; ?>
 
     <div class="row" style="margin-top:12px;">
-        <span class="hint grow">
-            <?php if ($fetchedAt > 0): ?>
-                <?= $e(translate('market.catalog_from', ['date' => \Overlays\Core\Support\Dates::long(date('c', $fetchedAt))])) ?>
-            <?php else: ?>
-                <?= $e(translate('market.catalog_not_loaded')) ?>
-            <?php endif; ?>
-        </span>
-        <?php if ($canManage): ?>
-            <form method="post" action="<?= $e($url('/account/plugins/find')) ?>">
-                <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-                <input type="hidden" name="action" value="refresh">
-                <button class="btn btn-ghost btn-small" type="submit"><?= $e(translate('market.reload')) ?></button>
-            </form>
-        <?php endif; ?>
+        <span class="hint grow"><?= $e(translate('market.live', ['source' => $registry])) ?></span>
     </div>
 </div>
 

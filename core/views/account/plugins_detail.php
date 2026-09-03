@@ -7,6 +7,8 @@
  * @var callable $e
  * @var callable $url
  * @var string $tab
+ * @var string $readme     README des Plugins, schon als HTML
+ * @var string $readmeErr  Grund, falls sie nicht geholt werden konnte
  * @var array<string, mixed> $plugin
  * @var array{installed: bool, enabled: bool, version: ?string}|null $state
  * @var bool $canManage
@@ -101,7 +103,15 @@ $neuer = $state !== null
         </div>
     <?php endif; ?>
 
-    <?php if ($plugin['description'] !== ''): ?>
+    <?php if (($readmeErr ?? '') !== ''): ?>
+        <p class="hint"><?= $e(translate('market.readme.failed', ['reason' => $readmeErr])) ?></p>
+    <?php endif; ?>
+
+    <?php if (($readme ?? '') !== ''): ?>
+        <?php /* Die README des Plugins - der Langtext. */ ?>
+        <div class="prose"><?= $readme ?></div>
+    <?php elseif ($plugin['description'] !== ''): ?>
+        <?php /* Keine README im Katalog: dann die Kurzbeschreibung. */ ?>
         <div class="prose">
             <?= \Overlays\Core\Support\Markdown::render((string) $plugin['description']) ?>
         </div>

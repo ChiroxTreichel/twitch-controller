@@ -65,16 +65,36 @@ plugins/<slug>/
   src/             Klassen unter Overlays\Plugin\<Slug>\  (optional)
 ```
 
-`docs/example/` ist ein vollständig kommentiertes Beispiel und die
-ausführbare Fassung dieser Dokumentation. Es liegt unter `docs/`, weil
-`plugins/` nicht im Repository verfolgt wird -- dort steht, was der
-Betreiber installiert hat. Zum Ausprobieren einmal hineinkopieren:
+Das **Beispiel-Plugin** ist ein vollständig kommentiertes, lauffähiges
+Plugin und die ausführbare Fassung dieser Dokumentation. Es liegt nicht
+in diesem Repository, sondern im Plugin-Repository — genau wie jedes
+andere Plugin:
 
-```bash
-cp -r docs/example plugins/example
+```
+github.com/ChiroxTreichel/twitch-controller-plugins
 ```
 
-Danach erscheint es unter *Konto → Plugins* und lässt sich aktivieren.
+Zum Anschauen entweder im Marktplatz unter *Konto → Plugins → Plugins
+finden* installieren, oder das Repository auschecken und den Ordner
+`example/src/` als Vorlage kopieren.
+
+### Trennung der Repositories
+
+| Repository | Inhalt |
+| --- | --- |
+| `twitch-controller` | der Kern. `plugins/` ist darin **nicht** verfolgt |
+| `twitch-controller-plugins` | die Plugins, ausgeliefert über `plugins.talutah.de` |
+
+Der Grund: ein Plugin bekommt so einen eigenen Lebenszyklus. Es lässt
+sich veröffentlichen, ohne den Kern anzufassen, und der Selbst-Update-Pull
+des Kerns (`git merge --ff-only`) kann nicht an installierten Plugins
+scheitern.
+
+Aufbau eines Plugins im Plugin-Repository — ein Ordner je Slug, darin
+`src/` mit dem Quellcode, daneben `plugin.json`, `README.md` (die
+Beschreibungsseite im Marktplatz) und das gebaute `<slug>.zip`. Gepackt
+wird mit `php bin/pack.php <slug>`; Einzelheiten stehen in der README
+dieses Repositories.
 
 ### Manifest
 
