@@ -36,7 +36,7 @@ RUN php -m | grep -qi '^mbstring$' || docker-php-ext-install mbstring
 # rewrite  .. alles auf den Front-Controller public/index.php
 # remoteip .. echte Client-IP hinter Caddy/NPM
 # proxy*   .. fuer Plugins, die einen eigenen Dienst weiterreichen
-#             (z.B. ein WebSocket-Server fuer Overlays)
+#             (z.B. ein Dienst, der dauerhaft laeuft)
 RUN a2enmod rewrite remoteip proxy proxy_http proxy_wstunnel headers
 
 COPY php/uploads.ini /usr/local/etc/php/conf.d/uploads.ini

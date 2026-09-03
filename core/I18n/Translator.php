@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\I18n;
+namespace TwitchController\Core\I18n;
 
 /**
  * Uebersetzungen.

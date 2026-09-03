@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Config;
+namespace TwitchController\Core\Config;
 
-use Overlays\Core\Database\Db;
-use Overlays\Core\Support\Crypto;
+use TwitchController\Core\Database\Db;
+use TwitchController\Core\Support\Crypto;
 
 /**
  * Alle fachlichen Einstellungen liegen in der Datenbank, nicht in der

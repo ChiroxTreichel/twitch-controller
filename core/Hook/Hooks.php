@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Hook;
+namespace TwitchController\Core\Hook;
 
 /**
  * Hook-Verteiler: die einzige Stelle, an der Plugins den Kern erweitern.

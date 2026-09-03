@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Update;
+namespace TwitchController\Core\Update;
 
-use Overlays\Core\App;
+use TwitchController\Core\App;
 use Throwable;
 
 /**

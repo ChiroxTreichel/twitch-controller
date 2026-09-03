@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Registry;
+namespace TwitchController\Core\Registry;
 
-use Overlays\Core\App;
+use TwitchController\Core\App;
 use RuntimeException;
 use Throwable;
 use ZipArchive;

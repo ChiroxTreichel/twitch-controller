@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Plugin;
+namespace TwitchController\Core\Plugin;
 
-use Overlays\Core\App;
-use Overlays\Core\Config\Settings;
+use TwitchController\Core\App;
+use TwitchController\Core\Config\Settings;
 use RuntimeException;
 use Throwable;
 
@@ -280,7 +280,7 @@ final class PluginManager
                 // Sprachdatei des Plugins, falls vorhanden. Vor dem
                 // Laden, damit das Plugin beim Registrieren schon
                 // uebersetzte Beschriftungen benutzen kann.
-                \Overlays\Core\I18n\Translator::instance()
+                \TwitchController\Core\I18n\Translator::instance()
                     ->loadDirectory($manifest->directory . '/lang');
 
                 $this->app->hooks->withSource($slug, function () use ($manifest): void {

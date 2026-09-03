@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Registry;
+namespace TwitchController\Core\Registry;
 
-use Overlays\Core\App;
-use Overlays\Core\Support\Http;
-use Overlays\Core\Support\Markdown;
+use TwitchController\Core\App;
+use TwitchController\Core\Support\Http;
+use TwitchController\Core\Support\Markdown;
 use RuntimeException;
 
 /**

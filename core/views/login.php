@@ -1,6 +1,6 @@
 <?php
 /**
- * @var \Overlays\Core\App $app
+ * @var \TwitchController\Core\App $app
  * @var callable $e
  * @var callable $url
  * @var callable $asset
@@ -24,7 +24,7 @@ $channel = $app->settings->string('twitch_broadcaster_name')
     <div class="panel" style="max-width:420px;text-align:center;">
         <div class="brand" style="justify-content:center;margin-bottom:18px;">
             <span class="brand-dot"></span>
-            <strong>Overlays</strong>
+            <strong><?= $e(\TwitchController\Core\App::NAME) ?></strong>
         </div>
 
         <?php if ($channel !== ''): ?>

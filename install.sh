@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Overlays - Installation
+# Twitch-Controller - Installation
 #
 #   ./install.sh
 #
@@ -9,15 +9,15 @@
 # gefahrlos: vorhandene Werte bleiben stehen, insbesondere APP_KEY.
 #
 # Ohne Rückfragen (z.B. für ein Skript):
-#   ./install.sh --domain overlays.example.com --proxy npm --yes
+#   ./install.sh --domain twitch.example.com --proxy npm --yes
 #
 set -euo pipefail
 
 # Woher das Projekt geholt wird, wenn das Skript ohne Repository laeuft
 # (also beim Aufruf per curl ... | bash).
-REPO_URL="${OVERLAYS_REPO:-https://github.com/ChiroxTreichel/twitch-controller.git}"
-REPO_REF="${OVERLAYS_REF:-main}"
-DEFAULT_DIR="${OVERLAYS_DIR:-/opt/overlays}"
+REPO_URL="${TC_REPO:-https://github.com/ChiroxTreichel/twitch-controller.git}"
+REPO_REF="${TC_REF:-main}"
+DEFAULT_DIR="${TC_DIR:-/opt/twitch-controller}"
 
 # Aufrufparameter merken, um sie nach dem Klonen weiterzugeben.
 ORIGINAL_ARGS=("$@")
@@ -83,7 +83,7 @@ TARGET_DIR=''
 
 usage() {
     cat <<USAGE
-Overlays - Installation
+Twitch-Controller - Installation
 
   Direkt aus dem Netz (installiert und aktualisiert):
     curl -fsSL https://raw.githubusercontent.com/ChiroxTreichel/twitch-controller/main/install.sh | sudo bash
@@ -367,7 +367,7 @@ version_at_least() {
 # --- Begrüßung -------------------------------------------------------------
 
 printf '\n%s========================================================%s\n' "$C_INFO" "$C_RESET"
-printf '%s Overlays - Einrichtung%s\n' "$C_BOLD" "$C_RESET"
+printf '%s Twitch-Controller - Einrichtung%s\n' "$C_BOLD" "$C_RESET"
 printf '%s========================================================%s\n' "$C_INFO" "$C_RESET"
 cat <<'INTRO'
 
@@ -635,7 +635,7 @@ fi
 # das Skript von dort neu gestartet.
 
 if ! is_project_dir "$ROOT"; then
-    if [ "${OVERLAYS_BOOTSTRAPPED:-0}" = "1" ]; then
+    if [ "${TC_BOOTSTRAPPED:-0}" = "1" ]; then
         die "Das Projekt wurde geholt, ist aber nicht auffindbar. Bitte melden."
     fi
 
@@ -697,7 +697,7 @@ if ! is_project_dir "$ROOT"; then
         esac
     done
 
-    export OVERLAYS_BOOTSTRAPPED=1
+    export TC_BOOTSTRAPPED=1
     cd "$TARGET_DIR"
     exec bash "$TARGET_DIR/install.sh" ${FORWARD_ARGS[@]+"${FORWARD_ARGS[@]}"}
 fi
@@ -716,10 +716,10 @@ if [ "$NO_PULL" = "0" ] && [ -d "$ROOT/.git" ]; then
     # Nach dem Aktualisieren mit der neuen Fassung weiterarbeiten - sonst
     # laeuft die alte Datei weiter und spaetere Schritte passen womoeglich
     # nicht zum neuen Stand.
-    if [ "$REPO_UPDATED" = "1" ] && [ "${OVERLAYS_RELOADED:-0}" != "1" ]; then
+    if [ "$REPO_UPDATED" = "1" ] && [ "${TC_RELOADED:-0}" != "1" ]; then
         info "Starte mit der neuen Fassung neu."
 
-        export OVERLAYS_RELOADED=1
+        export TC_RELOADED=1
         exec bash "$ROOT/install.sh" --no-pull ${ORIGINAL_ARGS[@]+"${ORIGINAL_ARGS[@]}"}
     fi
 fi
@@ -745,11 +745,11 @@ step "Unter welcher Adresse soll es laufen?"
 if [ -z "$DOMAIN" ]; then
     CURRENT_DOMAIN="$(env_get APP_DOMAIN)"
     case "$CURRENT_DOMAIN" in
-        ''|overlays.example.com) CURRENT_DOMAIN='' ;;
+        ''|twitch.example.com) CURRENT_DOMAIN='' ;;
     esac
 
     dim "Die Adresse, die du später im Browser eingibst - ohne https://"
-    dim "Beispiel: overlays.deinedomain.de"
+    dim "Beispiel: twitch.deinedomain.de"
     DOMAIN="$(ask 'Domain' "$CURRENT_DOMAIN")"
 fi
 
@@ -764,7 +764,7 @@ DOMAIN="$(printf '%s' "$DOMAIN" | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]'
 case "$DOMAIN" in
     *.*) : ;;
     *) die "\"$DOMAIN\" sieht nicht wie eine Domain aus. Erwartet wird etwas wie
-  overlays.deinedomain.de" ;;
+  twitch.deinedomain.de" ;;
 esac
 
 env_set APP_DOMAIN "$DOMAIN"
@@ -807,7 +807,7 @@ DETECTED_NAME=''
 DETECTED_NET=''
 PROXY_LINE="$($DOCKER_SUDO docker ps --format '{{.ID}}|{{.Image}}|{{.Names}}' 2>/dev/null \
     | grep -Ei 'nginx-proxy-manager|nginxproxymanager|jc21/nginx|traefik|caddy|swag' \
-    | grep -v 'overlays-caddy' | head -n1 || true)"
+    | grep -v 'twitch-controller-caddy' | head -n1 || true)"
 
 if [ -n "$PROXY_LINE" ]; then
     PROXY_ID="$(printf '%s' "$PROXY_LINE" | cut -d'|' -f1)"
@@ -934,6 +934,9 @@ else
 fi
 
 [ -n "$(env_get DB_HOST)" ] || env_set DB_HOST db
+# Datenbank und Benutzer heissen weiter "overlays". Das ist kein
+# Ueberrest: sie heissen so in bestehenden Installationen, und ein
+# Umbenennen waere keine Umbenennung, sondern eine Datenmigration.
 [ -n "$(env_get DB_NAME)" ] || env_set DB_NAME overlays
 [ -n "$(env_get DB_USER)" ] || env_set DB_USER overlays
 
@@ -961,11 +964,27 @@ if [ "$DO_START" = "0" ]; then
     exit 0
 fi
 
+# Das Compose-Projekt hiess einmal "overlays". Nach der Umbenennung
+# gilt "twitch-controller" - Docker haelt das fuer ein voellig anderes
+# Projekt und laesst die alten Container stehen. Die halten dann Port 80
+# und den Netz-Alias fest, und der neue Start scheitert. Oder, schlimmer,
+# beide laufen und es ist Zufall, wen der Proxy erwischt.
+#
+# Die Daten liegen in ./pgdata und ./public/uploads, also im
+# Projektordner - beim Abraeumen der Container geht nichts verloren.
+if $DC -p overlays ps -q 2>/dev/null | grep -q .; then
+    step "Alten Stand abräumen"
+    info "Vor der Umbenennung hiess das Projekt \"overlays\". Dessen Container"
+    info "werden gestoppt und entfernt. Datenbank und Uploads bleiben liegen."
+    $DC -p overlays down --remove-orphans || true
+    ok "Alter Stand abgeräumt"
+fi
+
 step "Container bauen und starten"
 info "Beim ersten Mal dauert das ein paar Minuten."
 printf '\n'
 
-if ! $DC up -d --build; then
+if ! $DC up -d --build --remove-orphans; then
     die "Der Start ist fehlgeschlagen. Die Ursache steht meist direkt darüber.
   Sonst nachsehen mit:  $DC logs"
 fi
@@ -1026,7 +1045,7 @@ fi
 
 printf '\n%sSchritt %s: Twitch-Anwendung anlegen%s\n\n' "$C_BOLD" "$SCHRITT" "$C_RESET"
 printf '  1. Öffne  https://dev.twitch.tv/console/apps/create\n'
-printf '  2. Name        frei wählbar, z.B. "Overlays"\n'
+printf '  2. Name        frei wählbar, z.B. "Twitch-Controller"\n'
 printf '  3. OAuth Redirect URL - genau das, ohne Leerzeichen:\n\n'
 printf '     %shttps://%s/auth/callback%s\n\n' "$C_BOLD" "$DOMAIN" "$C_RESET"
 printf '  4. Category    "Website Integration"\n'

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Http;
+namespace TwitchController\Core\Http;
 
-use Overlays\Core\App;
-use Overlays\Core\I18n\Translator;
+use TwitchController\Core\App;
+use TwitchController\Core\I18n\Translator;
 use RuntimeException;
 use Throwable;
 

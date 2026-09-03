@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core;
+namespace TwitchController\Core;
 
-use Overlays\Core\Admin\AccountController;
-use Overlays\Core\Admin\ActivityController;
-use Overlays\Core\Admin\Nav;
-use Overlays\Core\Admin\PluginsController;
-use Overlays\Core\Obs\FeedController;
-use Overlays\Core\Auth\AuthController;
-use Overlays\Core\Http\Request;
-use Overlays\Core\Http\Response;
-use Overlays\Core\Setup\SetupController;
-use Overlays\Core\Twitch\WebhookController;
+use TwitchController\Core\Admin\AccountController;
+use TwitchController\Core\Admin\ActivityController;
+use TwitchController\Core\Admin\Nav;
+use TwitchController\Core\Admin\PluginsController;
+use TwitchController\Core\Obs\FeedController;
+use TwitchController\Core\Auth\AuthController;
+use TwitchController\Core\Http\Request;
+use TwitchController\Core\Http\Response;
+use TwitchController\Core\Setup\SetupController;
+use TwitchController\Core\Twitch\WebhookController;
 
 /**
  * Alle Routen des Kerns an einer Stelle. Plugins registrieren ihre
@@ -101,7 +101,7 @@ final class Routes
         // --- Overlay ----------------------------------------------------
         // Zwei Seiten, wie beim Aktivitaeten-Feed: die Flaeche selbst
         // fuer OBS, und die Einstellungen dazu unter Konto.
-        $overlay = new \Overlays\Core\Overlay\OverlayController($app);
+        $overlay = new \TwitchController\Core\Overlay\OverlayController($app);
 
         $router->get('/overlay', [$overlay, 'show'], [
             'auth' => true,

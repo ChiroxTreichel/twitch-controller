@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Config;
+namespace TwitchController\Core\Config;
 
 use RuntimeException;
 

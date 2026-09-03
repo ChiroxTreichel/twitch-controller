@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Http;
+namespace TwitchController\Core\Http;
 
 /**
  * Eingehender Request. Alles laeuft ueber public/index.php, also gibt es

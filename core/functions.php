@@ -7,8 +7,8 @@ declare(strict_types=1);
  * Funktionen nicht automatisch nachladen lassen.
  */
 
-use Overlays\Core\App;
-use Overlays\Core\I18n\Translator;
+use TwitchController\Core\App;
+use TwitchController\Core\I18n\Translator;
 
 if (!function_exists('translate')) {
     /**

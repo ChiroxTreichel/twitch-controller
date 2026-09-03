@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Events;
+namespace TwitchController\Core\Events;
 
-use Overlays\Core\App;
+use TwitchController\Core\App;
 
 /**
  * Der Event-Eingang des Kerns - das, was unter "Konto > Aktivitaeten"

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Twitch;
+namespace TwitchController\Core\Twitch;
 
 use DateTimeImmutable;
-use Overlays\Core\App;
-use Overlays\Core\Events\Normalizer;
-use Overlays\Core\Http\Request;
-use Overlays\Core\Http\Response;
+use TwitchController\Core\App;
+use TwitchController\Core\Events\Normalizer;
+use TwitchController\Core\Http\Request;
+use TwitchController\Core\Http\Response;
 use Throwable;
 
 /**

@@ -2,7 +2,7 @@
 /**
  * Reiter "Installierte Plugins".
  *
- * @var \Overlays\Core\Http\View $view
+ * @var \TwitchController\Core\Http\View $view
  * @var callable $e
  * @var callable $url
  * @var string $tab

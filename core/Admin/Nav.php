@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Admin;
+namespace TwitchController\Core\Admin;
 
-use Overlays\Core\App;
+use TwitchController\Core\App;
 
 /**
  * Navigation der Adminoberflaeche.

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Obs;
+namespace TwitchController\Core\Obs;
 
 /**
  * Lesehilfen fuer den Event-Payload.

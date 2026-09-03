@@ -7,13 +7,13 @@ declare(strict_types=1);
  * Versionswechsel ausgefuehrt und muss deshalb idempotent sein.
  *
  * Verfuegbar:
- *   $db          Overlays\Core\Database\Db
+ *   $db          TwitchController\Core\Database\Db
  *   $fromVersion vorher installierte Version, null bei Erstinstallation
  *
  * Dieselbe Signatur gilt fuer plugins/<slug>/install.php.
  */
 
-/** @var \Overlays\Core\Database\Db $db */
+/** @var \TwitchController\Core\Database\Db $db */
 /** @var string|null $fromVersion */
 
 // --- Einstellungen: Kern und Plugins, JSON-Werte -----------------------

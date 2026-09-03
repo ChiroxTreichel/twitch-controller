@@ -62,7 +62,7 @@ plugins/<slug>/
   uninstall.php    Tabellen abräumen
   views/           eigene Vorlagen        (optional)
   assets/          CSS, JS, Medien        (optional)
-  src/             Klassen unter Overlays\Plugin\<Slug>\  (optional)
+  src/             Klassen unter TwitchController\Plugin\<Slug>\  (optional)
 ```
 
 Das **Beispiel-Plugin** ist ein vollständig kommentiertes, lauffähiges
@@ -151,12 +151,12 @@ immer bedienbar.
 
 | Variable | Typ |
 | --- | --- |
-| `$app` | `Overlays\Core\App` |
-| `$plugin` | `Overlays\Core\Plugin\Manifest` |
-| `$hooks` | `Overlays\Core\Hook\Hooks` |
-| `$router` | `Overlays\Core\Http\Router` |
-| `$settings` | `Overlays\Core\Config\Settings` |
-| `$db` | `Overlays\Core\Database\Db` |
+| `$app` | `TwitchController\Core\App` |
+| `$plugin` | `TwitchController\Core\Plugin\Manifest` |
+| `$hooks` | `TwitchController\Core\Hook\Hooks` |
+| `$router` | `TwitchController\Core\Http\Router` |
+| `$settings` | `TwitchController\Core\Config\Settings` |
+| `$db` | `TwitchController\Core\Database\Db` |
 
 In Vorlagen zusaetzlich: `$e` (Escaping), `$url`, `$asset`, `$app`, `$view`,
 `$language`.
@@ -450,7 +450,7 @@ $hooks->on('core.event.stored', static function (array $event) use ($app): void 
         return;
     }
 
-    (new \Overlays\Core\Overlay\Bus($app))->send('alerts', [
+    (new \TwitchController\Core\Overlay\Bus($app))->send('alerts', [
         'kind' => 'follow',
         'name' => (string) ($event['actor_name'] ?? '?'),
     ]);
@@ -791,6 +791,49 @@ jemand angemeldet ist.
 Wer hier etwas ergaenzt, haelt die Seite arm: kein Hook-Aufruf, keine
 Netzanfrage, nichts, was eine Datenbanktabelle voraussetzt, die eine
 Migration erst noch anlegen muss.
+
+---
+
+## Namen
+
+Das Projekt hiess einmal "Overlays". Was dabei umbenannt wurde und was
+absichtlich nicht:
+
+| | jetzt | vorher |
+| --- | --- | --- |
+| Namensraum | `TwitchController\Core\…` | `Overlays\Core\…` |
+| Plugin-Namensraum | `TwitchController\Plugin\<Slug>\…` | `Overlays\Plugin\…` |
+| Compose-Projekt | `twitch-controller` | `overlays` |
+| Images | `twitch-controller-php`, `twitch-controller-postgres` | `overlays-php`, `overlays-postgres` |
+| Anzeigename | `App::NAME` | fest in vier Vorlagen |
+
+**Absichtlich unveraendert:**
+
+- Der **Netz-Alias `overlays`** in `docker-compose.npm.yaml`. Darauf
+  zeigt der Proxy-Host in Nginx Proxy Manager; ein neuer Alias hiesse,
+  dort ein Feld nachzutragen, und bis dahin waere die Seite offline.
+- **`DB_NAME` und `DB_USER`** heissen weiter `overlays`. Sie heissen so
+  in bestehenden Datenbanken, und ein Umbenennen waere keine
+  Umbenennung, sondern eine Datenmigration.
+
+### Was das fuer Plugins bedeutet
+
+Der Namensraum ist Teil des Plugin-Vertrags: ein Plugin mit
+`use Overlays\Core\Http\Response;` laedt nicht mehr. Deshalb steht die
+Kernversion auf **2.0.0**, und Plugins fordern `"core": ">=2.0.0"`.
+
+Ein Plugin mit dem alten Namensraum reisst nichts mit: `PluginManager`
+faengt pro Plugin ab, protokolliert und ueberspringt es. Die
+Plugin-Verwaltung bleibt bedienbar, und der Marktplatz bietet das
+Update an.
+
+### Beim Aktualisieren
+
+`docker-compose.yaml` hat sich geaendert, also verlangt das Update die
+Konsole (`SHELL_PATHS` im `Updater`). `install.sh` merkt, dass noch
+Container des alten Projekts `overlays` laufen, und raeumt sie ab -
+sonst halten die Port 80 und den Netz-Alias fest. Daten liegen in
+`./pgdata` und `./public/uploads` und bleiben unberuehrt.
 
 ---
 

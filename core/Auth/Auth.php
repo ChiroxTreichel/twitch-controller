@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Auth;
+namespace TwitchController\Core\Auth;
 
-use Overlays\Core\App;
+use TwitchController\Core\App;
 use RuntimeException;
 
 /**

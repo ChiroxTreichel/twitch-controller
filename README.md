@@ -1,4 +1,4 @@
-# Twitch Controller
+# Twitch-Controller
 
 Alerts, Ziele und Overlays für deinen Stream — auf deinem eigenen Server,
 ohne Fremdplattform dazwischen.
@@ -17,7 +17,7 @@ Contabo kostet einer ab etwa 4 € im Monat. Es geht auch ein Raspberry Pi
 zu Hause, wenn du dich damit auskennst. Nimm Ubuntu oder Debian, wenn du
 die Wahl hast.
 
-**Eine Domain.** Also eine Adresse wie `overlays.deinname.de`. Wenn du
+**Eine Domain.** Also eine Adresse wie `twitch.deinname.de`. Wenn du
 schon eine Domain hast, reicht eine Unteradresse davon. Sie muss auf deinen
 Server zeigen — bei deinem Domain-Anbieter heißt der passende Eintrag
 **A-Record**, dort trägst du die IP-Adresse deines Servers ein.
@@ -45,7 +45,7 @@ curl -fsSL https://raw.githubusercontent.com/ChiroxTreichel/twitch-controller/ma
 
 Jetzt wirst du zwei Dinge gefragt:
 
-1. **Deine Domain** — also `overlays.deinname.de`, ohne `https://`
+1. **Deine Domain** — also `twitch.deinname.de`, ohne `https://`
 2. **Wie HTTPS laufen soll** — wenn du nicht weißt, was das bedeutet:
    nimm die vorgeschlagene Antwort mit Enter. Sie ist richtig.
 

@@ -7,7 +7,7 @@
  * knapp hundert Kästchen ist diese Gliederung der Unterschied
  * zwischen benutzbar und unbenutzbar.
  *
- * @var \Overlays\Core\Http\View $view
+ * @var \TwitchController\Core\Http\View $view
  * @var callable $e
  * @var callable $url
  * @var string $tab

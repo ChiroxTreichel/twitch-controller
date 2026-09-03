@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Twitch;
+namespace TwitchController\Core\Twitch;
 
-use Overlays\Core\App;
-use Overlays\Core\Http\Request;
+use TwitchController\Core\App;
+use TwitchController\Core\Http\Request;
 
 /**
  * EventSub: Abos verwalten und eingehende Webhooks pruefen.

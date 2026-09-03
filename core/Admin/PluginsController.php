@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Admin;
+namespace TwitchController\Core\Admin;
 
-use Overlays\Core\App;
-use Overlays\Core\Http\Request;
-use Overlays\Core\Http\Response;
-use Overlays\Core\Registry\Client;
-use Overlays\Core\Registry\Installer;
+use TwitchController\Core\App;
+use TwitchController\Core\Http\Request;
+use TwitchController\Core\Http\Response;
+use TwitchController\Core\Registry\Client;
+use TwitchController\Core\Registry\Installer;
 use Throwable;
 
 /**
@@ -335,7 +335,7 @@ final class PluginsController
     {
         $constraint = (string) (($plugin['requires']['core'] ?? '') ?: '*');
 
-        return \Overlays\Core\Plugin\VersionConstraint::satisfies(App::VERSION, $constraint);
+        return \TwitchController\Core\Plugin\VersionConstraint::satisfies(App::VERSION, $constraint);
     }
 
     /**

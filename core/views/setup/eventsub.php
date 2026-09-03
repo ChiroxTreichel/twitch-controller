@@ -1,6 +1,6 @@
 <?php
 /**
- * @var \Overlays\Core\App $app
+ * @var \TwitchController\Core\App $app
  * @var callable $e
  * @var callable $url
  * @var array{created: list<string>, deleted: list<string>, kept: list<string>, failed: array<string, string>}|null $report
@@ -26,7 +26,7 @@
     $gruppen = [];
     $brauchtNeuVerbinden = false;
     foreach ($report['failed'] as $type => $message) {
-        $erklaerung = \Overlays\Core\Twitch\EventSub::explain((string) $message);
+        $erklaerung = \TwitchController\Core\Twitch\EventSub::explain((string) $message);
         $schluessel = $erklaerung['ursache'];
         $gruppen[$schluessel]['loesung'] = $erklaerung['loesung'];
         $gruppen[$schluessel]['typen'][] = (string) $type;
@@ -45,7 +45,7 @@
             <?php endif; ?>
             <div class="hint" style="margin-top:8px;">
                 <?php $namen = array_map(
-                    static fn (string $t): string => \Overlays\Core\Events\Labels::of($t, $app->hooks),
+                    static fn (string $t): string => \TwitchController\Core\Events\Labels::of($t, $app->hooks),
                     $gruppe['typen']
                 ); ?>
                 <?= $e(translate('setup.events.affects', ['types' => implode(', ', $namen)])) ?>
@@ -83,7 +83,7 @@
         <tbody>
         <?php foreach ($desired as $subscription): ?>
             <tr>
-                <td><?= $e(\Overlays\Core\Events\Labels::of($subscription['type'], $app->hooks)) ?></td>
+                <td><?= $e(\TwitchController\Core\Events\Labels::of($subscription['type'], $app->hooks)) ?></td>
                 <td class="actions hint mono"><?= $e($subscription['type']) ?></td>
             </tr>
         <?php endforeach; ?>

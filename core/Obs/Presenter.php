@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Obs;
+namespace TwitchController\Core\Obs;
 
-use Overlays\Core\App;
+use TwitchController\Core\App;
 
 /**
  * Macht aus einer Zeile der events-Tabelle das, was im Feed steht:
@@ -172,7 +172,7 @@ final class Presenter
         // Unbekannt: sichtbar, aber unauffaellig - damit man merkt, dass
         // etwas ankommt, fuer das noch ein Plugin fehlt.
         return [
-            'badge'  => \Overlays\Core\Events\Labels::of($eventType, $this->app->hooks),
+            'badge'  => \TwitchController\Core\Events\Labels::of($eventType, $this->app->hooks),
             'style'  => 'system',
             'title'  => $actor,
             'filter' => 'system.other',
@@ -228,6 +228,6 @@ final class Presenter
 
     private static function time(string $value): string
     {
-        return \Overlays\Core\Support\Dates::short($value);
+        return \TwitchController\Core\Support\Dates::short($value);
     }
 }

@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Admin;
+namespace TwitchController\Core\Admin;
 
-use Overlays\Core\App;
-use Overlays\Core\Http\Request;
-use Overlays\Core\Http\Response;
-use Overlays\Core\Obs\Badges;
+use TwitchController\Core\App;
+use TwitchController\Core\Http\Request;
+use TwitchController\Core\Http\Response;
+use TwitchController\Core\Obs\Badges;
 use Throwable;
 
 /**

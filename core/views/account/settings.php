@@ -23,7 +23,7 @@
  * @var list<array{type: string, version: string, condition: array<string, string>}> $desired
  */
 
-use Overlays\Core\Support\Dates;
+use TwitchController\Core\Support\Dates;
 ?>
 <h1><?= $e(translate('nav.settings')) ?></h1>
 <p class="lead"><?= $e(translate('settings.lead')) ?></p>
@@ -148,7 +148,7 @@ use Overlays\Core\Support\Dates;
             <select class="input" id="language" name="language" style="width:auto;">
                 <?php foreach ($languages as $code): ?>
                     <option value="<?= $e($code) ?>" <?= $language === $code ? 'selected' : '' ?>>
-                        <?= $e(\Overlays\Core\I18n\Translator::label($code)) ?>
+                        <?= $e(\TwitchController\Core\I18n\Translator::label($code)) ?>
                     </option>
                 <?php endforeach; ?>
             </select>
@@ -195,7 +195,7 @@ use Overlays\Core\Support\Dates;
                 <tr>
                     <td><?= $e(translate('settings.channel.granted')) ?></td>
                     <td class="actions hint">
-                        <?php $erteilt = \Overlays\Core\Twitch\Scopes::describe($broadcasterToken['scopes'], $app->hooks); ?>
+                        <?php $erteilt = \TwitchController\Core\Twitch\Scopes::describe($broadcasterToken['scopes'], $app->hooks); ?>
                         <?php if ($erteilt === []): ?>
                             &mdash;
                         <?php else: ?>
@@ -219,7 +219,7 @@ use Overlays\Core\Support\Dates;
                 <?= $e(translate('settings.channel.missing_hint')) ?>
             </p>
             <ul style="margin:8px 0 0;padding-left:20px;">
-                <?php foreach (\Overlays\Core\Twitch\Scopes::describe($missingScopes, $app->hooks) as $recht): ?>
+                <?php foreach (\TwitchController\Core\Twitch\Scopes::describe($missingScopes, $app->hooks) as $recht): ?>
                     <li>
                         <strong><?= $e($recht['label']) ?></strong>
                         <?php if ($recht['reason'] !== ''): ?>

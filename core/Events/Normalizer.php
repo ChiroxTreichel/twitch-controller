@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Events;
+namespace TwitchController\Core\Events;
 
-use Overlays\Core\Hook\Hooks;
+use TwitchController\Core\Hook\Hooks;
 
 /**
  * Zieht aus einem Twitch-EventSub-Payload die Felder heraus, die fuer

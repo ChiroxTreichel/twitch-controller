@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Support;
+namespace TwitchController\Core\Support;
 
-use Overlays\Core\Config\Env;
+use TwitchController\Core\Config\Env;
 use RuntimeException;
 
 /**

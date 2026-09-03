@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Plugin;
+namespace TwitchController\Core\Plugin;
 
 /**
  * Versionsvergleich fuer Plugin-Abhaengigkeiten. Absichtlich klein

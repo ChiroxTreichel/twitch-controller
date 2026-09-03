@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Overlay;
+namespace TwitchController\Core\Overlay;
 
-use Overlays\Core\App;
-use Overlays\Core\Http\Request;
-use Overlays\Core\Http\Response;
+use TwitchController\Core\App;
+use TwitchController\Core\Http\Request;
+use TwitchController\Core\Http\Response;
 
 /**
  * Das Overlay: die Flaeche, die in OBS laeuft, und ihre Einstellungen.

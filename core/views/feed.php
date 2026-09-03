@@ -7,7 +7,7 @@
  * Statustext, der Filter sitzt als Knopf mit drin. In einem schmalen
  * Dock ist jede gesparte Zeile eine Zeile mehr Feed.
  *
- * @var \Overlays\Core\App $app
+ * @var \TwitchController\Core\App $app
  * @var callable $e
  * @var callable $url
  * @var list<array<string, mixed>> $events

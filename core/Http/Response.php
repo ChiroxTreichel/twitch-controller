@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Http;
+namespace TwitchController\Core\Http;
 
 /**
  * Antwort an den Browser. Wird von Routen zurueckgegeben und erst am Ende

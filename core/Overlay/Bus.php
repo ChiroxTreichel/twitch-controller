@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Overlay;
+namespace TwitchController\Core\Overlay;
 
-use Overlays\Core\App;
+use TwitchController\Core\App;
 
 /**
  * ===================================================================
@@ -30,7 +30,7 @@ use Overlays\Core\App;
  *
  * Benutzung aus einem Plugin:
  *
- *   use Overlays\Core\Overlay\Bus;
+ *   use TwitchController\Core\Overlay\Bus;
  *
  *   (new Bus($app))->send('alerts', [
  *       'kind'  => 'follow',

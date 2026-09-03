@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Twitch;
+namespace TwitchController\Core\Twitch;
 
 /**
  * Uebersetzt Twitch-Berechtigungen in verstaendliches Deutsch.
@@ -26,7 +26,7 @@ final class Scopes
     /**
      * @return array<string, array{label: string, reason: string}>
      */
-    public static function catalog(?\Overlays\Core\Hook\Hooks $hooks = null): array
+    public static function catalog(?\TwitchController\Core\Hook\Hooks $hooks = null): array
     {
         $catalog = self::builtin();
 
@@ -118,7 +118,7 @@ final class Scopes
      * @param list<string> $scopes
      * @return list<array{scope: string, label: string, reason: string}>
      */
-    public static function describe(array $scopes, ?\Overlays\Core\Hook\Hooks $hooks = null): array
+    public static function describe(array $scopes, ?\TwitchController\Core\Hook\Hooks $hooks = null): array
     {
         $catalog = self::catalog($hooks);
         $result = [];

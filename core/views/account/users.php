@@ -3,8 +3,8 @@
  * Reiter "Freigegebene Benutzer": wer Zugang hat, seit wann, und wie
  * man ihn wieder los wird.
  *
- * @var \Overlays\Core\App $app
- * @var \Overlays\Core\Http\View $view
+ * @var \TwitchController\Core\App $app
+ * @var \TwitchController\Core\Http\View $view
  * @var callable $e
  * @var callable $url
  * @var string $tab
@@ -88,8 +88,8 @@ $darfVerwalten = permission('Konto.Benutzer.Manage');
                 <td><strong><?= $e($user['display_name']) ?></strong></td>
                 <td class="mono"><?= $e($user['twitch_id']) ?></td>
                 <td><?= $e($app->auth->roleLabel($user)) ?></td>
-                <td class="hint"><?= $e(\Overlays\Core\Support\Dates::long($user['created_at'] ?? null)) ?></td>
-                <td class="hint"><?= $e(\Overlays\Core\Support\Dates::long($user['last_seen_at'] ?? null)) ?></td>
+                <td class="hint"><?= $e(\TwitchController\Core\Support\Dates::long($user['created_at'] ?? null)) ?></td>
+                <td class="hint"><?= $e(\TwitchController\Core\Support\Dates::long($user['last_seen_at'] ?? null)) ?></td>
                 <?php if ($darfVerwalten): ?>
                     <td class="actions">
                         <?php /* Der Superadmin bleibt: ohne ihn koennte niemand mehr
@@ -131,7 +131,7 @@ $darfVerwalten = permission('Konto.Benutzer.Manage');
             <?php foreach ($invites as $invite): ?>
                 <tr>
                     <td class="mono"><?= $e($url('/login?invite=' . $invite['code'])) ?></td>
-                    <td class="hint"><?= $e(\Overlays\Core\Support\Dates::long($invite['expires_at'])) ?></td>
+                    <td class="hint"><?= $e(\TwitchController\Core\Support\Dates::long($invite['expires_at'])) ?></td>
                     <td class="actions">
                         <form method="post" action="<?= $e($url('/account/users')) ?>">
                             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">

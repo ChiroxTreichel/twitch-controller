@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Admin;
+namespace TwitchController\Core\Admin;
 
-use Overlays\Core\App;
-use Overlays\Core\Http\Request;
-use Overlays\Core\Http\Response;
-use Overlays\Core\I18n\Translator;
-use Overlays\Core\Twitch\TokenStore;
-use Overlays\Core\Update\Updater;
+use TwitchController\Core\App;
+use TwitchController\Core\Http\Request;
+use TwitchController\Core\Http\Response;
+use TwitchController\Core\I18n\Translator;
+use TwitchController\Core\Twitch\TokenStore;
+use TwitchController\Core\Update\Updater;
 use Throwable;
 
 /**
@@ -298,7 +298,7 @@ final class AccountController
                         // einzeln aufzuzaehlen - meist ist es dieselbe.
                         $ursachen = [];
                         foreach ($report['failed'] as $message) {
-                            $erklaerung = \Overlays\Core\Twitch\EventSub::explain((string) $message);
+                            $erklaerung = \TwitchController\Core\Twitch\EventSub::explain((string) $message);
                             $text = $erklaerung['ursache'];
                             if ($erklaerung['loesung'] !== '') {
                                 $text .= ' ' . $erklaerung['loesung'];

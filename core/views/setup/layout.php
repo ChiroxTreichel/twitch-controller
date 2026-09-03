@@ -11,7 +11,7 @@
  * @var string $step
  */
 
-use Overlays\Core\Setup\SetupController;
+use TwitchController\Core\Setup\SetupController;
 
 $order = [
     SetupController::STEP_CHECK       => translate('setup.step.system'),

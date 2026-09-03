@@ -2,21 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core;
+namespace TwitchController\Core;
 
-use Overlays\Core\Auth\Auth;
-use Overlays\Core\Config\Env;
-use Overlays\Core\Config\Settings;
-use Overlays\Core\Database\Db;
-use Overlays\Core\Events\EventStore;
-use Overlays\Core\Events\Normalizer;
-use Overlays\Core\Hook\Hooks;
-use Overlays\Core\Http\Router;
-use Overlays\Core\Http\View;
-use Overlays\Core\I18n\Translator;
-use Overlays\Core\Plugin\PluginManager;
-use Overlays\Core\Support\Crypto;
-use Overlays\Core\Twitch\Twitch;
+use TwitchController\Core\Auth\Auth;
+use TwitchController\Core\Config\Env;
+use TwitchController\Core\Config\Settings;
+use TwitchController\Core\Database\Db;
+use TwitchController\Core\Events\EventStore;
+use TwitchController\Core\Events\Normalizer;
+use TwitchController\Core\Hook\Hooks;
+use TwitchController\Core\Http\Router;
+use TwitchController\Core\Http\View;
+use TwitchController\Core\I18n\Translator;
+use TwitchController\Core\Plugin\PluginManager;
+use TwitchController\Core\Support\Crypto;
+use TwitchController\Core\Twitch\Twitch;
 use Throwable;
 
 /**
@@ -29,7 +29,13 @@ final class App
      * Kernversion. Plugins koennen dagegen Bedingungen stellen
      * ("requires": { "core": ">=1.0.0" }).
      */
-    public const VERSION = '1.1.0';
+    public const VERSION = '2.0.0';
+
+    /**
+     * Wie das System heisst. Steht im Seitentitel und in der Kopfzeile.
+     * An einer Stelle, damit ein Umbenennen eine Zeile bleibt.
+     */
+    public const NAME = 'Twitch-Controller';
 
     public readonly Env $env;
     public readonly Crypto $crypto;
@@ -234,6 +240,6 @@ final class App
 
     public function log(string $message): void
     {
-        error_log('[overlays] ' . $message);
+        error_log('[twitch-controller] ' . $message);
     }
 }

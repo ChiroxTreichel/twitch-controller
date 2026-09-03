@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Support;
+namespace TwitchController\Core\Support;
 
 /**
  * Ergebnis eines HTTP-Aufrufs. Wirft nicht bei Statuscodes - der

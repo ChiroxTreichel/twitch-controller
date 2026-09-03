@@ -1,11 +1,11 @@
-name: overlays
+name: twitch-controller
 
 # Web und Worker teilen sich Image und Code.
 x-php: &php
   build:
     context: ./docker
     dockerfile: php/Dockerfile
-  image: overlays-php:latest
+  image: twitch-controller-php:latest
   env_file: .env
   working_dir: /var/www/html
   volumes:
@@ -25,7 +25,7 @@ services:
   # install.php je Plugin), hier passiert nichts weiter.
   db:
     build: ./docker/postgres
-    image: overlays-postgres:latest
+    image: twitch-controller-postgres:latest
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}

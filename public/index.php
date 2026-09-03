@@ -11,11 +11,11 @@ declare(strict_types=1);
  * Routen stattdessen im Router.
  */
 
-use Overlays\Core\App;
-use Overlays\Core\Http\Request;
-use Overlays\Core\Http\Response;
-use Overlays\Core\Routes;
-use Overlays\Core\Support\Autoloader;
+use TwitchController\Core\App;
+use TwitchController\Core\Http\Request;
+use TwitchController\Core\Http\Response;
+use TwitchController\Core\Routes;
+use TwitchController\Core\Support\Autoloader;
 
 $root = dirname(__DIR__);
 

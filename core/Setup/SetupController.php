@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Setup;
+namespace TwitchController\Core\Setup;
 
-use Overlays\Core\App;
-use Overlays\Core\Auth\Auth;
-use Overlays\Core\Http\Request;
-use Overlays\Core\Http\Response;
-use Overlays\Core\Twitch\TokenStore;
+use TwitchController\Core\App;
+use TwitchController\Core\Auth\Auth;
+use TwitchController\Core\Http\Request;
+use TwitchController\Core\Http\Response;
+use TwitchController\Core\Twitch\TokenStore;
 use Throwable;
 
 /**

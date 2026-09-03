@@ -3,7 +3,7 @@
  * Detailseite eines Katalog-Plugins. Wird bei uns gerendert, nicht als
  * fremde Seite eingebettet - der Katalogserver liefert nur Daten.
  *
- * @var \Overlays\Core\Http\View $view
+ * @var \TwitchController\Core\Http\View $view
  * @var callable $e
  * @var callable $url
  * @var string $tab
@@ -19,7 +19,7 @@
  * @var bool $coreOk
  */
 
-use Overlays\Core\Support\Dates;
+use TwitchController\Core\Support\Dates;
 
 $neuer = $state !== null
     && version_compare((string) $state['version'], (string) $plugin['version'], '<');
@@ -113,7 +113,7 @@ $neuer = $state !== null
     <?php elseif ($plugin['description'] !== ''): ?>
         <?php /* Keine README im Katalog: dann die Kurzbeschreibung. */ ?>
         <div class="prose">
-            <?= \Overlays\Core\Support\Markdown::render((string) $plugin['description']) ?>
+            <?= \TwitchController\Core\Support\Markdown::render((string) $plugin['description']) ?>
         </div>
     <?php else: ?>
         <p class="hint"><?= $e(translate('market.no_description')) ?></p>

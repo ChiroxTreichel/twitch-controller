@@ -2,7 +2,7 @@
 /**
  * Rahmen der Adminoberflaeche.
  *
- * @var \Overlays\Core\App $app
+ * @var \TwitchController\Core\App $app
  * @var callable $e
  * @var callable $url
  * @var callable $asset
@@ -23,7 +23,7 @@ try {
 }
 
 try {
-    $nav = (new \Overlays\Core\Admin\Nav($app))->build();
+    $nav = (new \TwitchController\Core\Admin\Nav($app))->build();
 } catch (\Throwable) {
     $nav = [];
 }
@@ -39,7 +39,7 @@ try {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= $e($title !== '' ? $title . ' · Overlays' : 'Overlays') ?></title>
+    <title><?= $e($title !== '' ? $title . ' · ' . \TwitchController\Core\App::NAME : \TwitchController\Core\App::NAME) ?></title>
     <link rel="stylesheet" href="<?= $e($asset('/assets/admin.css')) ?>">
 </head>
 <body>
@@ -48,7 +48,7 @@ try {
         <div class="brand">
             <span class="brand-dot"></span>
             <div>
-                <strong>Overlays</strong>
+                <strong><?= $e(\TwitchController\Core\App::NAME) ?></strong>
                 <?php if ($channel !== ''): ?>
                     <small><?= $e($channel) ?></small>
                 <?php endif; ?>

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Events;
+namespace TwitchController\Core\Events;
 
-use Overlays\Core\Hook\Hooks;
+use TwitchController\Core\Hook\Hooks;
 
 /**
  * Verstaendliche Namen fuer Event-Typen.

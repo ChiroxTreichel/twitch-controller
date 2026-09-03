@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Support;
+namespace TwitchController\Core\Support;
 
 /**
  * Minimaler PSR-4-Autoloader. Absichtlich ohne Composer: das System soll
@@ -10,8 +10,8 @@ namespace Overlays\Core\Support;
  * ein composer install noetig ist.
  *
  * Abbildung:
- *   Overlays\Core\Http\Router        -> core/Http/Router.php
- *   Overlays\Plugin\Alerts\Renderer  -> plugins/alerts/src/Renderer.php
+ *   TwitchController\Core\Http\Router        -> core/Http/Router.php
+ *   TwitchController\Plugin\Alerts\Renderer  -> plugins/alerts/src/Renderer.php
  */
 final class Autoloader
 {
@@ -23,8 +23,8 @@ final class Autoloader
         require_once $root . '/core/functions.php';
 
         spl_autoload_register(static function (string $class) use ($root): void {
-            if (str_starts_with($class, 'Overlays\\Core\\')) {
-                $relative = substr($class, strlen('Overlays\\Core\\'));
+            if (str_starts_with($class, 'TwitchController\\Core\\')) {
+                $relative = substr($class, strlen('TwitchController\\Core\\'));
                 $path = $root . '/core/' . str_replace('\\', '/', $relative) . '.php';
                 if (is_file($path)) {
                     require $path;
@@ -32,8 +32,8 @@ final class Autoloader
                 return;
             }
 
-            if (str_starts_with($class, 'Overlays\\Plugin\\')) {
-                $relative = substr($class, strlen('Overlays\\Plugin\\'));
+            if (str_starts_with($class, 'TwitchController\\Plugin\\')) {
+                $relative = substr($class, strlen('TwitchController\\Plugin\\'));
                 $parts = explode('\\', $relative);
                 $slug = strtolower(array_shift($parts));
                 if ($slug === '' || $parts === []) {

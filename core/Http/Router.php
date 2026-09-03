@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Http;
+namespace TwitchController\Core\Http;
 
 /**
  * Routen von Kern und Plugins.

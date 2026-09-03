@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Overlays\Core\Database;
+namespace TwitchController\Core\Database;
 
-use Overlays\Core\Config\Env;
+use TwitchController\Core\Config\Env;
 use PDO;
 use PDOStatement;
 

@@ -6,7 +6,7 @@
 #   COMPOSE_FILE=docker-compose.yaml:docker-compose.npm.yaml
 #   PROXY_NETWORK=proxy
 #
-# Der Proxy traegt dann "overlays" als Ziel-Host mit Port 80 ein und muss
+# Der Proxy traegt "overlays" als Ziel-Host mit Port 80 ein und muss
 # selbst in demselben Netz haengen.
 services:
   web:
@@ -14,6 +14,9 @@ services:
       default: {}
       proxy:
         aliases:
+          # Bleibt "overlays": darauf zeigt der Proxy-Host in Nginx
+          # Proxy Manager. Ein neuer Alias hiesse, dort ein Feld
+          # nachzutragen - und bis dahin waere die Seite offline.
           - overlays
 
 networks:

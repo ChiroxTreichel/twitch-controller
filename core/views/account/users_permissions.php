@@ -4,8 +4,8 @@
  * Rechte - Rolle und Anzahl. Geändert wird auf einer eigenen Seite,
  * weil es knapp hundert Kästchen sind.
  *
- * @var \Overlays\Core\App $app
- * @var \Overlays\Core\Http\View $view
+ * @var \TwitchController\Core\App $app
+ * @var \TwitchController\Core\Http\View $view
  * @var callable $e
  * @var callable $url
  * @var string $tab

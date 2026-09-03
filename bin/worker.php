@@ -16,8 +16,8 @@ declare(strict_types=1);
  * Aufgaben also selbst in Haeppchen aufteilen.
  */
 
-use Overlays\Core\App;
-use Overlays\Core\Support\Autoloader;
+use TwitchController\Core\App;
+use TwitchController\Core\Support\Autoloader;
 
 $root = dirname(__DIR__);
 
@@ -63,7 +63,7 @@ while ($running) {
         // Hat jemand in der Oberflaeche ein Update beauftragt? Der Worker
         // laeuft als root und darf im Projektordner schreiben, der
         // Webserver nicht - deshalb passiert es hier.
-        $updater = new Overlays\Core\Update\Updater($app);
+        $updater = new TwitchController\Core\Update\Updater($app);
         if ($updater->isRequested()) {
             fwrite(STDOUT, "[worker] Update wird eingespielt...\n");
 
