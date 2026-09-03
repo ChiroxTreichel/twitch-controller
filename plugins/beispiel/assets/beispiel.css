@@ -1,0 +1,17 @@
+/* Eigene Datei eines Plugins.
+ *
+ * Erreichbar unter /plugin/beispiel/assets/beispiel.css - eingebunden
+ * wird sie in der Vorlage mit $asset(), damit sie einen
+ * Aenderungsstempel bekommt:
+ *
+ *   <link rel="stylesheet" href="<?= $e($asset('/plugin/beispiel/assets/beispiel.css')) ?>">
+ *
+ * Ausgeliefert wird sie vom Kern, weil plugins/ ausserhalb des
+ * DocumentRoots liegt.
+ */
+
+.beispiel-hinweis {
+    border-left: 3px solid var(--accent);
+    padding-left: 12px;
+    color: var(--muted);
+}

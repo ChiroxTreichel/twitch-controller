@@ -78,6 +78,9 @@ final class View
             'UTF-8'
         );
         $url = fn (string $path = ''): string => $this->app->url($path);
+        // Statische Dateien immer ueber $asset() einbinden, nicht ueber
+        // $url() - nur so bekommen sie den Aenderungsstempel.
+        $asset = fn (string $path): string => $this->app->asset($path);
         $app = $this->app;
         $view = $this;
 
@@ -87,7 +90,7 @@ final class View
             (static function (array $__scope, string $__file): void {
                 extract($__scope, EXTR_SKIP);
                 require $__file;
-            })($data + compact('e', 'url', 'app', 'view'), $file);
+            })($data + compact('e', 'url', 'asset', 'app', 'view'), $file);
         } catch (Throwable $exception) {
             ob_end_clean();
             throw $exception;

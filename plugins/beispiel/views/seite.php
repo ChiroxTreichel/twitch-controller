@@ -7,6 +7,7 @@
  *
  * @var callable $e
  * @var callable $url
+ * @var callable $asset
  * @var string $gruss
  * @var int $zaehler
  * @var bool $canManage
@@ -14,6 +15,8 @@
  * @var string $notice
  */
 ?>
+<link rel="stylesheet" href="<?= $e($asset('/plugin/beispiel/assets/beispiel.css')) ?>">
+
 <h1>Beispiel</h1>
 <p class="lead">Ein Plugin ohne Nutzen, dafür mit Kommentaren.</p>
 
@@ -44,6 +47,10 @@
 
 <div class="card">
     <h2>Reaktion auf Events</h2>
+    <p class="beispiel-hinweis">
+        Dieser Absatz ist über eine eigene CSS-Datei des Plugins gestaltet
+        (<span class="mono">assets/beispiel.css</span>).
+    </p>
     <p>
         Follows gezählt seit Installation: <strong><?= $e((string) $zaehler) ?></strong>
     </p>

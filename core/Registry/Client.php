@@ -132,7 +132,11 @@ final class Client
     {
         // Genau eine Adresse. Der Katalog wird nicht hier erzeugt, er
         // wird geladen - dafuer hat der Katalogserver zu sorgen.
-        $url = $this->baseUrl() . '/index.json';
+        //
+        // Bewusst /index.php und nicht /index.json: die PHP-Datei
+        // antwortet immer, auch bevor auf dem Katalogserver ein Paket
+        // veroeffentlicht wurde und ohne dass dort mod_rewrite laeuft.
+        $url = $this->baseUrl() . '/index.php';
 
         try {
             $result = Http::get($url, ['Accept' => 'application/json'], 20);
@@ -145,7 +149,8 @@ final class Client
             $message = sprintf('%s antwortet mit %d.', $url, $result->status);
 
             if ($result->status === 404) {
-                $message .= ' Der Katalogserver liefert dort keinen Katalog aus.';
+                $message .= ' Liegt der Katalogserver wirklich unter dieser Adresse,'
+                    . ' und ist sein DocumentRoot der Ordner "public"?';
             }
 
             $this->app->settings->set('registry_error', $message);

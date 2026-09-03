@@ -174,6 +174,8 @@ final class Routes
             return Response::text('Not Found', 404);
         }
 
-        return Response::file($file, $types[$extension], 86400);
+        // Ein Jahr: die Adresse traegt den Aenderungsstempel,
+        // siehe App::asset().
+        return Response::file($file, $types[$extension], 31536000);
     }
 }

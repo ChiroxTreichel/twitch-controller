@@ -111,11 +111,13 @@ $catalog = loadCatalog($catalogFile);
 
 // --- Schnittstelle --------------------------------------------------
 
-// Normalerweise liefert der Webserver /index.json direkt als Datei aus.
-// Hierher kommt der Aufruf nur, falls die Datei fehlt und eine
-// Umschreibung greift - dann ist ein leerer Katalog die richtige
-// Antwort, kein 404.
-if ($path === '/index.json') {
+// Der Katalog.
+//
+// /index.php ist die Adresse, die der Client abfragt: sie funktioniert
+// immer, auch ohne mod_rewrite und ohne dass vorher bin/build.php
+// gelaufen ist. /index.json liefert dasselbe - als Datei direkt vom
+// Webserver, falls sie erzeugt wurde, sonst hier.
+if ($path === '/index.php' || $path === '/index.json') {
     sendJson($catalog);
 }
 

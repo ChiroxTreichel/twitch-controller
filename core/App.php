@@ -139,6 +139,46 @@ final class App
         return $this->env->url($path);
     }
 
+    /**
+     * Adresse einer statischen Datei mit Aenderungsstempel:
+     *
+     *   /assets/admin.css  ->  https://…/assets/admin.css?v=1756822931
+     *
+     * Damit holt der Browser eine geaenderte Datei sofort und darf sie
+     * ansonsten beliebig lange behalten. Ohne das sehen Nutzer nach
+     * einem Update das alte Aussehen, bis sie von Hand neu laden - und
+     * genau das melden sie dann als Fehler.
+     *
+     * Kennt zwei Orte:
+     *   /assets/…                      -> public/assets/…
+     *   /plugin/<slug>/assets/…        -> plugins/<slug>/assets/…
+     */
+    public function asset(string $path): string
+    {
+        $path = '/' . ltrim($path, '/');
+        $url = $this->url($path);
+
+        // Kein Verzeichniswechsel - der Pfad kommt zwar aus eigenen
+        // Vorlagen, aber Plugins duerfen ihn auch fuellen.
+        if (str_contains($path, '..')) {
+            return $url;
+        }
+
+        if (preg_match('#^/plugin/([a-z0-9][a-z0-9-]*)/assets/(.+)$#', $path, $match) === 1) {
+            $file = $this->root . '/plugins/' . $match[1] . '/assets/' . $match[2];
+        } else {
+            $file = $this->root . '/public' . $path;
+        }
+
+        if (!is_file($file)) {
+            return $url;
+        }
+
+        $stamp = (int) filemtime($file);
+
+        return $url . (str_contains($url, '?') ? '&' : '?') . 'v=' . $stamp;
+    }
+
     public function log(string $message): void
     {
         error_log('[overlays] ' . $message);

@@ -25,14 +25,13 @@ location / { try_files $uri $uri/ /index.php?$query_string; }
 > aufs falsche Verzeichnis oder es fehlt eine Startdatei. Prüfen: liegt
 > `public/index.php` wirklich unter dem eingestellten Pfad?
 >
-> Wenn `/index.json` mit **404** antwortet, fehlt die Datei
-> `public/index.json`. Sie liegt bei und muss mitkopiert werden - sonst
-> findet der Client keinen Katalog. Danach `bin/build.php` ausführen.
+> Wenn `/index.php` mit **404** antwortet, zeigt das DocumentRoot nicht auf
+> `public/`. Das ist die Adresse, die der Client abfragt — sie muss gehen.
 
-`public/index.json` ist die eine Adresse, die der Client abfragt. Sie liegt
-als leerer Katalog bei, damit ein frisch aufgesetzter Server sofort
-gültig antwortet; `bin/build.php` überschreibt sie mit dem echten Inhalt.
-Sie muss **immer** vorhanden sein - der Client erzeugt nichts, er lädt nur.
+`public/index.json` liegt zusätzlich als leerer Katalog bei, damit auch die
+statische Adresse von Anfang an gültig antwortet. `bin/build.php`
+überschreibt sie mit dem echten Inhalt. Der Client erzeugt nichts, er lädt
+nur.
 
 PHP 8.2 oder neuer mit der Erweiterung `zip`. Mehr wird nicht gebraucht —
 keine Datenbank, kein Composer.
@@ -85,15 +84,22 @@ alles escaped. HTML im Text erscheint deshalb als Text.
 
 | Adresse | Zweck |
 | --- | --- |
-| `GET /index.json` | der ganze Katalog — **das ist die eigentliche Schnittstelle** |
+| `GET /index.php` | der ganze Katalog — **das fragt der Client ab** |
+| `GET /index.json` | dasselbe, als statische Datei |
 | `GET /api/plugins` | dasselbe, mit `?q=` und `?tag=` filterbar |
 | `GET /api/plugins/<slug>` | ein Plugin |
 | `GET /pkg/<datei>.zip` | das Paket |
 | `GET /` | Übersicht im Browser |
 
-Der Client holt ausschließlich `/index.json` und sucht danach lokal. Die
-`/api/`-Endpunkte sind Bequemlichkeit für andere Werkzeuge — wer mag, kann
-`public/` auch komplett statisch ausliefern und `index.php` weglassen.
+Der Client holt ausschließlich `/index.php` und sucht danach lokal. Diese
+Adresse ist gewählt, weil sie ohne Voraussetzungen funktioniert: kein
+`mod_rewrite`, und auch dann, wenn noch kein Paket veröffentlicht wurde.
+
+`/index.json` liefert dasselbe. Existiert die Datei, kommt sie direkt vom
+Webserver; fehlt sie, antwortet `index.php` mit einem leeren Katalog —
+sofern eine Umschreibung greift.
+
+Die `/api/`-Endpunkte sind Bequemlichkeit für andere Werkzeuge.
 
 ### Format von index.json
 

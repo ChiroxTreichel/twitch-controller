@@ -130,6 +130,8 @@ immer bedienbar.
 | `$settings` | `Overlays\Core\Config\Settings` |
 | `$db` | `Overlays\Core\Database\Db` |
 
+In Vorlagen zusaetzlich: `$e` (Escaping), `$url`, `$asset`, `$app`, `$view`.
+
 `plugin.php` soll nur registrieren, nicht arbeiten — sie wird bei jedem
 Request geladen.
 
@@ -199,6 +201,24 @@ Prüfung.
 Statische Plugin-Dateien liegen unter `/plugin/<slug>/assets/<pfad>` und
 werden vom Kern ausgeliefert (nur bekannte Dateitypen, kein
 Verzeichniswechsel).
+
+### Statische Dateien
+
+Immer ueber `$asset()` einbinden, nie ueber `$url()`:
+
+```php
+<link rel="stylesheet" href="<?= $e($asset('/plugin/throne/assets/throne.css')) ?>">
+```
+
+`$asset()` haengt den Aenderungsstempel der Datei an
+(`?v=1788423165`). Damit holt der Browser eine geaenderte Datei sofort
+und darf sie ansonsten ein Jahr behalten. Ohne das sehen Nutzer nach
+einem Update das alte Aussehen, bis sie von Hand neu laden - und melden
+das dann als Fehler.
+
+Es funktioniert fuer `/assets/…` (aus `public/`) und
+`/plugin/<slug>/assets/…` (aus dem Plugin-Ordner). Fehlt die Datei,
+kommt die Adresse ohne Stempel zurueck - kein Fehler.
 
 ### Eigene Vorlagen
 

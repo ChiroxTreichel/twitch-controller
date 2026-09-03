@@ -1,29 +1,5 @@
 {
     "format": 1,
-    "generated_at": "2026-09-03T07:51:18+00:00",
-    "plugins": [
-        {
-            "slug": "beispiel",
-            "name": "Beispiel",
-            "version": "1.0.0",
-            "summary": "Zeigt an einem lauffaehigen Beispiel, wie ein Plugin aufgebaut ist",
-            "description": "Dieses Plugin tut nichts Nuetzliches, dafuer ist jede Zeile kommentiert.\n\nEnthalten ist:\n- ein eigener Menuepunkt und eine eigene Seite\n- eigene Rechte, die in der Benutzerverwaltung auftauchen\n- eine eigene Einstellung im Scope `plugin:beispiel`\n- eine Reaktion auf Twitch-Events ueber `core.event.stored`\n- eine wiederkehrende Aufgabe ueber `cron.tick`\n\nWer ein Plugin schreiben will, kopiert diesen Ordner und legt los.",
-            "author": "Overlays",
-            "homepage": "https://github.com/ChiroxTreichel/twitch-controller",
-            "tags": [
-                "beispiel",
-                "entwicklung"
-            ],
-            "icon": "http://127.0.0.1:8140/img/beispiel.png",
-            "screenshots": [],
-            "requires": {
-                "core": ">=1.0.0"
-            },
-            "optional": [],
-            "download": "http://127.0.0.1:8140/pkg/beispiel-1.0.0.zip",
-            "sha256": "1356e3ba21f5438c26152cea29d78bd0ea053358248478ed0ee34b7fc7bb9023",
-            "size": 4983,
-            "updated_at": "2026-09-03T07:51:18+00:00"
-        }
-    ]
+    "generated_at": "",
+    "plugins": []
 }

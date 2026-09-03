@@ -5,6 +5,7 @@
  *
  * @var callable $e
  * @var callable $url
+ * @var callable $asset
  * @var string $content
  * @var string $title
  * @var string $step
@@ -29,7 +30,7 @@ $currentIndex = $currentIndex === false ? 0 : $currentIndex;
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= $e($title !== '' ? $title : 'Einrichtung') ?></title>
-    <link rel="stylesheet" href="<?= $e($url('/assets/admin.css')) ?>">
+    <link rel="stylesheet" href="<?= $e($asset('/assets/admin.css')) ?>">
 </head>
 <body>
 <div class="centered">
