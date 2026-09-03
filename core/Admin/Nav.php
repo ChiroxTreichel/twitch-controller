@@ -92,9 +92,79 @@ final class Nav
             ];
         }
 
-        uasort($result, static fn (array $a, array $b): int => $a['order'] <=> $b['order']);
+        // Erst nach der Vorgabe des Plugins, dann nach der Reihenfolge,
+        // die der Betreiber eingestellt hat. Ein Bereich, der dort
+        // nicht steht - ein neues Plugin -, landet hinten und stoert
+        // die eingestellte Reihenfolge nicht.
+        $eigene = $this->savedOrder();
+
+        uasort($result, static function (array $a, array $b) use ($eigene, $result): int {
+            $platz = static function (array $gruppe) use ($eigene, $result): int {
+                $key = (string) array_search($gruppe, $result, true);
+                $index = array_search($key, $eigene, true);
+
+                return $index === false ? PHP_INT_MAX : (int) $index;
+            };
+
+            return [$platz($a), $a['order']] <=> [$platz($b), $b['order']];
+        });
 
         return $result;
+    }
+
+    /**
+     * Wie der Betreiber die Bereiche sortiert hat.
+     *
+     * Nur die Schluessel, keine Namen: welche Bereiche es gibt,
+     * entscheiden die Plugins - diese Liste sagt nur, in welcher
+     * Reihenfolge. Ein Schluessel darin, den es nicht mehr gibt, bleibt
+     * stehen: wird das Plugin neu installiert, landet es wieder an
+     * seinem Platz.
+     *
+     * @return list<string>
+     */
+    public function savedOrder(): array
+    {
+        $gespeichert = $this->app->settings->get('nav_order', null);
+
+        if (!is_array($gespeichert)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map('strval', $gespeichert)));
+    }
+
+    /**
+     * Einen Bereich um einen Platz verschieben.
+     *
+     * Gerechnet wird auf der Liste der Bereiche, die es GERADE gibt -
+     * sonst wandert ein Bereich an einem Schluessel vorbei, der zu
+     * einem entfernten Plugin gehoert, und nichts scheint zu
+     * passieren.
+     */
+    public function move(string $group, string $direction): bool
+    {
+        $sichtbar = array_keys($this->build());
+
+        $index = array_search($group, $sichtbar, true);
+        if ($index === false) {
+            return false;
+        }
+
+        $ziel = $direction === 'up' ? $index - 1 : $index + 1;
+        if ($ziel < 0 || $ziel >= count($sichtbar)) {
+            return false;
+        }
+
+        [$sichtbar[$index], $sichtbar[$ziel]] = [$sichtbar[$ziel], $sichtbar[$index]];
+
+        // Schluessel entfernter Plugins hinten anhaengen, damit ihr
+        // Platz nicht verloren geht.
+        $rest = array_values(array_diff($this->savedOrder(), $sichtbar));
+
+        $this->app->settings->set('nav_order', array_merge($sichtbar, $rest));
+
+        return true;
     }
 
     /**

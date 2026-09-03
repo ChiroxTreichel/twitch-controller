@@ -1,33 +1,43 @@
 <?php
 /**
- * Einstellungen des Kerns: nur was mit dem Twitch-Login und dem
- * Event-Empfang zu tun hat. Alles Fachliche gehoert in die Plugins.
+ * Einstellungen, Reiter «System».
+ *
+ * Fassung und Update, Zeitzone, Sprache und die Reihenfolge der
+ * Menuebereiche. Alles, was das System als Ganzes betrifft - der
+ * Twitch-Zugang steckt in den anderen Reitern.
  *
  * @var \TwitchController\Core\Http\View $view
  * @var callable $e
  * @var callable $url
+ * @var string $tab
  * @var bool $canManage
  * @var string $csrf
  * @var string $notice
  * @var string $error
- * @var string $clientId
- * @var bool $hasSecret
- * @var bool $hasWebhook
- * @var string $redirectUri
- * @var string $callbackUrl
- * @var array{id: string, login: string, name: string} $channel
- * @var array{login: ?string, expires_in: int, scopes: list<string>}|null $broadcasterToken
- * @var list<string> $missingScopes
  * @var string $installPath
  * @var string $language
  * @var list<string> $languages
- * @var list<array{type: string, version: string, condition: array<string, string>}> $desired
+ * @var list<array{key: string, label: string}> $navGroups
+ * @var string $timezone
+ * @var array<string, string> $timezones
+ * @var array<string, mixed> $update
+ * @var bool $updatePossible
+ * @var string $updateVersion
  */
 
 use TwitchController\Core\Support\Dates;
 ?>
 <h1><?= $e(translate('nav.settings')) ?></h1>
 <p class="lead"><?= $e(translate('settings.lead')) ?></p>
+
+<?= $view->render('account/_settings_tabs', ['tab' => $tab], null) ?>
+
+<?php if ($notice !== ''): ?>
+    <div class="note note-ok"><?= $e($notice) ?></div>
+<?php endif; ?>
+<?php if ($error !== ''): ?>
+    <div class="note note-error"><?= $e($error) ?></div>
+<?php endif; ?>
 
 <div class="card">
     <div class="card-head">
@@ -172,166 +182,8 @@ use TwitchController\Core\Support\Dates;
     <div class="note note-error"><?= $e($error) ?></div>
 <?php endif; ?>
 
-<div class="card">
-    <div class="card-head">
-        <h2><?= $e(translate('settings.channel.title')) ?></h2>
-        <?php if ($broadcasterToken !== null): ?>
-            <span class="badge badge-ok"><?= $e(translate('settings.channel.connected')) ?></span>
-        <?php else: ?>
-            <span class="badge badge-error"><?= $e(translate('settings.channel.not_connected')) ?></span>
-        <?php endif; ?>
-    </div>
-
-    <?php if ($channel['login'] !== ''): ?>
-        <table>
-            <tbody>
-            <tr>
-                <td><?= $e(translate('settings.channel.title')) ?></td>
-                <td class="actions">
-                    <strong><?= $e($channel['name'] !== '' ? $channel['name'] : $channel['login']) ?></strong>
-                    <span class="hint mono">(<?= $e($channel['id']) ?>)</span>
-                </td>
-            </tr>
-            <?php if ($broadcasterToken !== null): ?>
-                <tr>
-                    <td><?= $e(translate('settings.channel.granted')) ?></td>
-                    <td class="actions hint">
-                        <?php $erteilt = \TwitchController\Core\Twitch\Scopes::describe($broadcasterToken['scopes'], $app->hooks); ?>
-                        <?php if ($erteilt === []): ?>
-                            &mdash;
-                        <?php else: ?>
-                            <?php foreach ($erteilt as $recht): ?>
-                                <div title="<?= $e($recht['scope']) ?>"><?= $e($recht['label']) ?></div>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </td>
-                </tr>
-            <?php endif; ?>
-            </tbody>
-        </table>
-    <?php else: ?>
-        <div class="empty"><?= $e(translate('settings.channel.none')) ?></div>
-    <?php endif; ?>
-
-    <?php if ($missingScopes !== []): ?>
-        <div class="note note-warn" style="margin:14px 0 0;">
-            <strong><?= $e(translate('settings.channel.missing')) ?></strong>
-            <p style="margin:8px 0 0;">
-                <?= $e(translate('settings.channel.missing_hint')) ?>
-            </p>
-            <ul style="margin:8px 0 0;padding-left:20px;">
-                <?php foreach (\TwitchController\Core\Twitch\Scopes::describe($missingScopes, $app->hooks) as $recht): ?>
-                    <li>
-                        <strong><?= $e($recht['label']) ?></strong>
-                        <?php if ($recht['reason'] !== ''): ?>
-                            &ndash; <?= $e($recht['reason']) ?>
-                        <?php endif; ?>
-                    </li>
-                <?php endforeach; ?>
-            </ul>
-            <p style="margin:10px 0 0;">
-                <?= $e(translate('settings.channel.missing_why')) ?>
-            </p>
-            <?php if ($canManage): ?>
-                <p style="margin:12px 0 0;">
-                    <a class="btn btn-small" href="<?= $e($url('/account/settings/channel')) ?>">
-                        <?= $e(translate('common.reconnect_channel')) ?>
-                    </a>
-                </p>
-                <p class="hint" style="margin:8px 0 0;">
-                    <?= $e(translate('settings.channel.then_sync')) ?>
-                </p>
-            <?php endif; ?>
-        </div>
-    <?php endif; ?>
-
-    <?php if ($canManage): ?>
-        <div class="row" style="margin-top:14px;">
-            <a class="btn btn-small" href="<?= $e($url('/account/settings/channel')) ?>">
-                <?= $e($broadcasterToken === null
-                    ? translate('settings.channel.connect')
-                    : translate('settings.channel.reconnect')) ?>
-            </a>
-            <?php if ($broadcasterToken !== null): ?>
-                <?= $view->render('_confirm', [
-                    'label'    => translate('settings.channel.disconnect'),
-                    'question' => translate('settings.channel.confirm_disconnect'),
-                    'confirm'  => translate('settings.channel.confirm_disconnect_yes'),
-                    'action'   => $url('/account/settings'),
-                    'fields'   => ['csrf' => $csrf, 'action' => 'disconnect_channel'],
-                ], null) ?>
-            <?php endif; ?>
-        </div>
-    <?php endif; ?>
-</div>
-
-<div class="card">
-    <div class="card-head">
-        <h2><?= $e(translate('settings.events.title')) ?></h2>
-        <span class="badge"><?= $e(translate('settings.events.needed', ['count' => count($desired)])) ?></span>
-    </div>
-    <p class="hint">
-        <?= translate('settings.events.hint', ['url' => '<span class="mono">' . $e($callbackUrl) . '</span>']) ?>
-    </p>
-
-    <?php if ($canManage): ?>
-        <form method="post" action="<?= $e($url('/account/settings')) ?>">
-            <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-            <input type="hidden" name="action" value="eventsub">
-            <button class="btn btn-small" type="submit"><?= $e(translate('settings.events.sync')) ?></button>
-        </form>
-    <?php endif; ?>
-</div>
-
-<div class="card">
-    <div class="card-head">
-        <h2><?= $e(translate('setup.step.app')) ?></h2>
-        <?php if ($hasSecret && $hasWebhook): ?>
-            <span class="badge badge-ok"><?= $e(translate('settings.app.complete')) ?></span>
-        <?php else: ?>
-            <span class="badge badge-warn"><?= $e(translate('settings.app.incomplete')) ?></span>
-        <?php endif; ?>
-    </div>
-
-    <p class="hint">
-        <?= translate('settings.app.redirect', ['url' => '<span class="mono">' . $e($redirectUri) . '</span>']) ?>
-    </p>
-
-    <?php if ($canManage): ?>
-        <form method="post" action="<?= $e($url('/account/settings')) ?>">
-            <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-            <input type="hidden" name="action" value="credentials">
-
-            <div class="field">
-                <label for="client_id"><?= $e(translate('setup.credentials.client_id')) ?></label>
-                <input class="input mono" id="client_id" name="client_id"
-                       value="<?= $e($clientId) ?>" autocomplete="off" spellcheck="false">
-            </div>
-
-            <div class="field">
-                <label for="client_secret"><?= $e(translate('setup.credentials.client_secret')) ?></label>
-                <input class="input mono" id="client_secret" name="client_secret" type="password"
-                       placeholder="<?= $e($hasSecret
-                           ? translate('settings.app.secret_set')
-                           : translate('settings.app.secret_unset')) ?>"
-                       autocomplete="off">
-            </div>
-
-            <div class="field">
-                <label for="webhook_secret"><?= $e(translate('setup.credentials.webhook_secret')) ?></label>
-                <input class="input mono" id="webhook_secret" name="webhook_secret" type="password"
-                       placeholder="<?= $e($hasWebhook
-                           ? translate('settings.app.secret_set')
-                           : translate('settings.app.secret_unset')) ?>"
-                       autocomplete="off">
-                <p class="hint">
-                    <?= $e(translate('settings.app.webhook_hint')) ?>
-                </p>
-            </div>
-
-            <button class="btn" type="submit"><?= $e(translate('common.save')) ?></button>
-        </form>
-    <?php else: ?>
-        <p class="hint"><?= $e(translate('settings.app.owner_only')) ?></p>
-    <?php endif; ?>
-</div>
+<?= $view->render('account/_settings_nav_order', [
+    'navGroups' => $navGroups,
+    'canManage' => $canManage,
+    'csrf'      => $csrf,
+], null) ?>

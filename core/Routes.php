@@ -148,7 +148,19 @@ final class Routes
             'permission' => 'Konto.Einstellungen.View',
         ]);
         $router->post('/account/settings', [$account, 'settingsAction'], ['auth' => true]);
-        $router->get('/account/settings/channel', [$account, 'reconnectChannel'], ['auth' => true]);
+
+        // Drei Reiter, eine POST-Route: die Aktionen unterscheiden sich
+        // im Feld "action", nicht in der Adresse.
+        $router->get('/account/settings/channel', [$account, 'settingsChannel'], [
+            'auth' => true,
+            'permission' => 'Konto.Einstellungen.View',
+        ]);
+        $router->get('/account/settings/secrets', [$account, 'settingsSecrets'], [
+            'auth' => true,
+            'permission' => 'Konto.Einstellungen.View',
+        ]);
+
+        $router->get('/account/settings/connect', [$account, 'reconnectChannel'], ['auth' => true]);
 
         // Notausgang. Bewusst nicht unter /account: Update und Sprache
         // muessen erreichbar bleiben, wenn eine Seite dort nicht mehr

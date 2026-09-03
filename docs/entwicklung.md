@@ -448,6 +448,41 @@ Daten bereit. Ohne dritten Parameter wird das Layout des Kerns benutzt.
 
 ---
 
+## Einstellungen
+
+Drei Reiter, weil die Bereiche ganz verschiedene Lebensdauern haben:
+
+| Reiter | Adresse | Inhalt |
+| --- | --- | --- |
+| **System** | `/account/settings` | Fassung und Update, Zeitzone, Sprache, Reihenfolge im Menü |
+| **Kanal** | `/account/settings/channel` | verbundener Kanal, Twitch-Rechte, Event-Abos |
+| **Secrets** | `/account/settings/secrets` | Client-ID, Client-Secret, Webhook-Secret |
+
+Eine POST-Route für alle drei: die Aktionen unterscheiden sich im Feld
+`action`, nicht in der Adresse. Die Daten holt `settingsData()` einmal
+für alle Reiter — sie sind eine Aufteilung der *Anzeige*, nicht drei
+verschiedene Seiten. Wer hier trennt, hat dreimal dieselbe Abfrage und
+beim nächsten Feld drei Stellen zu pflegen.
+
+### Reihenfolge im Menü
+
+Unter *System*, mit Auf-und-ab-Knöpfen — kein Ziehen: das geht ohne
+JavaScript, ist mit der Tastatur bedienbar und auf einem Telefon
+zuverlässiger.
+
+Gespeichert wird in `nav_order` als Liste von Bereichs-Schlüsseln.
+Verschoben wird auf der Liste der Bereiche, die es **gerade** gibt —
+sonst wandert ein Bereich an einem Schlüssel vorbei, der zu einem
+entfernten Plugin gehört, und scheinbar passiert nichts. Schlüssel
+entfernter Plugins bleiben hinten stehen: wird das Plugin neu
+installiert, landet es wieder an seinem Platz.
+
+Ein Bereich, der nicht in der Liste steht, sortiert sich nach seinem
+`order` aus dem Plugin und landet hinten. Ein neues Plugin stört die
+eingestellte Reihenfolge damit nicht.
+
+---
+
 ## Overlay
 
 Die Fläche, die in OBS läuft — eine Kernfähigkeit, kein Plugin. Zwei

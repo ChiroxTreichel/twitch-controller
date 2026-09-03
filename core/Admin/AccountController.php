@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TwitchController\Core\Admin;
 
 use TwitchController\Core\App;
+use TwitchController\Core\Admin\Nav;
 use TwitchController\Core\Http\Request;
 use TwitchController\Core\Http\Response;
 use TwitchController\Core\I18n\Translator;
@@ -200,7 +201,52 @@ final class AccountController
     //  Einstellungen
     // -----------------------------------------------------------------
 
+    /**
+     * Reiter «System»: Fassung und Update, Zeitzone, Sprache und die
+     * Reihenfolge der Menuebereiche.
+     */
     public function settings(Request $request): Response
+    {
+        return Response::html($this->app->view->render('account/settings', [
+            'title'  => translate('settings.tab.system'),
+            'tab'    => 'system',
+        ] + $this->settingsData($request)));
+    }
+
+    /**
+     * Reiter «Kanal»: welcher Kanal verbunden ist, welche Twitch-Rechte
+     * dabei erteilt wurden, und die Event-Abos daran.
+     */
+    public function settingsChannel(Request $request): Response
+    {
+        return Response::html($this->app->view->render('account/settings_channel', [
+            'title'  => translate('settings.tab.channel'),
+            'tab'    => 'channel',
+        ] + $this->settingsData($request)));
+    }
+
+    /**
+     * Reiter «Secrets»: die Zugangsdaten der Twitch-App.
+     */
+    public function settingsSecrets(Request $request): Response
+    {
+        return Response::html($this->app->view->render('account/settings_secrets', [
+            'title'  => translate('settings.tab.secrets'),
+            'tab'    => 'secrets',
+        ] + $this->settingsData($request)));
+    }
+
+    /**
+     * Was alle drei Reiter brauchen.
+     *
+     * Absichtlich einmal fuer alle: die Reiter sind eine Aufteilung der
+     * Anzeige, nicht drei verschiedene Seiten. Wer hier trennt, hat
+     * dreimal dieselbe Abfrage - und beim naechsten Feld drei Stellen
+     * zu pflegen.
+     *
+     * @return array<string, mixed>
+     */
+    private function settingsData(Request $request): array
     {
         $tokens = $this->app->twitch->tokens();
         $updater = new Updater($this->app);
@@ -215,8 +261,14 @@ final class AccountController
             $missingScopes = [];
         }
 
-        return Response::html($this->app->view->render('account/settings', [
-            'title'         => 'Einstellungen',
+        // Die Bereiche in ihrer aktuellen Reihenfolge - fuer die
+        // Auf-und-ab-Knoepfe.
+        $navGroups = [];
+        foreach ((new Nav($this->app))->build() as $key => $group) {
+            $navGroups[] = ['key' => (string) $key, 'label' => (string) $group['label']];
+        }
+
+        return [
             'active'        => 'account/settings',
             'canManage'     => $this->app->auth->can('Konto.Einstellungen.Manage'),
             'csrf'          => $this->app->auth->csrfToken(),
@@ -248,7 +300,8 @@ final class AccountController
             // bei der Einrichtung angegeben, nicht geraten.
             'installPath'      => $this->app->root,
             'updatePossible'   => $updater->isGitCheckout() && $updater->gitAvailable(),
-        ]));
+            'navGroups'        => $navGroups,
+        ];
     }
 
     public function settingsAction(Request $request): Response
@@ -335,6 +388,16 @@ final class AccountController
                     $this->app->applyTimezone();
 
                     return $this->back('/account/settings', 'Zeitzone gespeichert: ' . $timezone);
+
+                case 'nav_order':
+                    $verschoben = (new Nav($this->app))->move(
+                        $request->input('group'),
+                        $request->input('direction')
+                    );
+
+                    return $verschoben
+                        ? $this->back('/account/settings', translate('settings.nav_order.saved'))
+                        : $this->back('/account/settings', null, translate('settings.nav_order.failed'));
 
                 case 'language':
                     $language = Translator::normalize($request->input('language'));
