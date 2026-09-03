@@ -353,7 +353,63 @@ final class Chat
             ];
         }
 
-        return ['ok' => true, 'error' => '', 'id' => (string) ($erste['message_id'] ?? '')];
+        $messageId = (string) ($erste['message_id'] ?? '');
+
+        $this->rememberOwn($messageId, $text, $purpose, $senderId);
+
+        return ['ok' => true, 'error' => '', 'id' => $messageId];
+    }
+
+    /**
+     * Die eigene Nachricht sofort ablegen, bevor der Webhook sie bringt.
+     *
+     * Der Grund ist eine Schleife, die es unter IRC nicht gab: dort
+     * bekam man die eigenen Zeilen nicht zurueck, EventSub liefert sie
+     * aus. Antwortet ein Plugin auf einen Befehl, kommt seine Antwort
+     * also als neue Chatnachricht wieder herein - und faengt sie mit
+     * "!" an, laeuft das im Kreis.
+     *
+     * Naheliegend waere gewesen, Nachrichten des eigenen Kontos zu
+     * verwerfen. Das ist falsch: ohne Bot-Konto ist das eigene Konto
+     * der Kanalinhaber, und der haette dann keinen Befehl mehr
+     * ausloesen koennen - genau der Fall, in dem es zuerst auffaellt.
+     *
+     * Stattdessen zaehlt die Nummer der Nachricht. Steht sie schon in
+     * der Tabelle, laesst store() sie liegen und der Hook feuert nicht.
+     * Das ist derselbe Riegel, der auch die Zweitzustellung von Twitch
+     * abfaengt - eine Abfrage mehr braucht es dafuer nicht, denn diese
+     * Zeile waere ohnehin geschrieben worden.
+     *
+     * Eine Zeile, die ein Mensch von demselben Konto tippt, hat eine
+     * andere Nummer und loest normal aus.
+     */
+    private function rememberOwn(string $messageId, string $text, string $purpose, string $senderId): void
+    {
+        // Ohne Nummer geht es nicht. Twitch liefert sie, aber wenn
+        // nicht, ist eine ausgelassene Zeile besser als eine Ausnahme
+        // im Anschluss an eine erfolgreich gesendete Nachricht.
+        if ($messageId === '') {
+            return;
+        }
+
+        $info = $this->app->twitch->tokens()->info($purpose) ?? [];
+        $login = (string) ($info['login'] ?? '');
+
+        $this->app->db->run(
+            'INSERT INTO chat_messages
+                    (message_id, chatter_id, chatter_login, chatter_name, color,
+                     text, message_type, sent_at)
+             VALUES (:message_id, :chatter_id, :chatter_login, :chatter_name, \'\',
+                     :text, \'text\', now())
+             ON CONFLICT (message_id) DO NOTHING',
+            [
+                'message_id'    => $messageId,
+                'chatter_id'    => $senderId,
+                'chatter_login' => $login,
+                'chatter_name'  => $login,
+                'text'          => $text,
+            ]
+        );
     }
 
     // -----------------------------------------------------------------

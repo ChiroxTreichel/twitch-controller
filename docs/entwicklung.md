@@ -773,6 +773,26 @@ Aufbewahrungsfrist (Voreinstellung ein Tag, anhebbar über
 `Twitch\WebhookController` fragt vor dem Speichern, ob der Abo-Typ in
 `Chat::TYPES` steht, und führt ihn dann am Event-Speicher vorbei.
 
+### Die eigene Antwort kommt zurück
+
+Unter IRC bekam man die eigenen Zeilen **nicht** zurück. EventSub
+liefert sie aus. Antwortet ein Plugin auf einen Befehl, kommt seine
+Antwort also als neue Chatnachricht wieder herein — und fängt sie mit
+`!` an, läuft das im Kreis, bis Twitch bremst.
+
+Naheliegend wäre, Nachrichten des eigenen Kontos zu verwerfen. **Das
+ist falsch, und zwar auf eine Weise, die sofort auffällt:** ohne
+Bot-Konto ist das eigene Konto der Kanalinhaber. Der könnte dann keinen
+einzigen Befehl mehr auslösen — und genau er testet es zuerst. Genau
+dieser Fehler war beim ersten Anlauf drin, und er war lautlos.
+
+`Chat::send()` legt die gesendete Nachricht deshalb **sofort** in
+`chat_messages` ab. Kommt sie über den Webhook wieder herein, greift
+`ON CONFLICT DO NOTHING`, `store()` lässt sie liegen und der Hook
+feuert nicht. Was ein Mensch von demselben Konto tippt, hat eine andere
+`message_id` und löst normal aus. Eine zusätzliche Abfrage kostet das
+nicht: die Zeile wäre ohnehin geschrieben worden.
+
 ### Doppelte Zustellung
 
 Twitch schickt eine Nachricht **erneut**, wenn unsere Antwort nicht
