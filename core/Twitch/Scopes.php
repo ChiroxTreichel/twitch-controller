@@ -77,13 +77,26 @@ final class Scopes
                 'label'  => translate('scope.raids'),
                 'reason' => translate('scope.raids.why'),
             ],
-            'chat:read' => [
+            // Chat laeuft ueber EventSub und Helix, nicht mehr ueber
+            // IRC. Die alten Scopes chat:read und chat:edit gehoerten
+            // zum IRC-Weg und sind hier nutzlos - sie stehen darum
+            // nicht mehr in dieser Liste, damit niemand sie anfordert
+            // und sich wundert, warum der Chat leer bleibt.
+            'user:read:chat' => [
                 'label'  => translate('scope.chat_read'),
                 'reason' => translate('scope.chat_read.why'),
             ],
-            'chat:edit' => [
+            'user:write:chat' => [
                 'label'  => translate('scope.chat_write'),
                 'reason' => translate('scope.chat_write.why'),
+            ],
+            'user:bot' => [
+                'label'  => translate('scope.bot_user'),
+                'reason' => translate('scope.bot_user.why'),
+            ],
+            'channel:bot' => [
+                'label'  => translate('scope.bot_channel'),
+                'reason' => translate('scope.bot_channel.why'),
             ],
             'moderator:manage:banned_users' => [
                 'label'  => translate('scope.ban'),

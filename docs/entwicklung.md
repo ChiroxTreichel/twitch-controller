@@ -191,6 +191,10 @@ Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
 | `core.obs.present` | filter | eigene Ereignisse im Feed darstellen (null blendet aus) |
 | `core.obs.badges` | filter | eigene Badges samt Standardfarben anmelden |
 | `core.obs.filters` | filter | eigene Filterknoten im Feed, auch in vorhandene Zweige |
+| `core.chat.message` | dispatch | auf eine Chatnachricht reagieren |
+| `core.chat.deleted` | dispatch | eine Chatnachricht wurde entfernt |
+| `core.chat.cleared` | dispatch | der Chat wurde geleert |
+| `core.chat.keep_hours` | filter | Aufbewahrungsfrist des Chatverlaufs |
 | `overlay.slots` | filter | eigenen Platz in der Overlay-Flaeche anmelden |
 | `admin.assets` | filter | eigenes CSS und JavaScript in die Verwaltungsseiten |
 | `overlay.assets` | filter | eigenes CSS und JavaScript in die Overlay-Flaeche |
@@ -734,6 +738,132 @@ eigenen Browser-Cache.
 Das ist die eine Stelle, an der ein Zugang über einen geheimen Schlüssel
 in der URL nachgerüstet werden müsste — die Rechteprüfung der Route in
 `core/Routes.php`.
+
+---
+
+## Chat
+
+Eine Kernfähigkeit, keine Seite. Der Kern kann mitlesen, schreiben und
+löschen; angezeigt wird der Chat hier nirgends — das gehört einem
+Plugin.
+
+### Kein IRC mehr
+
+Der Vorgänger hing an einer dauerhaft offenen IRC-Verbindung, und dafür
+mussten Benutzername und Token in einer Datei stehen. Beides ist weg:
+
+| | über IRC | jetzt |
+| --- | --- | --- |
+| mitlesen | offene Verbindung, `PRIVMSG` empfangen | EventSub `channel.chat.message` per Webhook |
+| schreiben | `PRIVMSG` senden | `POST helix/chat/messages` |
+| löschen | `/delete` als Chatbefehl | `DELETE helix/moderation/chat` |
+
+Kein Daemon, keine Verbindung, die abreißen kann, und kein Passwort
+irgendwo. Chat kommt auf derselben Adresse an wie Follows und Subs.
+
+### Eigene Tabelle, nicht `events`
+
+Chat ist um Größenordnungen mehr als alles andere. Ein lebhafter Stream
+schreibt tausende Zeilen pro Stunde — in `events` wären sie Lärm im
+Aktivitäten-Feed, und die Tabelle, die den Verlauf des Kanals hält,
+würde ohne Grenze wachsen. `chat_messages` hat darum eine eigene
+Aufbewahrungsfrist (Voreinstellung ein Tag, anhebbar über
+`core.chat.keep_hours`) und wird von sich aus wieder leer.
+
+`Twitch\WebhookController` fragt vor dem Speichern, ob der Abo-Typ in
+`Chat::TYPES` steht, und führt ihn dann am Event-Speicher vorbei.
+
+### Doppelte Zustellung
+
+Twitch schickt eine Nachricht **erneut**, wenn unsere Antwort nicht
+ankam oder kein 2xx war. `chat_messages.message_id` ist deshalb
+eindeutig, und das Einfügen endet auf `ON CONFLICT DO NOTHING`. Bleibt
+das `RETURNING` leer, gab es die Zeile schon — dann feuert auch der
+Hook nicht, sonst würde aus einem `!würfel` zweimal gewürfelt.
+
+### Benutzung
+
+```php
+use TwitchController\Core\Chat\Chat;
+
+$app->chat->send('Moin!');
+$app->chat->send('Klar!', $messageId);      // als Antwort
+$app->chat->delete($messageId);
+
+$hooks->on('core.chat.message', static function (array $message): void {
+    if (str_starts_with($message['text'], '!würfel')) { … }
+});
+```
+
+`send()` und `delete()` geben `['ok' => bool, 'error' => string]`
+zurück und werfen nicht: ein misslungener Chatbeitrag ist ein normaler
+Ausgang, kein Programmfehler.
+
+### Wer schreibt
+
+Ist ein Bot-Konto verbunden, schreibt der Bot — sonst der Kanalinhaber
+selbst. Ein eigenes Konto ist also möglich, aber nichts, was man erst
+einrichten muss. Dieselbe Regel gilt für die Bedingung der Chat-Abos:
+`user_id` ist das Konto, dessen Chatfenster mitgelesen wird.
+
+Gelöscht wird immer mit dem Token des Kanalinhabers. Er ist in seinem
+eigenen Kanal immer Moderator, ein Bot-Konto dagegen nur, wenn man es
+dazu gemacht hat.
+
+### Zwei Grenzen von Twitch beim Löschen
+
+- Die Nachricht darf **nicht älter als sechs Stunden** sein.
+- Die **eigenen Nachrichten des Kanalinhabers** lassen sich nicht
+  löschen.
+
+Beides kommt als knappe Ablehnung zurück; `Chat::explain()` macht daraus
+einen Satz, mit dem man etwas anfangen kann. Ohne das sucht man den
+Fehler bei sich.
+
+### Leeren schreibt die Vergangenheit nicht um
+
+`channel.chat.clear` heißt: die Zuschauer sehen den Verlauf nicht mehr.
+Es heißt nicht, dass die Nachrichten nie geschrieben wurden. Würden
+dabei alle Zeilen als gelöscht vermerkt, wäre eine Nachricht von vor
+zwanzig Stunden hinterher als entfernt ausgewiesen — und das Protokoll,
+um dessen willen man hinsieht, wäre weg. Ein Moderator kann Aufräumen
+nicht zum Vergessen machen. Der Hook sagt einer offenen Ansicht nur,
+dass dort ein Trennstrich hingehört.
+
+### Offen: Shared Chat
+
+Nimmt der Kanal an einem gemeinsamen Chat teil, liefert
+`channel.chat.message` auch Nachrichten aus den anderen Kanälen — mit
+`source_broadcaster_user_id` und `is_source_only` in der Nutzlast. Der
+Kern speichert sie derzeit wie eigene und hält die beiden Felder nicht.
+
+Bewusst so gelassen: eine Nachricht wegzuwerfen, weil ein Feld gesetzt
+ist, dessen genaue Bedeutung man nicht geprüft hat, verliert im
+Zweifelsfall echte Zeilen — und ein Überwachungsprotokoll mit Löchern
+ist schlimmer als eines mit zu viel darin. Wer gemeinsamen Chat
+benutzt, ergänzt die zwei Spalten und entscheidet dann im Plugin, was
+angezeigt wird.
+
+### Berechtigungen
+
+`chat:read` und `chat:edit` gehörten zum IRC-Weg und sind hier nutzlos.
+Sie stehen darum nicht mehr im Katalog, damit niemand sie anfordert und
+sich wundert, warum der Chat leer bleibt. Gebraucht werden:
+
+| Scope | an welchem Konto |
+| --- | --- |
+| `user:read:chat`, `user:write:chat`, `user:bot` | dem mitlesenden und schreibenden (Bot oder Kanalinhaber) |
+| `channel:bot` | dem Kanal — erlaubt ein Chat-Konto darin |
+| `moderator:manage:chat_messages` | dem Kanalinhaber — zum Löschen |
+
+Weil das Abo mit einem App-Token angelegt wird, verlangt Twitch
+`user:bot` **und** `channel:bot`; mit einem reinen Benutzer-Token wäre
+`user:read:chat` allein genug. Der Kanal fordert alle fünf an, damit es
+auch ohne Bot-Konto funktioniert.
+
+**Nach dem Update muss der Kanal einmal neu verbunden werden.** Ohne
+die neuen Freigaben lehnt Twitch die Chat-Abos ab — sichtbar unter
+*Konto → Einstellungen → Kanal*.
 
 ---
 

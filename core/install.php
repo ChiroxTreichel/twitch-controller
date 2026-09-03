@@ -185,3 +185,38 @@ $db->run('
     )
 ');
 $db->run('CREATE INDEX IF NOT EXISTS overlay_messages_created_at_idx ON overlay_messages (created_at)');
+
+// --- Chat --------------------------------------------------------------
+// Bewusst nicht in 'events': Chat ist um Groessenordnungen mehr als
+// Follows und Subs. Ein lebhafter Stream schreibt tausende Zeilen pro
+// Stunde - im Aktivitaeten-Feed waeren sie Laerm, und die Tabelle, die
+// den Verlauf des Kanals haelt, wuerde ohne Grenze wachsen.
+//
+// Diese hier wird von sich aus wieder leer: Chat\Chat raeumt alles weg,
+// was aelter als die Aufbewahrungsfrist ist (Voreinstellung ein Tag).
+//
+// message_id ist die Nummer von Twitch und eindeutig. Das ist kein
+// Beiwerk: Twitch schickt eine Nachricht erneut, wenn unsere Antwort
+// nicht ankam - ohne den Riegel stuende dieselbe Zeile zweimal da.
+$db->run('
+    CREATE TABLE IF NOT EXISTS chat_messages (
+        id            BIGSERIAL   PRIMARY KEY,
+        message_id    TEXT        NOT NULL,
+        chatter_id    TEXT        NOT NULL,
+        chatter_login TEXT        NOT NULL,
+        chatter_name  TEXT        NOT NULL,
+        color         VARCHAR(16),
+        text          TEXT        NOT NULL,
+        fragments     JSONB       NOT NULL DEFAULT \'[]\'::jsonb,
+        badges        JSONB       NOT NULL DEFAULT \'[]\'::jsonb,
+        message_type  VARCHAR(48) NOT NULL DEFAULT \'text\',
+        bits          INTEGER     NOT NULL DEFAULT 0,
+        reply_to      TEXT,
+        deleted_at    TIMESTAMPTZ,
+        sent_at       TIMESTAMPTZ NOT NULL,
+        received_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+        CONSTRAINT chat_messages_message_id_unique UNIQUE (message_id)
+    )
+');
+$db->run('CREATE INDEX IF NOT EXISTS chat_messages_received_at_idx ON chat_messages (received_at)');
+$db->run('CREATE INDEX IF NOT EXISTS chat_messages_chatter_idx     ON chat_messages (chatter_id)');

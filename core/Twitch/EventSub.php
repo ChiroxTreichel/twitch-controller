@@ -86,6 +86,14 @@ final class EventSub
 
         $channel = ['broadcaster_user_id' => $broadcasterId];
 
+        // Wer im Chat sitzt: das Bot-Konto, wenn eines verbunden ist,
+        // sonst der Kanalinhaber. Dieselbe Regel wie beim Schreiben -
+        // siehe Chat\Chat::senderPurpose().
+        $chatUserId = $this->app->chat->senderId($this->app->chat->senderPurpose());
+        if ($chatUserId === '') {
+            $chatUserId = $broadcasterId;
+        }
+
         $base = [
             // Follows brauchen zusaetzlich einen Moderator-Bezug.
             ['type' => 'channel.follow', 'version' => '2', 'condition' => [
@@ -102,6 +110,23 @@ final class EventSub
             ]],
             ['type' => 'stream.online',  'version' => '1', 'condition' => $channel],
             ['type' => 'stream.offline', 'version' => '1', 'condition' => $channel],
+
+            // Chat. Die Bedingung hat zwei Seiten: broadcaster_user_id
+            // ist der Kanal, user_id derjenige, dessen Chatfenster
+            // mitgelesen wird - also das Konto, mit dem wir im Chat
+            // sitzen. Ohne Bot-Konto ist das der Kanalinhaber selbst.
+            ['type' => 'channel.chat.message', 'version' => '1', 'condition' => [
+                'broadcaster_user_id' => $broadcasterId,
+                'user_id'             => $chatUserId,
+            ]],
+            ['type' => 'channel.chat.message_delete', 'version' => '1', 'condition' => [
+                'broadcaster_user_id' => $broadcasterId,
+                'user_id'             => $chatUserId,
+            ]],
+            ['type' => 'channel.chat.clear', 'version' => '1', 'condition' => [
+                'broadcaster_user_id' => $broadcasterId,
+                'user_id'             => $chatUserId,
+            ]],
         ];
 
         $all = $this->app->hooks->filter('core.eventsub.subscriptions', $base, $broadcasterId);

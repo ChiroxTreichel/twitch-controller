@@ -113,10 +113,25 @@ final class Twitch
         //   channel.cheer            -> bits:read
         //   channel.raid             -> kein Scope
         //   stream.online / .offline -> kein Scope
+        //   channel.chat.*           -> user:read:chat + user:bot am
+        //                               mitlesenden Konto, channel:bot
+        //                               am Kanal
+        //
+        // Die Chat-Scopes stehen hier alle, obwohl drei davon eigentlich
+        // dem Bot-Konto gehoeren: ohne eigenes Bot-Konto ist der
+        // Kanalinhaber selbst der, der im Chat sitzt. Wer einen Bot
+        // einrichtet, bekommt sie ueber botScopes() ein zweites Mal -
+        // doppelt vergeben ist harmlos, fehlend nicht.
         $base = [
             'moderator:read:followers',
             'channel:read:subscriptions',
             'bits:read',
+            // Chat mitlesen und schreiben
+            'user:read:chat',
+            'user:write:chat',
+            'user:bot',
+            'channel:bot',
+            'moderator:manage:chat_messages',
         ];
 
         $scopes = $this->app->hooks->filter('core.twitch.broadcaster_scopes', $base);
@@ -128,15 +143,27 @@ final class Twitch
     }
 
     /**
-     * Scopes fuer den Chat-Account. Ohne Chat-Plugin leer.
+     * Scopes fuer das Bot-Konto.
+     *
+     * Ein Bot-Konto ist freiwillig: ohne eines schreibt der
+     * Kanalinhaber selbst. Wer eines verbindet, braucht daran genau
+     * das, was Twitch vom mitlesenden und schreibenden Konto verlangt -
+     * channel:bot gehoert dagegen an den Kanal und steht darum in
+     * broadcasterScopes().
      *
      * @return list<string>
      */
     public function botScopes(): array
     {
-        $scopes = $this->app->hooks->filter('core.twitch.bot_scopes', []);
+        $base = [
+            'user:read:chat',
+            'user:write:chat',
+            'user:bot',
+        ];
+
+        $scopes = $this->app->hooks->filter('core.twitch.bot_scopes', $base);
         if (!is_array($scopes)) {
-            return [];
+            return $base;
         }
 
         return array_values(array_unique(array_filter(array_map('strval', $scopes))));

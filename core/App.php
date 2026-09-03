@@ -9,6 +9,7 @@ use TwitchController\Core\Config\Env;
 use TwitchController\Core\Config\Settings;
 use TwitchController\Core\Database\Db;
 use TwitchController\Core\Events\EventStore;
+use TwitchController\Core\Chat\Chat;
 use TwitchController\Core\Events\Normalizer;
 use TwitchController\Core\Hook\Hooks;
 use TwitchController\Core\Http\Router;
@@ -49,6 +50,7 @@ final class App
     public readonly Twitch $twitch;
     public readonly Normalizer $normalizer;
     public readonly EventStore $events;
+    public readonly Chat $chat;
 
     private function __construct(public readonly string $root)
     {
@@ -65,6 +67,7 @@ final class App
         $this->twitch     = new Twitch($this);
         $this->normalizer = new Normalizer($this->hooks);
         $this->events     = new EventStore($this);
+        $this->chat       = new Chat($this);
     }
 
     /**

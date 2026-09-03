@@ -6,6 +6,7 @@ namespace TwitchController\Core\Twitch;
 
 use DateTimeImmutable;
 use TwitchController\Core\App;
+use TwitchController\Core\Chat\Chat;
 use TwitchController\Core\Events\Normalizer;
 use TwitchController\Core\Http\Request;
 use TwitchController\Core\Http\Response;
@@ -95,6 +96,15 @@ final class WebhookController
             $occurredAt = date('Y-m-d H:i:sP');
         }
 
+        // Chat geht seinen eigenen Weg. Er ist um Groessenordnungen mehr
+        // als alles andere hier - in 'events' waere er Laerm im
+        // Aktivitaeten-Feed und liesse die Tabelle ohne Grenze wachsen.
+        if (in_array($subscriptionType, Chat::TYPES, true)) {
+            $this->chat($subscriptionType, $event, $occurredAt);
+
+            return;
+        }
+
         $externalId = Normalizer::externalId(
             $eventType,
             $event,
@@ -110,5 +120,32 @@ final class WebhookController
             $event,
             $request->rawBody,
         );
+    }
+
+    /**
+     * Die drei Chat-Abos.
+     *
+     * @param array<string, mixed> $event
+     */
+    private function chat(string $subscriptionType, array $event, string $occurredAt): void
+    {
+        $chat = $this->app->chat;
+
+        switch ($subscriptionType) {
+            case 'channel.chat.message':
+                $chat->store($event, $occurredAt);
+
+                return;
+
+            case 'channel.chat.message_delete':
+                $chat->markDeleted((string) ($event['message_id'] ?? ''));
+
+                return;
+
+            case 'channel.chat.clear':
+                $chat->markCleared();
+
+                return;
+        }
     }
 }
