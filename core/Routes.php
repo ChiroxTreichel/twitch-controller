@@ -87,6 +87,25 @@ final class Routes
 
         // Kurze Adresse, weil der Link in OBS eingetragen und
         // gelegentlich von Hand getippt wird.
+        // --- Overlay ----------------------------------------------------
+        // Zwei Seiten, wie beim Aktivitaeten-Feed: die Flaeche selbst
+        // fuer OBS, und die Einstellungen dazu unter Konto.
+        $overlay = new \Overlays\Core\Overlay\OverlayController($app);
+
+        $router->get('/overlay', [$overlay, 'show'], [
+            'auth' => true,
+            'permission' => 'Konto.Overlay.View',
+        ]);
+        $router->get('/overlay/stream', [$overlay, 'stream'], [
+            'auth' => true,
+            'permission' => 'Konto.Overlay.View',
+        ]);
+        $router->get('/account/overlay', [$overlay, 'settings'], [
+            'auth' => true,
+            'permission' => 'Konto.Overlay.View',
+        ]);
+        $router->post('/account/overlay', [$overlay, 'save'], ['auth' => true]);
+
         $router->get('/obs', [$feed, 'show'], [
             'auth' => true,
             'permission' => 'Konto.Aktivitaeten.View',

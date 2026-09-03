@@ -395,6 +395,8 @@ final class Auth
                     'Konto.Benutzer.Manage' => translate('permissions.users.manage'),
                     'Konto.Aktivitaeten.View'   => translate('permissions.activity.view'),
                     'Konto.Aktivitaeten.Manage' => translate('permissions.activity.manage'),
+                    'Konto.Overlay.View'   => translate('permissions.overlay.view'),
+                    'Konto.Overlay.Manage' => translate('permissions.overlay.manage'),
                     'Konto.Plugins.View'    => translate('permissions.plugins.view'),
                     'Konto.Plugins.Manage'  => translate('permissions.plugins.manage'),
                     'Konto.Einstellungen.View'   => translate('permissions.settings.view'),

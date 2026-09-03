@@ -29,7 +29,7 @@ final class App
      * Kernversion. Plugins koennen dagegen Bedingungen stellen
      * ("requires": { "core": ">=1.0.0" }).
      */
-    public const VERSION = '1.0.0';
+    public const VERSION = '1.1.0';
 
     public readonly Env $env;
     public readonly Crypto $crypto;

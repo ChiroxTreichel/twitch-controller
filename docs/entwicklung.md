@@ -179,6 +179,8 @@ Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
 | `core.obs.present` | filter | eigene Ereignisse im Feed darstellen (null blendet aus) |
 | `core.obs.badges` | filter | eigene Badges samt Standardfarben anmelden |
 | `core.obs.filters` | filter | eigene Filterknoten im Feed, auch in vorhandene Zweige |
+| `overlay.slots` | filter | eigenen Platz in der Overlay-Flaeche anmelden |
+| `overlay.assets` | filter | eigenes CSS und JavaScript in die Overlay-Flaeche |
 | `core.twitch.scope_labels` | filter | Klartext für eigene Twitch-Berechtigungen |
 | `core.eventsub.subscriptions` | filter | zusätzliche Twitch-Abos anfordern |
 | `core.eventsub.revoked` | dispatch | Twitch hat ein Abo entzogen |
@@ -337,6 +339,147 @@ $app->view->from($plugin->directory . '/views')->render('seite', [
 
 In der Vorlage stehen `$e` (Escaping), `$url`, `$app` und die übergebenen
 Daten bereit. Ohne dritten Parameter wird das Layout des Kerns benutzt.
+
+---
+
+## Overlay
+
+Die Fläche, die in OBS läuft — eine Kernfähigkeit, kein Plugin. Zwei
+Seiten, wie beim Aktivitäten-Feed:
+
+| Adresse | Zweck |
+| --- | --- |
+| `/overlay` | die Fläche selbst, als Browserquelle in OBS |
+| `/overlay/stream` | die Leitung dorthin (Server-Sent Events) |
+| `/account/overlay` | Größe, Verbindungsanzeige, Liste der Plätze |
+
+Das Overlay zeigt **nichts** von sich aus. Es stellt Plätze bereit, in
+die Plugins zeichnen, und die Leitung, über die Nachrichten dorthin
+kommen. Einen Platz namens `system` bringt der Kern mit — darin
+erscheint *Test senden*, damit die Fläche auch ohne ein einziges Plugin
+prüfbar ist.
+
+### Warum SSE und nicht WebSocket
+
+Server-Sent Events sind gewöhnliches HTTP. Damit laufen sie durch jeden
+Reverse Proxy ohne eigene Einstellung, brauchen keinen zweiten Port und
+keinen Dauerprozess. Den Wiederaufbau der Verbindung macht der Browser
+selbst, und über `Last-Event-ID` holt er dabei das Verpasste nach.
+
+Die Antwort begrenzt sich auf 50 Sekunden und endet dann von selbst —
+jede offene Antwort belegt so lange einen PHP-Prozess. Der Browser
+verbindet danach neu; verloren geht nichts, weil die Nachricht in der
+Tabelle steht.
+
+### Der Weg einer Nachricht
+
+Ein Twitch-Event kommt in einem Webhook-Request an, die Browserquelle
+hängt an einem anderen — und PHP hat zwischen zwei Requests kein
+gemeinsames Gedächtnis. Dazwischen liegt deshalb die Tabelle
+`overlay_messages`:
+
+```
+Webhook-Request          Tabelle                offene SSE-Antwort
+  Bus::send(…)   ──▶  overlay_messages  ──▶  Bus::since($letzte)  ──▶  Browser
+```
+
+`Bus` räumt Zeilen weg, die älter als eine Viertelstunde sind. Lang
+genug, dass eine Browserquelle einen Neustart von OBS übersteht — und
+lange genug, um nachzusehen, ob ein Alert überhaupt abgeschickt wurde.
+
+Postgres könnte das mit `LISTEN`/`NOTIFY` ohne Nachfragen erledigen. Es
+bräuchte aber eine zweite, dauerhaft offene Verbindung, und eine
+verpasste Benachrichtigung ist unwiederbringlich.
+
+### Ein Plugin einhängen
+
+Drei Schritte: Platz anmelden, Dateien anmelden, Nachrichten schicken.
+
+```php
+// 1. Platz anmelden
+$hooks->on('overlay.slots', static function (array $slots): array {
+    $slots['alerts'] = [
+        'label'    => translate('alerts.name'),
+        'position' => 'center',   // siehe Bus::positions()
+        'width'    => '900px',    // leer = Vorgabe aus dem CSS
+        'z'        => 20,         // kleiner liegt weiter hinten
+    ];
+
+    return $slots;
+});
+
+// 2. Eigenes CSS und JavaScript anmelden
+$hooks->on('overlay.assets', static function (array $assets) use ($app): array {
+    $assets['css'][] = $app->asset('/plugin/alerts/assets/alerts.css');
+    $assets['js'][]  = $app->asset('/plugin/alerts/assets/alerts.js');
+
+    return $assets;
+});
+
+// 3. Nachricht schicken, z.B. aus core.event.stored
+$hooks->on('core.event.stored', static function (array $event) use ($app): void {
+    if (($event['event_type'] ?? '') !== 'twitch.channel.follow') {
+        return;
+    }
+
+    (new \Overlays\Core\Overlay\Bus($app))->send('alerts', [
+        'kind' => 'follow',
+        'name' => (string) ($event['actor_name'] ?? '?'),
+    ]);
+});
+```
+
+Nur eigene Adressen werden eingebunden — alles, was nicht mit `/`
+beginnt, wird verworfen. Ein Plugin soll nicht ungefragt Code von einem
+fremden Server in eine Seite holen, die unbeaufsichtigt im Stream läuft.
+
+### Im Browser
+
+`public/assets/overlay.js` skaliert die Bühne, hält die Verbindung und
+verteilt die Nachrichten. Plugins benutzen davon vier Dinge:
+
+```js
+Overlay.slot('alerts')          // der Kasten des Platzes, oder null
+Overlay.size()                  // { width, height } der Bühne
+Overlay.on('goals', fn)         // jede Nachricht sofort
+Overlay.queue('alerts', fn)     // eine nach der anderen
+```
+
+`queue` ist für alles, was nicht gleichzeitig laufen darf — ein Alert
+mit Video und Ton. Der Handler bekommt `(daten, fertig)` und die
+nächste Nachricht wartet, bis er `fertig()` aufruft:
+
+```js
+Overlay.queue('alerts', function (daten, fertig) {
+    var video = document.createElement('video');
+    video.src = daten.video;
+    video.onended = fertig;
+    Overlay.slot('alerts').appendChild(video);
+    video.play();
+});
+```
+
+Ein Fehler in einem Hörer wird protokolliert und weggesteckt — sonst
+stünde das ganze Overlay still, weil eines von fünf Plugins sich
+verschluckt hat.
+
+### Die Bühne rechnet in festen Pixeln
+
+Die Bühne ist immer so groß wie eingestellt (Vorgabe 1920×1080) und wird
+auf das Fenster skaliert. Ein Platz sieht damit gleich aus, egal wie
+groß die Quelle in OBS gezogen wurde — Plugins können also in festen
+Pixeln rechnen.
+
+### Anmeldung
+
+`/overlay` verlangt eine Anmeldung wie `/obs`. Eine Browserquelle kann
+sich nicht selbst anmelden: in OBS Rechtsklick auf die Quelle, dann
+*Interagieren*, dort einmal einloggen. OBS behält das Cookie in seinem
+eigenen Browser-Cache.
+
+Das ist die eine Stelle, an der ein Zugang über einen geheimen Schlüssel
+in der URL nachgerüstet werden müsste — die Rechteprüfung der Route in
+`core/Routes.php`.
 
 ---
 

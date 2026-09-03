@@ -32,9 +32,9 @@
 
 <div class="card">
     <h2><?= $e(translate('rescue.update_heading')) ?></h2>
-    <p class="muted"><?= $e(translate('rescue.update_hint', ['version' => $version])) ?></p>
+    <p class="hint"><?= $e(translate('rescue.update_hint', ['version' => $version])) ?></p>
 
-    <form method="post" action="<?= $e($url('/rescue')) ?>" class="row gap">
+    <form method="post" action="<?= $e($url('/rescue')) ?>" class="row">
         <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
         <button class="btn btn-ghost" type="submit" name="action" value="update_check">
             <?= $e(translate('rescue.update_check')) ?>
@@ -47,9 +47,9 @@
 
 <div class="card">
     <h2><?= $e(translate('rescue.language_heading')) ?></h2>
-    <p class="muted"><?= $e(translate('rescue.language_hint')) ?></p>
+    <p class="hint"><?= $e(translate('rescue.language_hint')) ?></p>
 
-    <form method="post" action="<?= $e($url('/rescue')) ?>" class="row gap">
+    <form method="post" action="<?= $e($url('/rescue')) ?>" class="row">
         <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
         <?php foreach ($languages as $code => $label): ?>
             <button class="btn <?= $code === $language ? '' : 'btn-ghost' ?>"

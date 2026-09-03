@@ -123,3 +123,24 @@ $db->run('
 $db->run('CREATE INDEX IF NOT EXISTS events_received_at_idx ON events (received_at DESC)');
 $db->run('CREATE INDEX IF NOT EXISTS events_source_type_idx ON events (source, event_type)');
 $db->run('CREATE INDEX IF NOT EXISTS events_actor_idx       ON events (source, actor_external_id)');
+
+// --- Overlay -----------------------------------------------------------
+// Die Leitung zum Overlay in OBS. Ein Twitch-Event kommt in einem
+// Webhook-Request an, die Browserquelle haengt an einem anderen - und
+// PHP hat zwischen zwei Requests kein gemeinsames Gedaechtnis. Wer
+// etwas anzeigen will, legt deshalb hier eine Nachricht ab, und die
+// offene SSE-Antwort liest nach, was seit ihrer letzten Nummer
+// dazugekommen ist.
+//
+// Die Zeilen sind fluechtig: Overlay\Bus raeumt alles weg, was aelter
+// als eine Viertelstunde ist. Lang genug, dass eine Browserquelle
+// einen Neustart von OBS uebersteht.
+$db->run('
+    CREATE TABLE IF NOT EXISTS overlay_messages (
+        id         BIGSERIAL   PRIMARY KEY,
+        slot       VARCHAR(32) NOT NULL,
+        payload    JSONB       NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+');
+$db->run('CREATE INDEX IF NOT EXISTS overlay_messages_created_at_idx ON overlay_messages (created_at)');

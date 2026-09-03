@@ -9,7 +9,7 @@
 ?>
 <h1><?= $e($heading) ?></h1>
 <p class="lead"><?= $e($message) ?></p>
-<div class="row gap">
+<div class="row">
     <a class="btn btn-ghost" href="<?= $e($url('/')) ?>"><?= $e(translate('common.back')) ?></a>
     <?php if (!empty($rescue)): ?>
         <a class="btn" href="<?= $e($url('/rescue')) ?>"><?= $e(translate('rescue.title')) ?></a>

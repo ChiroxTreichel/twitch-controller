@@ -126,13 +126,43 @@ Links im Menü findest du **Konto** mit vier Punkten:
 | --- | --- |
 | **Benutzer** | Moderatoren einladen und festlegen, was sie dürfen |
 | **Aktivitäten** | Alles, was im Kanal passiert ist — Follows, Abos, Bits, Raids |
+| **Overlay** | Die Fläche, die du in OBS einbaust |
 | **Plugins** | Zusatzfunktionen an- und abschalten |
 | **Einstellungen** | Deine Twitch-Verbindung |
 
-Der Kern selbst macht absichtlich wenig. Alles Weitere — Overlays für OBS,
-Alerts, Spendenziele, Chat-Befehle — kommt als **Plugin** dazu, und du
+Der Kern selbst macht absichtlich wenig. Alles Weitere — Alerts,
+Spendenziele, Chat-Befehle — kommt als **Plugin** dazu, und du
 installierst nur, was du wirklich willst. Unter *Konto → Plugins* siehst
 du, was verfügbar ist.
+
+### Das Overlay in OBS einbauen
+
+Das Overlay ist die durchsichtige Fläche, auf der später deine Alerts und
+Ziele erscheinen. Sie zeigt von sich aus nichts — das machen die Plugins.
+Einbauen kannst du sie aber schon jetzt, dann ist sie fertig, wenn das
+erste Plugin dazukommt.
+
+1. Unter *Konto → Overlay* steht die Adresse. Kopiere sie.
+2. In OBS: **Quelle hinzufügen → Browser**.
+3. Die Adresse einsetzen, Breite **1920**, Höhe **1080**.
+4. Auf **OK** klicken.
+
+Jetzt kommt der Schritt, der leicht übersehen wird: **einmal anmelden.**
+Eine Browserquelle in OBS ist ein eigener kleiner Browser und kennt deine
+Anmeldung nicht.
+
+5. Rechtsklick auf die Quelle → **Interagieren**
+6. Im Fenster, das aufgeht, mit Twitch anmelden
+7. Fenster schließen
+
+Ab jetzt merkt sich OBS das. Ob es geklappt hat, prüfst du so: unter
+*Konto → Overlay* auf **Test senden** klicken — in OBS muss oben in der
+Quelle kurz „Die Verbindung steht" erscheinen. Kommt nichts, wiederhole
+Schritt 5 bis 7.
+
+> **Tipp:** Aktiviere bei der Quelle *nicht* die Option „Quelle beim
+> Ausblenden herunterfahren". Damit vergisst OBS die Anmeldung immer
+> wieder.
 
 ### Moderatoren einladen
 

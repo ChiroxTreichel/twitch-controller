@@ -277,8 +277,8 @@ final class AccountController
         }
 
         return Response::html($this->app->view->render('rescue', [
-            'notice'    => $request->query('notice'),
-            'error'     => $request->query('error'),
+            'notice'    => $request->get('notice'),
+            'error'     => $request->get('error'),
             'csrf'      => $this->app->auth->csrfToken(),
             'version'   => $updater->currentVersion(),
             'language'  => $this->app->language(),
