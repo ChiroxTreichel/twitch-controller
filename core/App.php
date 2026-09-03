@@ -241,6 +241,41 @@ final class App
         return $url . (str_contains($url, '?') ? '&' : '?') . 'v=' . $stamp;
     }
 
+    /**
+     * Gehoert diese Adresse zu dieser Installation?
+     *
+     * Gebraucht dort, wo Plugins Adressen liefern - eigenes CSS,
+     * eigenes JavaScript. Ein Plugin soll keinen Code von einem fremden
+     * Server in eine Seite holen, die unbeaufsichtigt im Stream laeuft
+     * oder auf der jemand angemeldet ist.
+     *
+     * Erlaubt sind zwei Formen, und die zweite hat gefehlt:
+     *
+     *   /plugin/alerts/assets/alerts.js
+     *   https://meine-domain/plugin/alerts/assets/alerts.js?v=123
+     *
+     * Die Pruefung war "beginnt mit /". App::asset() gibt aber eine
+     * vollstaendige Adresse zurueck - damit wurde jede Plugin-Datei
+     * stillschweigend verworfen. Weder Stylesheet noch JavaScript
+     * eines Plugins kam an, und niemand sah eine Fehlermeldung.
+     */
+    public function ownUrl(string $url): bool
+    {
+        $url = trim($url);
+
+        if ($url === '') {
+            return false;
+        }
+
+        // Eigener Pfad. "//host" ist keiner - das waere eine fremde
+        // Adresse ohne Schema.
+        if (str_starts_with($url, '/') && !str_starts_with($url, '//')) {
+            return true;
+        }
+
+        return str_starts_with($url, $this->url('') . '/');
+    }
+
     public function log(string $message): void
     {
         error_log('[twitch-controller] ' . $message);

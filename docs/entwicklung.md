@@ -535,9 +535,20 @@ $hooks->on('core.event.stored', static function (array $event) use ($app): void 
 });
 ```
 
-Nur eigene Adressen werden eingebunden — alles, was nicht mit `/`
-beginnt, wird verworfen. Ein Plugin soll nicht ungefragt Code von einem
-fremden Server in eine Seite holen, die unbeaufsichtigt im Stream läuft.
+Nur eigene Adressen werden eingebunden (`App::ownUrl()`) — ein Plugin
+soll nicht ungefragt Code von einem fremden Server in eine Seite holen,
+die unbeaufsichtigt im Stream läuft. Erlaubt sind beide Formen:
+
+```
+/plugin/alerts/assets/alerts.js
+https://meine-domain/plugin/alerts/assets/alerts.js?v=123
+```
+
+Die zweite ist wichtig: `$app->asset()` gibt eine **vollständige**
+Adresse zurück. Die Prüfung war einmal „beginnt mit `/`" — damit wurde
+jedes Plugin-Stylesheet und -JavaScript stillschweigend verworfen, und
+es gab keine Fehlermeldung, an der man das gesehen hätte. Wer hier
+etwas ändert: `ownUrl()` benutzen, nicht selbst prüfen.
 
 ### Im Browser
 

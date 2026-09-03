@@ -202,7 +202,7 @@ final class Bus
             $assets = [];
         }
 
-        $nurEigene = static function (mixed $liste): array {
+        $nurEigene = static function (mixed $liste) use ($app): array {
             if (!is_array($liste)) {
                 return [];
             }
@@ -212,7 +212,7 @@ final class Bus
                 // Nur eigene Adressen. Ein Plugin soll nicht ungefragt
                 // Code von einem fremden Server ins Overlay holen -
                 // das laeuft im Stream, unbeaufsichtigt.
-                static fn (string $url): bool => $url !== '' && str_starts_with($url, '/')
+                static fn (string $url): bool => $app->ownUrl($url)
             ));
         };
 

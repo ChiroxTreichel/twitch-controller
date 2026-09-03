@@ -87,14 +87,18 @@ final class View
             $assets = [];
         }
 
-        $nurEigene = static function (mixed $liste): array {
+        $app = $this->app;
+
+        $nurEigene = static function (mixed $liste) use ($app): array {
             if (!is_array($liste)) {
                 return [];
             }
 
             return array_values(array_filter(
                 array_map('strval', $liste),
-                static fn (string $url): bool => $url !== '' && str_starts_with($url, '/')
+                // Siehe App::ownUrl(): eine vollstaendige eigene
+                // Adresse ist auch eine eigene.
+                static fn (string $url): bool => $app->ownUrl($url)
             ));
         };
 

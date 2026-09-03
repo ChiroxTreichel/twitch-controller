@@ -75,6 +75,15 @@ nav {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+
+    /*
+     * Ausdruecklich, nicht nebenbei: ist eine Achse "auto" und die
+     * andere "visible", macht der Browser aus "visible" ebenfalls
+     * "auto". Sobald die Leiste senkrecht scrollte, nahm ihr Balken
+     * Breite weg, die Kinder ragten heraus - und unten erschien ein
+     * waagerechter Balken. Waagerecht gibt es hier nichts zu scrollen.
+     */
+    overflow-x: hidden;
     display: flex;
     flex-direction: column;
     gap: 4px;
