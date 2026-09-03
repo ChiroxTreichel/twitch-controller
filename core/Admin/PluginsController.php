@@ -102,10 +102,6 @@ final class PluginsController
 
                     return $this->back('/account/plugins', 'Plugin deaktiviert.');
 
-                case 'uninstall':
-                    $this->app->plugins->uninstall($slug);
-
-                    return $this->back('/account/plugins', 'Plugin entfernt, seine Daten sind gelöscht.');
 
                 case 'update':
                     $manifest = $this->app->plugins->manifest($slug);
@@ -118,14 +114,48 @@ final class PluginsController
                 case 'download_update':
                     return $this->installFromRegistry($slug, '/account/plugins');
 
-                case 'delete':
-                    // Dateien weg. Das Gegenstueck zu 'uninstall', das
-                    // nur Datenbank und Einstellungen abraeumt.
-                    (new Installer($this->app))->remove($slug);
+                case 'remove':
+                    // Ein Schritt, nicht zwei: Daten abraeumen UND
+                    // Dateien loeschen. Zwei Knoepfe fuer eine Absicht
+                    // waren umstaendlich, und wer "Entfernen" drueckt,
+                    // will das Plugin loswerden - nicht seine Dateien
+                    // behalten.
+                    $name = $this->app->plugins->manifest($slug)?->name ?? $slug;
+
+                    // Wer wird dadurch kaputt? Ein Plugin, das dieses
+                    // voraussetzt, laesst sich danach nie wieder
+                    // einschalten - und der Grund dafuer waere nicht
+                    // mehr zu sehen.
+                    $abhaengige = $this->app->plugins->installedDependents($slug);
+                    if ($abhaengige !== []) {
+                        return $this->back('/account/plugins', null, translate(
+                            'account.plugins.needed_by_others',
+                            ['name' => $name, 'plugins' => implode(', ', $abhaengige)]
+                        ));
+                    }
+
+                    // Reihenfolge zaehlt: uninstall() braucht die
+                    // Dateien noch, weil darin die uninstall.php des
+                    // Plugins liegt.
+                    if ($this->app->plugins->isInstalled($slug)) {
+                        $this->app->plugins->uninstall($slug);
+                    }
+
+                    try {
+                        (new Installer($this->app))->remove($slug);
+                    } catch (Throwable $e) {
+                        // Die Daten sind schon weg. Das muss dastehen,
+                        // sonst versucht es jemand noch einmal und
+                        // wundert sich.
+                        return $this->back('/account/plugins', null, translate(
+                            'account.plugins.data_gone_files_stay',
+                            ['name' => $name, 'reason' => $e->getMessage()]
+                        ));
+                    }
 
                     return $this->back(
                         '/account/plugins',
-                        translate('account.plugins.files_deleted', ['slug' => $slug])
+                        translate('account.plugins.removed', ['name' => $name])
                     );
             }
         } catch (Throwable $e) {

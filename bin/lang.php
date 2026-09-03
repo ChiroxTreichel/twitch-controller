@@ -99,9 +99,26 @@ function schluesselIn(string $verzeichnis): array
             }
 
             $klammer = $tokens[$i + 1] ?? null;
-            $argument = $tokens[$i + 2] ?? null;
+            if ($klammer !== '(') {
+                continue;
+            }
 
-            if ($klammer !== '(' || !is_array($argument) || $argument[0] !== T_CONSTANT_ENCAPSED_STRING) {
+            // Leerraum und Kommentare zwischen Klammer und Schluessel
+            // ueberspringen. Ohne das findet der Pruefer einen Aufruf
+            // nicht, dessen Schluessel in der naechsten Zeile steht -
+            // und meldet ihn dann als unbenutzt.
+            $j = $i + 2;
+            while (
+                isset($tokens[$j])
+                && is_array($tokens[$j])
+                && in_array($tokens[$j][0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT], true)
+            ) {
+                $j++;
+            }
+
+            $argument = $tokens[$j] ?? null;
+
+            if (!is_array($argument) || $argument[0] !== T_CONSTANT_ENCAPSED_STRING) {
                 continue;
             }
 
@@ -162,6 +179,45 @@ function platzhalter(string $text): array
     sort($gefunden);
 
     return $gefunden;
+}
+
+/**
+ * Schluessel aus den Sprachdateien der harten Voraussetzungen.
+ *
+ * Ein Plugin darf Woerter eines Plugins mitbenutzen, das es zwingend
+ * braucht: zur Laufzeit sind beide geladen, und der Translator legt
+ * ihre Dateien uebereinander. Ohne diese Funktion meldete der Pruefer
+ * solche Schluessel als fehlend - und zwang dazu, "An" und "Aus" in
+ * jedem Plugin erneut zu uebersetzen.
+ *
+ * @return array<string, string>
+ */
+function schluesselDerVoraussetzungen(string $root, string $verzeichnis): array
+{
+    $manifest = ladeJson($verzeichnis . '/plugin.json');
+    $requires = $manifest['requires'] ?? [];
+
+    if (!is_array($requires)) {
+        return [];
+    }
+
+    $schluessel = [];
+
+    foreach (array_keys($requires) as $slug) {
+        $slug = strtolower(trim((string) $slug));
+
+        // "core" ist eine Bedingung an die Kernversion, kein Plugin.
+        if ($slug === '' || $slug === 'core') {
+            continue;
+        }
+
+        $ordner = $root . '/plugins/' . $slug;
+        $quelle = is_file($ordner . '/src/plugin.json') ? $ordner . '/src' : $ordner;
+
+        $schluessel += ladeJson($quelle . '/lang/de.json');
+    }
+
+    return $schluessel;
 }
 
 /**
@@ -272,6 +328,7 @@ if ($plugin !== '') {
         $verzeichnis . '/lang',
         $fix,
         ladeJson($root . '/lang/de.json')
+            + schluesselDerVoraussetzungen($root, $verzeichnis)
     );
 } else {
     $beanstandungen += pruefe('Kern', $root . '/core', $root . '/lang', $fix);
@@ -301,7 +358,7 @@ if ($plugin !== '') {
                 $verzeichnis,
                 $verzeichnis . '/lang',
                 $fix,
-                $kern
+                $kern + schluesselDerVoraussetzungen($root, $verzeichnis)
             );
         }
     }

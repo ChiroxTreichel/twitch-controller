@@ -661,6 +661,25 @@ Weil der Webserver als `www-data` läuft, muss `plugins/` ihm gehören -
 `install.sh` setzt das. Ist es nicht beschreibbar, sagt der Reiter das und
 bietet nichts zum Installieren an.
 
+### Entfernen
+
+**Ein** Knopf, drei Schritte: ausschalten, Daten abräumen, Dateien
+löschen. Vorher waren es zwei Knöpfe — erst «Entfernen» für die Daten,
+dann «Dateien löschen» — und das war zweimal Klicken für eine Absicht.
+
+Die Reihenfolge ist zwingend: `PluginManager::uninstall()` führt die
+`uninstall.php` des Plugins aus, die muss also noch auf der Platte
+liegen. Erst danach `Installer::remove()`.
+
+Verweigert wird das Entfernen, wenn ein **installiertes** Plugin dieses
+voraussetzt (`installedDependents()`). Nicht nur ein aktives: wäre die
+Voraussetzung weg, ließe sich der Abhängige nie wieder einschalten — und
+der Grund dafür wäre dann nicht mehr zu sehen.
+
+Scheitert das Löschen der Dateien, sind die Daten schon weg. Das steht
+dann auch in der Meldung: sonst versucht es jemand noch einmal und
+wundert sich, dass das Plugin leer wiederkommt.
+
 ### Die Gegenseite
 
 Der Katalogserver liegt nicht in diesem Repository. Verlangt werden drei

@@ -202,6 +202,36 @@ final class PluginManager
     }
 
     /**
+     * Alle installierten Plugins, die dieses voraussetzen - auch die
+     * gerade ausgeschalteten.
+     *
+     * Gegenstueck zu activeDependents(): fuer das Entfernen zaehlt
+     * nicht, ob der Abhaengige gerade laeuft. Ist er installiert und
+     * die Voraussetzung verschwindet, laesst er sich nie wieder
+     * einschalten - und der Grund dafuer waere dann nicht mehr zu
+     * sehen.
+     *
+     * @return list<string>
+     */
+    public function installedDependents(string $slug): array
+    {
+        $slug = strtolower($slug);
+        $dependents = [];
+
+        foreach ($this->discover() as $candidate) {
+            if ($candidate->slug === $slug || !$this->isInstalled($candidate->slug)) {
+                continue;
+            }
+
+            if (array_key_exists($slug, $candidate->requiredPlugins())) {
+                $dependents[] = $candidate->name;
+            }
+        }
+
+        return $dependents;
+    }
+
+    /**
      * Ladereihenfolge: Abhaengigkeiten zuerst. Zyklen werden gemeldet und
      * die betroffenen Plugins hinten angehaengt, damit ein Fehler im
      * Manifest nicht das ganze System lahmlegt.
