@@ -266,7 +266,7 @@ use Overlays\Core\Support\Dates;
 <div class="card">
     <div class="card-head">
         <h2><?= $e(translate('settings.events.title')) ?></h2>
-        <span class="badge"><?= $e(translate('settings.events.needed', [count($desired)])) ?></span>
+        <span class="badge"><?= $e(translate('settings.events.needed', ['count' => count($desired)])) ?></span>
     </div>
     <p class="hint">
         <?= translate('settings.events.hint', ['url' => '<span class="mono">' . $e($callbackUrl) . '</span>']) ?>

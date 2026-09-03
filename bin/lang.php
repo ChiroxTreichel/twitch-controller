@@ -150,10 +150,26 @@ function schreibeJson(string $datei, array $daten): void
 }
 
 /**
+ * Platzhalter eines Textes, sortiert - benannte wie positionelle.
+ *
+ * @return list<string>
+ */
+function platzhalter(string $text): array
+{
+    preg_match_all('/%[{][a-zA-Z0-9_]+[}]|%[sd]/', $text, $treffer);
+
+    $gefunden = $treffer[0];
+    sort($gefunden);
+
+    return $gefunden;
+}
+
+/**
  * @return int Anzahl der Beanstandungen
  */
 function pruefe(string $name, string $codeDir, string $langDir, bool $fix, array $zusaetzlich = []): int
 {
+    $abweichungen = 0;
     $benutzt = schluesselIn($codeDir);
     $basis = ladeJson($langDir . '/de.json');
 
@@ -209,6 +225,30 @@ function pruefe(string $name, string $codeDir, string $langDir, bool $fix, array
             $offen === [] ? '' : sprintf(', %d offen', count($offen))
         );
 
+        // Platzhalter muessen in jeder Sprache dieselben sein. Stimmen
+        // sie nicht, setzt die Uebersetzung Werte an der falschen Stelle
+        // ein oder laesst sie weg - und wer den Aufruf schreibt, merkt
+        // es nicht, weil er nur den deutschen Text vor Augen hat.
+        foreach ($uebersetzung as $key => $text) {
+            if (!is_string($text) || $text === '' || !isset($basis[$key])) {
+                continue;
+            }
+
+            $hier = platzhalter($text);
+            $dort = platzhalter($basis[$key]);
+
+            if ($hier !== $dort) {
+                printf(
+                    "      ! %s: Platzhalter weichen ab (de: %s / %s: %s)\n",
+                    $key,
+                    implode(' ', $dort) ?: '–',
+                    $code,
+                    implode(' ', $hier) ?: '–'
+                );
+                $abweichungen++;
+            }
+        }
+
         if ($fix && $offen !== []) {
             foreach ($offen as $key) {
                 $uebersetzung[$key] ??= '';
@@ -217,7 +257,7 @@ function pruefe(string $name, string $codeDir, string $langDir, bool $fix, array
         }
     }
 
-    return count($fehlend);
+    return count($fehlend) + $abweichungen;
 }
 
 $beanstandungen = 0;

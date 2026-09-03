@@ -135,11 +135,29 @@ final class Translator
             return strtr($text, $benannt);
         }
 
-        // Bei kaputten Platzhaltern in einer Uebersetzung lieber den
-        // unformatierten Text ausgeben als eine Fehlermeldung in der Seite.
-        $formatted = @vsprintf($text, array_values($args));
+        // Benannte Platzhalter im Text, aber Werte der Reihe nach
+        // uebergeben? Dann der Reihe nach einsetzen. Das ist ein Fehler
+        // im Aufruf, darf aber nicht die Seite kosten.
+        if (str_contains($text, '%{')) {
+            return (string) preg_replace_callback(
+                '/%\{[a-zA-Z0-9_]+\}/',
+                static function () use (&$args): string {
+                    $wert = array_shift($args);
 
-        return is_string($formatted) ? $formatted : $text;
+                    return $wert === null ? '' : (string) $wert;
+                },
+                $text
+            );
+        }
+
+        // vsprintf wirft bei kaputten Platzhaltern eine ValueError - das
+        // faengt kein @. Ohne dieses try/catch reisst eine einzige
+        // schiefe Uebersetzung die ganze Seite mit.
+        try {
+            return vsprintf($text, array_values($args));
+        } catch (\Throwable) {
+            return $text;
+        }
     }
 
     public function has(string $key): bool
