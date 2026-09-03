@@ -9,6 +9,7 @@
  * @var list<array<string, mixed>> $rows
  * @var list<string> $missing
  * @var bool $canManage
+ * @var bool $canWrite   Ist plugins/ beschreibbar? Ohne das kein Loeschen
  * @var string $csrf
  * @var string $notice
  * @var string $error
@@ -133,6 +134,24 @@
                                 <input type="hidden" name="action" value="uninstall">
                                 <input type="hidden" name="slug" value="<?= $e($manifest->slug) ?>">
                                 <button class="btn btn-danger btn-small" type="submit"><?= $e(translate('common.remove')) ?></button>
+                            </form>
+                        <?php endif; ?>
+
+                        <?php /*
+                            Dateien da, aber nicht installiert - der
+                            Zustand "liegt bereit". Ohne diesen Knopf
+                            gaebe es keinen Weg mehr aus ihm heraus:
+                            uninstall laesst die Dateien liegen.
+                        */ ?>
+                        <?php if (!$row['installed'] && $canWrite): ?>
+                            <form method="post" action="<?= $e($url('/account/plugins')) ?>"
+                                  onsubmit="return confirm('<?= $e(translate('account.plugins.confirm_delete')) ?>');">
+                                <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="slug" value="<?= $e($manifest->slug) ?>">
+                                <button class="btn btn-danger btn-small" type="submit">
+                                    <?= $e(translate('account.plugins.delete_files')) ?>
+                                </button>
                             </form>
                         <?php endif; ?>
                     </div>

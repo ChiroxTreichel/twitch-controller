@@ -68,6 +68,7 @@ final class PluginsController
             'rows'      => $rows,
             'missing'   => $this->app->plugins->missing(),
             'canManage' => $this->app->auth->can('Konto.Plugins.Manage'),
+            'canWrite'  => (new Installer($this->app))->canWrite(),
             'csrf'      => $this->app->auth->csrfToken(),
             'notice'    => $request->get('notice'),
             'error'     => $request->get('error'),
@@ -114,6 +115,16 @@ final class PluginsController
 
                 case 'download_update':
                     return $this->installFromRegistry($slug, '/account/plugins');
+
+                case 'delete':
+                    // Dateien weg. Das Gegenstueck zu 'uninstall', das
+                    // nur Datenbank und Einstellungen abraeumt.
+                    (new Installer($this->app))->remove($slug);
+
+                    return $this->back(
+                        '/account/plugins',
+                        translate('account.plugins.files_deleted', ['slug' => $slug])
+                    );
             }
         } catch (Throwable $e) {
             return $this->back('/account/plugins', null, $e->getMessage());

@@ -100,6 +100,59 @@ final class Installer
      * Der Download muss vom selben Host kommen wie der Katalog. Sonst
      * koennte ein uebernommener Katalog auf fremde Pakete zeigen.
      */
+    /**
+     * Loescht die Dateien eines Plugins aus plugins/.
+     *
+     * Das Gegenstueck zu fetch(), nicht zu uninstall(): uninstall()
+     * raeumt Datenbank und Einstellungen ab und laesst die Dateien
+     * liegen - danach steht das Plugin als "liegt bereit" da und kann
+     * ohne neuen Download wieder eingeschaltet werden. Erst diese
+     * Methode macht es ganz weg.
+     *
+     * Registrierte Plugins werden abgelehnt. Waeren die Dateien weg,
+     * waehrend in der Datenbank noch Zeilen und Tabellen des Plugins
+     * stehen, kaeme niemand mehr an dessen uninstall.php - die Daten
+     * blieben fuer immer liegen.
+     */
+    public function remove(string $slug): void
+    {
+        $slug = strtolower(trim($slug));
+
+        if (preg_match('/^[a-z0-9][a-z0-9\-]{1,38}[a-z0-9]$/', $slug) !== 1) {
+            throw new RuntimeException(translate('market.remove.bad_slug'));
+        }
+
+        if ($this->app->plugins->installedVersion($slug) !== null) {
+            throw new RuntimeException(translate('market.remove.still_installed'));
+        }
+
+        if (!$this->canWrite()) {
+            throw new RuntimeException(translate('market.not_writable_short'));
+        }
+
+        $wurzel = realpath($this->app->root . '/plugins');
+        $ordner = realpath($this->app->root . '/plugins/' . $slug);
+
+        if ($wurzel === false || $ordner === false) {
+            throw new RuntimeException(translate('market.remove.not_found', ['slug' => $slug]));
+        }
+
+        // Der aufgeloeste Pfad muss unter plugins/ liegen. Faengt einen
+        // Symlink ab, der aus dem Verzeichnis herausfuehrt - geloescht
+        // wird hier rekursiv, ein Irrtum waere nicht zu widerrufen.
+        if (!str_starts_with($ordner, $wurzel . DIRECTORY_SEPARATOR)) {
+            throw new RuntimeException(translate('market.remove.outside'));
+        }
+
+        self::removeTree($ordner);
+
+        if (is_dir($ordner)) {
+            throw new RuntimeException(translate('market.remove.failed', ['slug' => $slug]));
+        }
+
+        $this->app->hooks->dispatch('plugin.files_removed', $slug);
+    }
+
     private function assertSameHost(string $downloadUrl): void
     {
         $registry = parse_url((new Client($this->app))->baseUrl());
