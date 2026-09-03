@@ -13,6 +13,7 @@ use Overlays\Core\Events\Normalizer;
 use Overlays\Core\Hook\Hooks;
 use Overlays\Core\Http\Router;
 use Overlays\Core\Http\View;
+use Overlays\Core\I18n\Translator;
 use Overlays\Core\Plugin\PluginManager;
 use Overlays\Core\Support\Crypto;
 use Overlays\Core\Twitch\Twitch;
@@ -132,6 +133,41 @@ final class App
     public function applyTimezone(): void
     {
         date_default_timezone_set($this->timezone());
+    }
+
+    /**
+     * Sprache der Oberflaeche. Reihenfolge wie bei der Zeitzone:
+     * Einstellung, dann APP_LANG aus der Umgebung, dann Deutsch.
+     */
+    public function language(): string
+    {
+        $language = '';
+
+        try {
+            $language = $this->settings->string('language');
+        } catch (Throwable) {
+            // Datenbank noch nicht da - waehrend der Einrichtung normal.
+        }
+
+        if ($language === '') {
+            $language = (string) $this->env->get('APP_LANG', Translator::DEFAULT_LANGUAGE);
+        }
+
+        return Translator::normalize($language);
+    }
+
+    /**
+     * Laedt die Sprachdatei des Kerns. Plugins ergaenzen ihre eigenen,
+     * wenn sie geladen werden (siehe PluginManager::boot).
+     */
+    public function applyLanguage(): void
+    {
+        Translator::boot($this->language(), $this->root . '/lang');
+    }
+
+    public function languageDirectory(): string
+    {
+        return $this->root . '/lang';
     }
 
     public function url(string $path = ''): string

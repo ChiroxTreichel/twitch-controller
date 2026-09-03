@@ -277,6 +277,12 @@ final class PluginManager
             }
 
             try {
+                // Sprachdatei des Plugins, falls vorhanden. Vor dem
+                // Laden, damit das Plugin beim Registrieren schon
+                // uebersetzte Beschriftungen benutzen kann.
+                \Overlays\Core\I18n\Translator::instance()
+                    ->loadDirectory($manifest->directory . '/lang');
+
                 $this->app->hooks->withSource($slug, function () use ($manifest): void {
                     $this->app->router->withSource($manifest->slug, function () use ($manifest): void {
                         self::includeInIsolation($manifest->entryFile(), [

@@ -389,16 +389,16 @@ final class Auth
     {
         $catalog = [
             'Konto' => [
-                'label' => 'Konto',
+                'label' => translate('Konto'),
                 'permissions' => [
-                    'Konto.Benutzer.View'   => 'darf die Benutzerliste sehen.',
-                    'Konto.Benutzer.Manage' => 'darf Benutzer einladen, Rechte setzen und entfernen.',
-                    'Konto.Aktivitaeten.View'   => 'darf den Aktivitäten-Feed des Kanals sehen.',
-                    'Konto.Aktivitaeten.Manage' => 'darf Farben und Anzeige des Feeds ändern.',
-                    'Konto.Plugins.View'    => 'darf die Plugin-Liste sehen.',
-                    'Konto.Plugins.Manage'  => 'darf Plugins installieren, aktivieren und entfernen.',
-                    'Konto.Einstellungen.View'   => 'darf die Einstellungen sehen.',
-                    'Konto.Einstellungen.Manage' => 'darf die Einstellungen aendern.',
+                    'Konto.Benutzer.View'   => translate('darf die Benutzerliste sehen.'),
+                    'Konto.Benutzer.Manage' => translate('darf Benutzer einladen, Rechte setzen und entfernen.'),
+                    'Konto.Aktivitaeten.View'   => translate('darf den Aktivitäten-Feed des Kanals sehen.'),
+                    'Konto.Aktivitaeten.Manage' => translate('darf Farben und Anzeige des Feeds ändern.'),
+                    'Konto.Plugins.View'    => translate('darf die Plugin-Liste sehen.'),
+                    'Konto.Plugins.Manage'  => translate('darf Plugins installieren, aktivieren und entfernen.'),
+                    'Konto.Einstellungen.View'   => translate('darf die Einstellungen sehen.'),
+                    'Konto.Einstellungen.Manage' => translate('darf die Einstellungen ändern.'),
                 ],
             ],
         ];

@@ -1,0 +1,23 @@
+{
+    "Abmelden": "Sign out",
+    "Aktivitäten": "Activity",
+    "Anmelden": "Sign in",
+    "Benutzer": "Users",
+    "darf Benutzer einladen, Rechte setzen und entfernen.": "may invite users, set permissions and remove them.",
+    "darf den Aktivitäten-Feed des Kanals sehen.": "may view the channel activity feed.",
+    "darf die Benutzerliste sehen.": "may view the user list.",
+    "darf die Einstellungen sehen.": "may view the settings.",
+    "darf die Einstellungen ändern.": "may change the settings.",
+    "darf die Plugin-Liste sehen.": "may view the plugin list.",
+    "darf Farben und Anzeige des Feeds ändern.": "may change the feed's colours and display.",
+    "darf Plugins installieren, aktivieren und entfernen.": "may install, enable and remove plugins.",
+    "Du wurdest eingeladen. Melde dich mit Twitch an, um beizutreten.": "You have been invited. Sign in with Twitch to join.",
+    "Einstellungen": "Settings",
+    "Kanalinhaber": "Channel owner",
+    "Konto": "Account",
+    "Mit Twitch anmelden": "Sign in with Twitch",
+    "Nur eingeladene Accounts können sich anmelden.": "Only invited accounts can sign in.",
+    "Plugins": "Plugins",
+    "Sprache gespeichert: %s": "Language saved: %s",
+    "Team": "Team"
+}

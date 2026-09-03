@@ -26,6 +26,7 @@ declare(strict_types=1);
  *   uninstall.php    Tabellen abraeumen
  *   views/           eigene Vorlagen (optional)
  *   assets/          CSS, JS, Bilder (optional, ueber /plugin/<slug>/assets/…)
+ *   lang/            Uebersetzungen je Sprachcode (optional)
  *   src/             Klassen, Namensraum Overlays\Plugin\<Slug>\… (optional)
  */
 
@@ -49,10 +50,10 @@ $scope = \Overlays\Core\Config\Settings::pluginScope($plugin->slug);
 // die auf ".View" enden, bekommen neu eingeladene Benutzer automatisch.
 $hooks->on('permissions.catalog', static function (array $catalog): array {
     $catalog['Beispiel'] = [
-        'label' => 'Beispiel',
+        'label' => translate('Beispiel'),
         'permissions' => [
-            'Beispiel.Seite.View'   => 'darf die Beispielseite öffnen.',
-            'Beispiel.Seite.Manage' => 'darf die Beispieleinstellung ändern.',
+            'Beispiel.Seite.View'   => translate('darf die Beispielseite öffnen.'),
+            'Beispiel.Seite.Manage' => translate('darf die Beispieleinstellung ändern.'),
         ],
     ];
 
@@ -66,11 +67,11 @@ $hooks->on('permissions.catalog', static function (array $catalog): array {
 // alles darueber landet dahinter.
 $hooks->on('admin.nav', static function (array $nav): array {
     $nav['beispiel'] = [
-        'label' => 'Beispiel',
+        'label' => translate('Beispiel'),
         'order' => 90,
         'items' => [
             [
-                'label'      => 'Beispielseite',
+                'label'      => translate('Beispielseite'),
                 'href'       => '/beispiel',
                 'permission' => 'Beispiel.Seite.View',
             ],
@@ -88,7 +89,10 @@ $hooks->on('admin.nav', static function (array $nav): array {
 // das Spenden-Plugin wuerde hier seine PayPal-Einstellungen anmelden.
 $hooks->on('plugin.settings', static function (array $pages) use ($plugin): array {
     $pages[$plugin->slug] = [
-        'label' => 'Einstellungen',
+        // Auch Plugin-Texte laufen ueber translate(). Die Sprachdatei
+        // liegt in plugins/beispiel/lang/<code>.json und wird beim
+        // Laden des Plugins ergaenzt.
+        'label' => translate('Einstellungen'),
         'href'  => '/beispiel',
     ];
 

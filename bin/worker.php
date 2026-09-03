@@ -27,6 +27,7 @@ Autoloader::register($root);
 $app = App::boot($root);
 
 $app->applyTimezone();
+$app->applyLanguage();
 
 $interval = max(5, (int) ($app->env->int('WORKER_INTERVAL', 15)));
 

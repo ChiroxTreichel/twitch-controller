@@ -202,6 +202,64 @@ Statische Plugin-Dateien liegen unter `/plugin/<slug>/assets/<pfad>` und
 werden vom Kern ausgeliefert (nur bekannte Dateitypen, kein
 Verzeichniswechsel).
 
+### Uebersetzungen
+
+Jeder Text, den ein Mensch liest, laeuft durch `translate()`. Der
+Schluessel ist der deutsche Text selbst - Deutsch ist die Quellsprache:
+
+```php
+translate('Benutzer')
+translate('%d Farben gespeichert.', $anzahl)
+```
+
+In Vorlagen immer zusammen mit dem Escaping:
+
+```php
+<?= $e(translate('Speichern')) ?>
+```
+
+Fehlt eine Uebersetzung, kommt der Text unveraendert zurueck. Die
+Oberflaeche funktioniert also auch bei halb gefuellter Sprachdatei -
+kein leerer Knopf, kein Platzhalter im Text.
+
+Dateien:
+
+| Ort | Inhalt |
+| --- | --- |
+| `lang/<code>.json` | Kern |
+| `plugins/<slug>/lang/<code>.json` | je Plugin, beim Laden ergaenzt |
+
+Format ist flach, Text auf Text:
+
+```json
+{ "Benutzer": "Users", "Speichern": "Save" }
+```
+
+`lang/de.json` enthaelt nur leere Werte - es gibt nichts zu uebersetzen.
+Die Datei ist der Ort fuer Faelle, in denen man eine Formulierung
+aendern will, ohne den Code anzufassen.
+
+Sprachdateien nicht von Hand pflegen, sondern einsammeln lassen:
+
+```bash
+php bin/lang.php en                    # lang/en.json
+php bin/lang.php en --plugin throne    # plugins/throne/lang/en.json
+php bin/lang.php --check               # nur auflisten
+```
+
+Vorhandene Uebersetzungen bleiben, neue Texte kommen mit leerem Wert
+dazu. Was aus dem Code verschwunden ist, sammelt sich unter
+`_unbenutzt` statt geloescht zu werden - bei einer Umformulierung will
+man die alte Uebersetzung noch sehen.
+
+Der Extraktor liest die PHP-Tokens, nicht per Regex. Ein `translate()`
+im Kommentar wird also nicht mitgezaehlt, und Anfuehrungszeichen im
+Text machen keinen Aerger. Aufrufe mit einer Variablen als erstem
+Argument kann er nicht sehen - dort den Text also ausschreiben.
+
+Die Sprache kommt aus der Einstellung `language`, sonst aus `APP_LANG`,
+sonst Deutsch. Umgestellt wird sie unter *Konto > Einstellungen*.
+
 ### Statische Dateien
 
 Immer ueber `$asset()` einbinden, nie ueber `$url()`:

@@ -17,6 +17,11 @@ final class Autoloader
 {
     public static function register(string $root): void
     {
+        // Funktionen lassen sich nicht nachladen, also hier mitnehmen.
+        // Das ist der eine Aufruf, den jeder Einstiegspunkt macht -
+        // damit kann translate() nirgends fehlen.
+        require_once $root . '/core/functions.php';
+
         spl_autoload_register(static function (string $class) use ($root): void {
             if (str_starts_with($class, 'Overlays\\Core\\')) {
                 $relative = substr($class, strlen('Overlays\\Core\\'));

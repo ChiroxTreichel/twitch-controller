@@ -36,6 +36,9 @@ try {
 // Zeiten in der Ortszeit des Streamers anzeigen, nicht in UTC.
 $app->applyTimezone();
 
+// Sprache der Oberflaeche laden.
+$app->applyLanguage();
+
 // Rechtepruefung fuer alle Routen, die es verlangen.
 $app->router->setGuard(static function (array $options, Request $request) use ($app): ?Response {
     if (!empty($options['auth']) && !$app->auth->isLoggedIn()) {

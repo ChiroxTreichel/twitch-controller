@@ -39,13 +39,13 @@ final class Nav
     {
         $nav = [
             'konto' => [
-                'label' => 'Konto',
+                'label' => translate('Konto'),
                 'order' => 0,
                 'items' => [
-                    ['label' => 'Benutzer',      'href' => '/konto/benutzer',      'permission' => 'Konto.Benutzer.View'],
-                    ['label' => 'Aktivitäten',   'href' => '/konto/aktivitaeten',  'permission' => 'Konto.Aktivitaeten.View'],
-                    ['label' => 'Plugins',       'href' => '/konto/plugins',       'permission' => 'Konto.Plugins.View'],
-                    ['label' => 'Einstellungen', 'href' => '/konto/einstellungen', 'permission' => 'Konto.Einstellungen.View'],
+                    ['label' => translate('Benutzer'),      'href' => '/konto/benutzer',      'permission' => 'Konto.Benutzer.View'],
+                    ['label' => translate('Aktivitäten'),   'href' => '/konto/aktivitaeten',  'permission' => 'Konto.Aktivitaeten.View'],
+                    ['label' => translate('Plugins'),       'href' => '/konto/plugins',       'permission' => 'Konto.Plugins.View'],
+                    ['label' => translate('Einstellungen'), 'href' => '/konto/einstellungen', 'permission' => 'Konto.Einstellungen.View'],
                 ],
             ],
         ];

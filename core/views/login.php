@@ -16,7 +16,7 @@ $channel = $app->settings->string('twitch_broadcaster_name')
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Anmelden</title>
+    <title><?= $e(translate('Anmelden')) ?></title>
     <link rel="stylesheet" href="<?= $e($asset('/assets/admin.css')) ?>">
 </head>
 <body>
@@ -37,18 +37,18 @@ $channel = $app->settings->string('twitch_broadcaster_name')
 
         <?php if ($invite !== ''): ?>
             <div class="note note-ok" style="text-align:left;">
-                Du wurdest eingeladen. Melde dich mit Twitch an, um beizutreten.
+                <?= $e(translate('Du wurdest eingeladen. Melde dich mit Twitch an, um beizutreten.')) ?>
             </div>
         <?php endif; ?>
 
         <a class="btn" style="width:100%;justify-content:center;"
            href="<?= $e($url('/login/start' . ($invite !== '' ? '?invite=' . rawurlencode($invite) : ''))) ?>">
-            Mit Twitch anmelden
+            <?= $e(translate('Mit Twitch anmelden')) ?>
         </a>
 
         <?php if ($invite === ''): ?>
             <p class="hint" style="margin-top:18px;">
-                Nur eingeladene Accounts können sich anmelden.
+                <?= $e(translate('Nur eingeladene Accounts können sich anmelden.')) ?>
             </p>
         <?php endif; ?>
     </div>

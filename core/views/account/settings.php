@@ -17,6 +17,9 @@
  * @var array{id: string, login: string, name: string} $channel
  * @var array{login: ?string, expires_in: int, scopes: list<string>}|null $broadcasterToken
  * @var list<string> $missingScopes
+ * @var string $installPath
+ * @var string $language
+ * @var list<string> $languages
  * @var list<array{type: string, version: string, condition: array<string, string>}> $desired
  */
 ?>
@@ -83,10 +86,7 @@
                         dem Server:
                     </p>
                     <p class="mono" style="background:var(--bg);padding:10px 12px;border-radius:9px;border:1px solid var(--line);margin:8px 0 0;">
-                        cd /opt/overlays &amp;&amp; sudo ./install.sh
-                    </p>
-                    <p class="hint" style="margin:8px 0 0;">
-                        Liegt die Installation woanders, dort denselben Befehl ausführen.
+                        cd <?= $e($installPath) ?> &amp;&amp; sudo ./install.sh
                     </p>
                 <?php elseif ($canManage): ?>
                     <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>"
@@ -136,6 +136,26 @@
             </select>
             <button class="btn btn-ghost btn-small" type="submit">Übernehmen</button>
         </form>
+
+        <form method="post" action="<?= $e($url('/konto/einstellungen')) ?>" class="row"
+              style="margin-top:10px;">
+            <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
+            <input type="hidden" name="action" value="language">
+            <label for="language" style="margin:0;">Sprache</label>
+            <select class="input" id="language" name="language" style="width:auto;">
+                <?php foreach ($languages as $code): ?>
+                    <option value="<?= $e($code) ?>" <?= $language === $code ? 'selected' : '' ?>>
+                        <?= $e(\Overlays\Core\I18n\Translator::label($code)) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <button class="btn btn-ghost btn-small" type="submit">Übernehmen</button>
+        </form>
+        <p class="hint" style="margin-top:8px;">
+            Weitere Sprachen kommen dazu, indem eine Datei
+            <span class="mono">lang/&lt;code&gt;.json</span> angelegt wird.
+        </p>
+
         <p class="hint" style="margin-top:8px;">
             Bestimmt, welche Uhrzeiten überall angezeigt werden. Der Server rechnet intern in
             UTC &mdash; ohne die richtige Zone stehen im Feed Zeiten, die daneben liegen.

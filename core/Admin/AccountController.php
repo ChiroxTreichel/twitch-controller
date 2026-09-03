@@ -126,8 +126,15 @@ final class AccountController
             'report'           => null,
             'update'           => $updater->status(),
             'timezone'         => $this->app->timezone(),
+            'language'         => $this->app->language(),
+            'languages'        => \Overlays\Core\I18n\Translator::available(
+                $this->app->languageDirectory()
+            ),
             'timezones'        => self::timezones(),
             'updateVersion'    => $updater->currentVersion(),
+            // Der Pfad, unter dem diese Installation wirklich liegt -
+            // bei der Einrichtung angegeben, nicht geraten.
+            'installPath'      => $this->app->root,
             'updatePossible'   => $updater->isGitCheckout() && $updater->gitAvailable(),
         ]));
     }
@@ -216,6 +223,16 @@ final class AccountController
                     $this->app->applyTimezone();
 
                     return $this->back('/konto/einstellungen', 'Zeitzone gespeichert: ' . $timezone);
+
+                case 'language':
+                    $language = \Overlays\Core\I18n\Translator::normalize($request->input('language'));
+                    $this->app->settings->set('language', $language);
+                    $this->app->applyLanguage();
+
+                    return $this->back(
+                        '/konto/einstellungen',
+                        translate('Sprache gespeichert: %s', \Overlays\Core\I18n\Translator::label($language))
+                    );
 
                 case 'update_check':
                     $check = (new \Overlays\Core\Update\Updater($this->app))->check();
