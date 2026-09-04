@@ -234,19 +234,52 @@ label { display: block; font-size: 0.86rem; color: var(--muted); margin-bottom: 
 
 .field { margin-bottom: 14px; }
 
+/*
+ * Alle Knöpfe haben EINE Höhe.
+ *
+ * Vorher gab es zwei: .btn mit 10px Polsterung und Fließtextgröße war
+ * so hoch wie ein .input (rund 45px), .btn-small mit 6px und 0.85rem
+ * rund 34px. Welche ein Knopf bekam, hing davon ab, welche Klasse eine
+ * Ansicht zufällig benutzte — auf einer Seite standen dadurch zwei
+ * verschieden hohe Knöpfe nebeneinander.
+ *
+ * Maßgeblich ist jetzt die kompakte Form. Ein Knopf ist damit niedriger
+ * als das Eingabefeld daneben, und das ist Absicht: er soll nicht so
+ * schwer wirken wie das Feld, in das man schreibt.
+ *
+ * line-height steht ausdrücklich hier. Mit dem geerbten 1.55 des
+ * Fließtextes wäre die Zeilenbox höher als der Text braucht, und die
+ * Höhe hinge an einer Einstellung, die für Absätze gedacht ist.
+ */
 .btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 16px;
+    padding: 7px 14px;
     border: 1px solid transparent;
     border-radius: 9px;
     background: var(--accent);
     color: var(--accent-ink);
     font: inherit;
+    font-size: 0.88rem;
+    line-height: 1.45;
     font-weight: 600;
     cursor: pointer;
     text-decoration: none;
+
+    /*
+     * Die Beschriftung bleibt in einer Zeile.
+     *
+     * Ohne das wird ein Knopf im schmalen Fenster doppelt oder dreifach
+     * hoch: "Muster hinzufügen" bricht um, und aus 36px werden 57 oder
+     * 77. Gemessen im Browser, nicht geschätzt - auf dem Handy war
+     * genau das der Grund, warum die Knöpfe zu hoch aussahen.
+     *
+     * Passt er nicht mehr in die Zeile, schiebt ihn .row in die
+     * nächste - das ist richtig, denn ein Knopf ist so breit wie sein
+     * Text.
+     */
+    white-space: nowrap;
 }
 
 .btn:hover { filter: brightness(1.1); }
@@ -259,7 +292,18 @@ label { display: block; font-size: 0.86rem; color: var(--muted); margin-bottom: 
 }
 
 .btn-danger { background: transparent; border-color: rgba(239, 77, 77, 0.5); color: #ff9a9a; }
-.btn-small { padding: 6px 11px; font-size: 0.85rem; }
+/*
+ * .btn-small ist keine eigene Größe mehr.
+ *
+ * Die Klasse bleibt, weil sie in Markup steht, das schon ausgeliefert
+ * ist: ein installiertes Plugin bringt seine Vorlagen selbst mit und
+ * lässt sich nicht im Gleichschritt mit dem Kern ändern. Würde sie
+ * hier verschwinden, sähen deren Knöpfe plötzlich anders aus als die
+ * daneben — genau der Zustand, den diese Änderung beseitigt.
+ *
+ * Für neues Markup ist sie überflüssig.
+ */
+.btn-small { /* absichtlich leer - siehe oben */ }
 
 /* --- Meldungen ----------------------------------------------------- */
 
