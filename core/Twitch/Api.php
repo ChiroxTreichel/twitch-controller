@@ -148,8 +148,9 @@ final class Api
     private function request(string $method, string $endpoint, array $query = [], ?array $body = null): HttpResult
     {
         $url = self::BASE . ltrim($endpoint, '/');
-        if ($query !== []) {
-            $url .= '?' . http_build_query($query);
+        $frage = self::query($query);
+        if ($frage !== '') {
+            $url .= '?' . $frage;
         }
 
         $headers = [
@@ -162,6 +163,43 @@ final class Api
         }
 
         return Http::json($method, $url, $body, $headers);
+    }
+
+    /**
+     * Die Frage an Helix, aus Namen und Werten.
+     *
+     * Selbst gebaut und nicht mit http_build_query(), und das ist kein
+     * Selbstzweck: Helix nimmt viele Angaben MEHRFACH - streams?
+     * user_login=a&user_login=b, users?id=1&id=2, videos?id=… Genau so
+     * fragt man nach hundert Kanaelen auf einmal.
+     *
+     * http_build_query() macht aus einer Liste dagegen
+     * "user_login[0]=a&user_login[1]=b". Das ist gueltiges HTTP und fuer
+     * Twitch Unsinn: die Angabe heisst dann "user_login[0]", und die
+     * kennt es nicht. Die Antwort ist keine Fehlermeldung, sondern eine
+     * leere Liste - der Aufruf sieht also gelungen aus und liefert
+     * nichts.
+     *
+     * @param array<string, string|int|list<string|int>> $query
+     */
+    private static function query(array $query): string
+    {
+        $teile = [];
+
+        foreach ($query as $name => $wert) {
+            foreach (is_array($wert) ? $wert : [$wert] as $eines) {
+                // Leere Werte weglassen: eine Angabe ohne Wert bedeutet
+                // bei Helix nicht dasselbe wie keine Angabe.
+                $eines = (string) $eines;
+                if ($eines === '') {
+                    continue;
+                }
+
+                $teile[] = rawurlencode((string) $name) . '=' . rawurlencode($eines);
+            }
+        }
+
+        return implode('&', $teile);
     }
 
     private function token(): string
