@@ -175,13 +175,12 @@ use TwitchController\Core\Support\Dates;
     <?php endif; ?>
 </div>
 
-<?php if ($notice !== ''): ?>
-    <div class="note note-ok"><?= $e($notice) ?></div>
-<?php endif; ?>
-<?php if ($error !== ''): ?>
-    <div class="note note-error"><?= $e($error) ?></div>
-<?php endif; ?>
-
+<?php /*
+    Hier stand die Meldung ein zweites Mal - ein Ueberrest vom Umbau
+    auf Reiter, als die Reihenfolge im Menue noch eine eigene Seite
+    war. Sie steht oben unter den Reitern, wie in settings_channel.php
+    und settings_secrets.php auch.
+*/ ?>
 <?= $view->render('account/_settings_nav_order', [
     'navGroups' => $navGroups,
     'canManage' => $canManage,
