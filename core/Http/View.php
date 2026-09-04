@@ -6,6 +6,7 @@ namespace TwitchController\Core\Http;
 
 use TwitchController\Core\App;
 use TwitchController\Core\I18n\Translator;
+use TwitchController\Core\Twitch\TokenStore;
 use RuntimeException;
 use Throwable;
 
@@ -80,6 +81,40 @@ final class View
      *
      * @return array{css: list<string>, js: list<string>}
      */
+    /**
+     * Welche Twitch-Freigaben fehlen dem Kanal?
+     *
+     * Gefragt wird nur nach dem, was eine EINGESCHALTETE Funktion
+     * braucht: broadcasterScopes() sammelt ueber einen Hook, und ein
+     * Plugin mit ausgeschaltetem Hauptschalter traegt nichts bei. Sonst
+     * mahnte die Oberflaeche eine Freigabe fuer etwas an, das bewusst
+     * aus ist - und wer sie erteilt, merkte keinen Unterschied.
+     *
+     * Ist gar kein Kanal verbunden, wird nichts gemeldet: dann steht
+     * die Einrichtung ohnehin am Anfang, und eine Liste fehlender
+     * Freigaben waere dort nur Laerm.
+     *
+     * @return list<string>
+     */
+    private function missingScopes(): array
+    {
+        try {
+            if ($this->app->settings->string('twitch_broadcaster_id') === '') {
+                return [];
+            }
+
+            return $this->app->twitch->tokens()->missingScopes(
+                TokenStore::BROADCASTER,
+                $this->app->twitch->broadcasterScopes()
+            );
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * @return array{css: list<string>, js: list<string>}
+     */
     public function adminAssets(): array
     {
         $assets = $this->app->hooks->filter('admin.assets', ['css' => [], 'js' => []]);
@@ -136,13 +171,31 @@ final class View
             $language = Translator::DEFAULT_LANGUAGE;
         }
 
+        // Freigaben, die eine eingeschaltete Funktion braucht und die
+        // der Kanal nicht erteilt hat.
+        //
+        // Hier und nicht im Controller, weil die Warnung auf JEDER
+        // Seite oben stehen soll: fehlt eine Freigabe, tut ein Teil
+        // der Anwendung stillschweigend nichts, und man sucht den
+        // Fehler bei sich. Frueher stand der Hinweis nur unter
+        // Konto > Einstellungen > Kanal - also genau dort, wo man
+        // nicht nachsieht, solange man den Zusammenhang nicht kennt.
+        //
+        // Mit Netz wie die Sprache: die Fehlerseite benutzt dasselbe
+        // Layout, und eine weggebrochene Datenbank darf die Meldung
+        // darueber nicht verschlucken.
+        $missingScopes = $this->missingScopes();
+
         ob_start();
 
         try {
             (static function (array $__scope, string $__file): void {
                 extract($__scope, EXTR_SKIP);
                 require $__file;
-            })($data + compact('e', 'url', 'asset', 'app', 'view', 'language'), $file);
+            })(
+                $data + compact('e', 'url', 'asset', 'app', 'view', 'language', 'missingScopes'),
+                $file
+            );
         } catch (Throwable $exception) {
             ob_end_clean();
             throw $exception;

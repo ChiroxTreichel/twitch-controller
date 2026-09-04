@@ -121,6 +121,36 @@ try {
     </aside>
 
     <main class="content">
+        <?php /*
+            Fehlende Twitch-Freigaben: oben auf JEDER Seite.
+
+            Fehlt eine, tut ein Teil der Anwendung stillschweigend
+            nichts - kein Fehler, keine Meldung, es passiert einfach
+            nicht. Der ausfuehrliche Hinweis stand nur unter
+            Konto > Einstellungen > Kanal, also genau dort, wo man
+            nicht nachsieht, solange man den Zusammenhang nicht kennt.
+
+            Gemeldet wird nur, was eine EINGESCHALTETE Funktion
+            braucht - siehe View::missingScopes().
+
+            Nicht auf der Einstellungsseite selbst: dort steht die
+            Warnung samt Liste und Knopf, und zweimal dasselbe ist
+            schlechter als einmal.
+        */ ?>
+        <?php if (($missingScopes ?? []) !== [] && ($active ?? '') !== 'account/settings'): ?>
+            <div class="note note-warn">
+                <strong><?= $e(translate('scopes.missing_banner')) ?></strong>
+                <?= $e(translate('scopes.missing_banner_hint', [
+                    'count' => (string) count($missingScopes),
+                ])) ?>
+                <?php if (permission('Account.Settings.View')): ?>
+                    <a href="<?= $e($url('/account/settings/channel')) ?>">
+                        <?= $e(translate('scopes.missing_banner_link')) ?>
+                    </a>
+                <?php endif ?>
+            </div>
+        <?php endif ?>
+
         <?= $content ?>
     </main>
 </div>
