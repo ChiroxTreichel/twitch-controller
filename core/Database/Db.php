@@ -21,10 +21,30 @@ final class Db
     {
     }
 
+    /**
+     * Der erste gescheiterte Verbindungsversuch dieses Requests.
+     *
+     * Ohne ihn versucht JEDE Abfrage es neu, und ein Versuch kostet die
+     * Zeitgrenze von PDO - zwei Sekunden, die sich nicht kleiner
+     * einstellen lassen. Der Rahmen der Oberflaeche liest an drei
+     * Stellen (Benutzer, Navigation, Kanalname), jede mit eigenem Netz;
+     * bei ausgefallener Datenbank stand die Fehlerseite also erst nach
+     * sechs Sekunden statt nach zwei.
+     *
+     * Gemerkt wird nur fuer diesen Request. Der naechste versucht es
+     * wieder - eine Datenbank, die gerade hochfaehrt, soll nicht bis
+     * zum Neustart des Webservers als ausgefallen gelten.
+     */
+    private ?\Throwable $verbindungsfehler = null;
+
     public function pdo(): PDO
     {
         if ($this->pdo instanceof PDO) {
             return $this->pdo;
+        }
+
+        if ($this->verbindungsfehler !== null) {
+            throw $this->verbindungsfehler;
         }
 
         $dsn = sprintf(
@@ -34,16 +54,22 @@ final class Db
             $this->env->require('DB_NAME')
         );
 
-        $this->pdo = new PDO(
-            $dsn,
-            $this->env->require('DB_USER'),
-            $this->env->require('DB_PASS'),
-            [
-                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                PDO::ATTR_EMULATE_PREPARES   => false,
-            ]
-        );
+        try {
+            $this->pdo = new PDO(
+                $dsn,
+                $this->env->require('DB_USER'),
+                $this->env->require('DB_PASS'),
+                [
+                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES   => false,
+                ]
+            );
+        } catch (\Throwable $e) {
+            $this->verbindungsfehler = $e;
+
+            throw $e;
+        }
 
         return $this->pdo;
     }
