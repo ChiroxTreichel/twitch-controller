@@ -14,6 +14,7 @@
  * @var string $stream    Adresse der SSE-Leitung
  * @var bool $debug       Verbindungsanzeige einblenden
  * @var int $startId      Ab dieser Nachricht wird gelesen
+ * @var int $build        Aufbaunummer - siehe Bus::invalidate()
  */
 ?>
 <!doctype html>
@@ -75,6 +76,7 @@
 </head>
 <body data-overlay-stream="<?= $e($stream) ?>"
       data-overlay-start="<?= (int) $startId ?>"
+      data-overlay-build="<?= (int) $build ?>"
       data-overlay-width="<?= (int) $width ?>"
       data-overlay-height="<?= (int) $height ?>">
 

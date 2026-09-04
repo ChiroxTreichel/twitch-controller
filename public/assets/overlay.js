@@ -34,6 +34,7 @@
     var hoehe = parseInt(koerper.dataset.overlayHeight, 10) || 1080;
     var quelle = koerper.dataset.overlayStream || '';
     var start = parseInt(koerper.dataset.overlayStart, 10) || 0;
+    var aufbau = parseInt(koerper.dataset.overlayBuild, 10) || 0;
 
     var hoerer = {};      // Platz -> Liste von Funktionen
     var schlangen = {};   // Platz -> { handler, wartend: [], laeuft: bool }
@@ -162,7 +163,19 @@
 
         // since nur beim ersten Mal: danach kennt der Browser die
         // letzte Nummer selbst und schickt sie als Last-Event-ID.
-        var adresse = quelle + (start > 0 ? '?since=' + encodeURIComponent(start) : '');
+        // since nur beim ersten Mal, die Aufbaunummer immer: an ihr
+        // erkennt die Leitung, dass diese Seite veraltet ist - etwa
+        // weil ein Plugin abgeschaltet wurde. Sie muss also auch bei
+        // jedem Neuverbinden mitgehen.
+        var frage = [];
+        if (start > 0) {
+            frage.push('since=' + encodeURIComponent(start));
+        }
+        if (aufbau > 0) {
+            frage.push('build=' + encodeURIComponent(aufbau));
+        }
+
+        var adresse = quelle + (frage.length > 0 ? '?' + frage.join('&') : '');
         verbindung = new EventSource(adresse);
 
         verbindung.onopen = function () {
@@ -176,6 +189,42 @@
             // also der Normalfall, kein Ausfall.
             zustand('closed', 'neu verbinden …');
         };
+
+        /*
+         * Die Seite ist veraltet - neu laden.
+         *
+         * Was diese Seite beim Laden festlegt, steht danach fest:
+         * welche Plaetze es gibt, welche Dateien geladen sind, welchen
+         * Stempel deren Adressen tragen. Schaltet man ein Plugin ab,
+         * aendert das an einer laufenden Seite nichts; man musste die
+         * Browserquelle in OBS von Hand neu laden.
+         *
+         * Neuladen und nicht stueckweise nachbessern: es raeumt in
+         * einem Schritt alles ab, was veraltet ist - Plaetze, Dateien,
+         * Warteschlangen und den Anfangszustand. Ein Alert, der noch
+         * spielt, bricht dabei ab, und beim Abschalten wegen eines
+         * Follow-Bot-Angriffs ist genau das der Zweck.
+         *
+         * Der Name kann kein Platz sein: Bus::normalizeSlot() verlangt
+         * als erstes Zeichen einen Buchstaben oder eine Ziffer.
+         */
+        verbindung.addEventListener('__overlay', function (ereignis) {
+            var daten = {};
+            try {
+                daten = JSON.parse(ereignis.data);
+            } catch (fehler) {
+                return;
+            }
+
+            if (daten && daten.reload) {
+                // Die Leitung zuerst schliessen. Sonst verbindet der
+                // Browser waehrend des Neuladens noch einmal neu und
+                // belegt einen Prozess, den niemand mehr liest.
+                verbindung.close();
+                zustand('closed', 'lade neu …');
+                window.location.reload();
+            }
+        });
 
         // Fuer jeden bekannten Platz einen Hoerer anmelden. Die
         // Nachricht kommt als Ereignis mit dem Namen des Platzes.

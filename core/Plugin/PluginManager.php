@@ -6,6 +6,7 @@ namespace TwitchController\Core\Plugin;
 
 use TwitchController\Core\App;
 use TwitchController\Core\Config\Settings;
+use TwitchController\Core\Overlay\Bus;
 use RuntimeException;
 use Throwable;
 
@@ -412,6 +413,13 @@ final class PluginManager
         );
 
         $this->registered = null;
+
+        // Laufende Browserquellen neu laden lassen: welche Plaetze es
+        // gibt und welche Dateien geladen sind, legt die Overlay-Seite
+        // beim Laden fest. Ohne das sieht man ein neues Plugin erst,
+        // nachdem man die Quelle in OBS von Hand aktualisiert hat.
+        (new Bus($this->app))->invalidate();
+
         $this->app->hooks->dispatch('plugin.activated', $manifest->slug);
     }
 
@@ -432,6 +440,12 @@ final class PluginManager
         );
 
         $this->registered = null;
+
+        // Und hier ist es der wichtigere Weg: was das Plugin ins
+        // Overlay stellt, bleibt sonst stehen, bis die Quelle neu
+        // geladen wird - Warteschlange inklusive.
+        (new Bus($this->app))->invalidate();
+
         $this->app->hooks->dispatch('plugin.deactivated', $slug);
     }
 

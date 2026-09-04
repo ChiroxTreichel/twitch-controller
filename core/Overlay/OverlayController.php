@@ -43,6 +43,9 @@ final class OverlayController
                 // verbundene Quelle alles nach, was in den letzten
                 // Minuten passiert ist.
                 'startId' => (new Bus($this->app))->latestId(),
+                // Woran die Leitung erkennt, dass diese Seite veraltet
+                // ist - siehe Bus::invalidate().
+                'build'   => (new Bus($this->app))->build(),
             ], null)
         );
     }
@@ -77,10 +80,25 @@ final class OverlayController
             $letzte = $bus->latestId();
         }
 
+        // Die Aufbaunummer, mit der die Seite geladen wurde. Aendert
+        // sich die aktuelle, ist die Seite veraltet - siehe unten.
+        //
+        // 0 heisst "hat keine mitgeschickt": eine aeltere Seite im
+        // Zwischenspeicher, oder ein Aufruf von Hand. Die wird nicht
+        // zum Neuladen aufgefordert, sonst schickte man eine Seite, die
+        // die Nummer nicht kennt, in eine Endlosschleife.
+        $aufbau = max(0, (int) $request->get('build'));
+
+        // Wie oft die Aufbaunummer nachgefragt wird. Nicht in jedem
+        // Takt: das waeren vier Abfragen je Sekunde und offener Quelle,
+        // fuer eine Zahl, die sich nur beim Schalten aendert.
+        $aufbauTakt = 2;
+
         return Response::stream(
-            static function () use ($bus, $letzte, $laufzeit, $takt, $herzschlag): void {
+            static function () use ($bus, $letzte, $aufbau, $laufzeit, $takt, $herzschlag, $aufbauTakt): void {
                 $ende = time() + $laufzeit;
                 $zuletzt = time();
+                $aufbauGeprueft = time();
 
                 // Wie lange der Browser nach einem Abbruch wartet.
                 echo "retry: 2000\n\n";
@@ -107,6 +125,35 @@ final class OverlayController
 
                         $zuletzt = time();
                         flush();
+                    }
+
+                    // Ist die Seite veraltet? Dann neu laden lassen.
+                    //
+                    // Der Name beginnt mit einem Unterstrich, und genau
+                    // damit kann kein Platz so heissen: Bus::normalizeSlot()
+                    // verlangt als erstes Zeichen einen Buchstaben oder
+                    // eine Ziffer. Ein Plugin kann diesen Namen also
+                    // nicht belegen.
+                    //
+                    // Ohne "id:", damit die Nummer der letzten echten
+                    // Nachricht stehen bleibt - sonst begaenne die Seite
+                    // nach dem Neuladen an der falschen Stelle.
+                    if ($aufbau > 0 && time() - $aufbauGeprueft >= $aufbauTakt) {
+                        $aufbauGeprueft = time();
+
+                        if ($bus->build() !== $aufbau) {
+                            echo "event: __overlay
+data: {\"reload\":true}
+
+";
+                            flush();
+
+                            // Schluss hier. Die Seite laedt neu und
+                            // verbindet dabei von selbst wieder - eine
+                            // Leitung zu einer Seite, die es gleich
+                            // nicht mehr gibt, muss nicht offen bleiben.
+                            return;
+                        }
                     }
 
                     // Lebenszeichen als Kommentarzeile. Ohne das

@@ -118,6 +118,66 @@ final class Bus
         return $messages;
     }
 
+    // -----------------------------------------------------------------
+    //  Aufbaunummer: wann muss eine laufende Browserquelle neu laden?
+    // -----------------------------------------------------------------
+
+    /**
+     * Was die Overlay-Seite beim Laden festlegt, steht danach fest:
+     * welche Plaetze es gibt, welche Dateien geladen sind, und welchen
+     * Stempel deren Adressen tragen. Schaltet man ein Plugin ab, aendert
+     * das nichts an einer Seite, die schon laeuft - man musste die
+     * Browserquelle in OBS von Hand neu laden.
+     *
+     * Das ist der Fall, in dem es am meisten stoert: bei einem
+     * Follow-Bot-Angriff schaltet man die Alerts ab und will Ruhe, nicht
+     * erst in OBS herumklicken. Und die Warteschlange im Browser laeuft
+     * ohnehin weiter - dort stehen die Alerts schon, das Abschalten
+     * verhindert nur neue.
+     *
+     * Darum diese Nummer: sie geht mit der Seite hinaus, die Leitung
+     * vergleicht sie mit der aktuellen, und bei einem Unterschied laedt
+     * die Seite neu. Das raeumt in einem Schritt alles ab, was veraltet
+     * ist - Plaetze, Dateien, Warteschlangen und den Anfangszustand.
+     */
+    private const BUILD_KEY = 'overlay_build';
+
+    /**
+     * Die aktuelle Nummer - frisch aus der Datenbank.
+     *
+     * Am Zwischenspeicher der Einstellungen vorbei, und das ist der
+     * ganze Grund fuer diese Methode: die SSE-Antwort lebt fast eine
+     * Minute, und in dieser Zeit ist der Zwischenspeicher genau so alt
+     * wie die Frage, die er beantworten soll. Ueber ihn gelesen wuerde
+     * die Leitung eine Aenderung nie bemerken.
+     */
+    public function build(): int
+    {
+        $roh = $this->app->db->value(
+            'SELECT value FROM settings WHERE scope = :scope AND key = :key',
+            ['scope' => 'core', 'key' => self::BUILD_KEY]
+        );
+
+        return max(0, (int) json_decode((string) $roh, true));
+    }
+
+    /**
+     * Die Seite ist veraltet - laufende Browserquellen sollen neu laden.
+     *
+     * Zu rufen, wenn sich aendert, was die Seite beim Laden festlegt:
+     * ein Plugin kommt oder geht, ein Hauptschalter mit Overlay-Anteil
+     * kippt, das Aussehen eines Ziels wird gespeichert.
+     *
+     * Zwei Aenderungen im selben Augenblick koennen sich zu einem
+     * einzigen Schritt zusammenlegen. Das ist in Ordnung: gebraucht wird
+     * nur, DASS die Nummer sich von der geladenen unterscheidet, nicht
+     * um wie viel.
+     */
+    public function invalidate(): void
+    {
+        $this->app->settings->set(self::BUILD_KEY, $this->build() + 1);
+    }
+
     /**
      * Hoechste vergebene Nummer. Eine Browserquelle, die sich zum
      * ersten Mal verbindet, startet hier - sonst spielte sie beim
