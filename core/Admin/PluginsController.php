@@ -95,6 +95,9 @@ final class PluginsController
             'missing'   => $this->app->plugins->missing(),
             'canManage' => $this->app->auth->can('Account.Plugins.Manage'),
             'canWrite'  => (new Installer($this->app))->canWrite(),
+            // Knapp oder ausfuehrlich - eine Vorliebe des angemeldeten
+            // Benutzers, nicht eine Einstellung des Kanals.
+            'compact'   => (bool) $this->app->auth->preference('plugins_compact', false),
             'csrf'      => $this->app->auth->csrfToken(),
             'notice'    => $request->get('notice'),
             'error'     => $request->get('error'),
@@ -104,6 +107,24 @@ final class PluginsController
 
     public function action(Request $request): Response
     {
+        // Die eigene Ansicht umschalten, bevor guard() greift.
+        //
+        // guard() verlangt Account.Plugins.Manage - fuer eine Vorliebe
+        // waere das die falsche Huerde: wer die Liste sehen darf, darf
+        // auch entscheiden, wie sie bei ihm aussieht. Die Pruefung des
+        // Formulars bleibt, die ist gegen fremde Seiten.
+        if ($request->input('action') === 'view_mode') {
+            if (!$this->app->auth->checkCsrf($request->input('csrf'))) {
+                return $this->back('/account/plugins', null, translate('common.error.form_expired'));
+            }
+
+            $this->app->auth->setPreference('plugins_compact', $request->input('mode') === 'compact');
+
+            // Ohne Meldung: man sieht das Ergebnis unmittelbar, und ein
+            // Hinweiskasten waere hier nur eine Zeile, die man wegliest.
+            return Response::redirect($this->app->url('/account/plugins'));
+        }
+
         $guard = $this->guard($request);
         if ($guard !== null) {
             return $guard;

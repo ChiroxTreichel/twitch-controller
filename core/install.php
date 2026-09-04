@@ -37,10 +37,24 @@ $db->run("
         display_name TEXT        NOT NULL,
         role         TEXT        NOT NULL DEFAULT 'member',
         permissions  JSONB       NOT NULL DEFAULT '[]'::jsonb,
+        preferences  JSONB       NOT NULL DEFAULT '{}'::jsonb,
         created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
         last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now()
     )
 ");
+
+// Eigene Vorlieben je Benutzer (2.1.0).
+//
+// Bisher lag alles Einstellbare in settings, und das gilt fuer die
+// ganze Installation - auch die Sprache. Fuer zwei Leute am selben
+// Kanal ist das die falsche Ebene, sobald es um die Ansicht geht: ob
+// die Plugin-Liste knapp oder ausfuehrlich steht, ist eine Vorliebe und
+// keine Einstellung des Kanals.
+//
+// Ein JSONB-Feld und keine Spalte je Vorliebe: es kommen weitere dazu,
+// und jedes Mal eine Spalte anzulegen waere eine Wanderung durch drei
+// Dateien fuer ein Ja/Nein.
+$db->run("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences JSONB NOT NULL DEFAULT '{}'::jsonb");
 
 // Rechte-Namen auf Englisch (2.0.0).
 //

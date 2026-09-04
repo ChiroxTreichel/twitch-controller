@@ -16,6 +16,7 @@
  * @var string $notice
  * @var string $error
  * @var bool $welcome
+ * @var bool $compact   Knappe Liste? Vorliebe des angemeldeten Benutzers
  */
 ?>
 <h1><?= $e(translate('nav.plugins')) ?></h1>
@@ -72,6 +73,26 @@
     </div>
 <?php endif; ?>
 
+<?php /*
+    Knapp oder ausfuehrlich.
+
+    Wer zehn Plugins installiert hat, scrollt in der ausfuehrlichen
+    Ansicht an Beschreibungen und Abhaengigkeiten vorbei, um an den
+    Schalter zu kommen - und genau dafuer kommt man hierher.
+
+    Die Wahl liegt beim Benutzer und nicht beim Kanal: zwei Leute am
+    selben Kanal duerfen das verschieden haben. Siehe
+    Auth::setPreference().
+*/ ?>
+<form class="view-switch" method="post" action="<?= $e($url('/account/plugins')) ?>">
+    <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
+    <input type="hidden" name="action" value="view_mode">
+    <input type="hidden" name="mode" value="<?= ($compact ?? false) ? 'full' : 'compact' ?>">
+    <button class="btn btn-ghost btn-small" type="submit">
+        <?= $e(($compact ?? false) ? translate('account.plugins.view_full') : translate('account.plugins.view_compact')) ?>
+    </button>
+</form>
+
 <?php if ($rows === []): ?>
     <div class="card">
         <div class="empty">
@@ -83,135 +104,119 @@
 <?php else: ?>
     <?php foreach ($rows as $row): ?>
         <?php $manifest = $row['manifest']; ?>
-        <div class="card">
-            <div class="card-head">
-                <div>
-                    <h2>
-                        <?= $e($manifest->name) ?>
-                        <?php if ($row['enabled']): ?>
-                            <span class="badge badge-ok"><?= $e(translate('common.active')) ?></span>
-                        <?php elseif ($row['installed']): ?>
-                            <span class="badge badge-off"><?= $e(translate('common.installed_off')) ?></span>
-                        <?php else: ?>
-                            <span class="badge"><?= $e(translate('account.plugins.available')) ?></span>
-                        <?php endif; ?>
-                        <?php if ($row['catalog'] !== null): ?>
-                            <span class="badge badge-warn"><?= $e(translate('account.plugins.version_available', ['version' => $row['catalog']])) ?></span>
-                        <?php elseif ($row['updatable']): ?>
-                            <span class="badge badge-warn"><?= $e(translate('account.plugins.update_ready')) ?></span>
-                        <?php endif; ?>
-                    </h2>
-                    <div class="hint">
-                        <?= $e(translate('common.version', ['version' => $manifest->version])) ?>
-                        <?php if ($row['installed'] && $row['version'] !== $manifest->version): ?>
-                            <?= $e(translate('account.plugins.installed_version', ['version' => (string) $row['version']])) ?>
-                        <?php endif; ?>
-                        <?php if ($manifest->author !== ''): ?>
-                            &middot; <?= $e($manifest->author) ?>
-                        <?php endif; ?>
-                    </div>
+
+        <?php /*
+            Der Zustandspunkt steht in beiden Ansichten gleich da -
+            einmal geschrieben, damit "aktiv" nicht in der einen Ansicht
+            anders heisst als in der anderen.
+        */ ?>
+        <?php ob_start(); ?>
+            <?php if ($row['enabled']): ?>
+                <span class="badge badge-ok"><?= $e(translate('common.active')) ?></span>
+            <?php elseif ($row['installed']): ?>
+                <span class="badge badge-off"><?= $e(translate('common.installed_off')) ?></span>
+            <?php else: ?>
+                <span class="badge"><?= $e(translate('account.plugins.available')) ?></span>
+            <?php endif; ?>
+            <?php if ($row['catalog'] !== null): ?>
+                <span class="badge badge-warn"><?= $e(translate('account.plugins.version_available', ['version' => $row['catalog']])) ?></span>
+            <?php elseif ($row['updatable']): ?>
+                <span class="badge badge-warn"><?= $e(translate('account.plugins.update_ready')) ?></span>
+            <?php endif; ?>
+        <?php $abzeichen = (string) ob_get_clean(); ?>
+
+        <?php if ($compact ?? false): ?>
+            <?php /*
+                Knapp: Name, Zustand, Knoepfe. Sonst nichts.
+
+                Was hier fehlt - Beschreibung, Fassung, Abhaengigkeiten -
+                steht weiter in der ausfuehrlichen Ansicht. Es geht nicht
+                weg, es steht nur nicht mehr zwischen einem und dem
+                Schalter, den man sucht.
+            */ ?>
+            <div class="plugin-row">
+                <div class="plugin-row-name">
+                    <strong><?= $e($manifest->name) ?></strong>
+                    <?= $abzeichen ?>
                 </div>
 
                 <?php if ($canManage): ?>
-                    <div class="row">
-                        <?php if ($row['enabled'] && $row['settings'] !== null): ?>
-                            <a class="btn btn-ghost btn-small"
-                               href="<?= $e($url($row['settings']['href'])) ?>">
-                                <?= $e($row['settings']['label']) ?>
-                            </a>
-                        <?php endif; ?>
-
-                        <?php if ($row['catalog'] !== null): ?>
-                            <form method="post" action="<?= $e($url('/account/plugins')) ?>">
-                                <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-                                <input type="hidden" name="action" value="download_update">
-                                <input type="hidden" name="slug" value="<?= $e($manifest->slug) ?>">
-                                <button class="btn btn-small" type="submit">
-                                    <?= $e(translate('account.plugins.update_to', ['version' => $row['catalog']])) ?>
-                                </button>
-                            </form>
-                        <?php elseif ($row['updatable']): ?>
-                            <form method="post" action="<?= $e($url('/account/plugins')) ?>">
-                                <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-                                <input type="hidden" name="action" value="update">
-                                <input type="hidden" name="slug" value="<?= $e($manifest->slug) ?>">
-                                <button class="btn btn-small" type="submit"><?= $e(translate('common.update')) ?></button>
-                            </form>
-                        <?php endif; ?>
-
-                        <?php if (!$row['installed'] || !$row['enabled']): ?>
-                            <form method="post" action="<?= $e($url('/account/plugins')) ?>">
-                                <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-                                <input type="hidden" name="action" value="enable">
-                                <input type="hidden" name="slug" value="<?= $e($manifest->slug) ?>">
-                                <button class="btn btn-small" type="submit"
-                                    <?= $row['blockers'] !== [] ? 'disabled' : '' ?>>
-                                    <?= $e($row['installed'] ? translate('common.enable') : translate('common.install')) ?>
-                                </button>
-                            </form>
-                        <?php else: ?>
-                            <form method="post" action="<?= $e($url('/account/plugins')) ?>">
-                                <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-                                <input type="hidden" name="action" value="disable">
-                                <input type="hidden" name="slug" value="<?= $e($manifest->slug) ?>">
-                                <button class="btn btn-ghost btn-small" type="submit"><?= $e(translate('common.disable')) ?></button>
-                            </form>
-                        <?php endif; ?>
-
-                        <?php /*
-                            EIN Knopf: Daten abraeumen und Dateien
-                            loeschen. Vorher waren es zwei - erst
-                            "Entfernen" fuer die Daten, dann "Dateien
-                            loeschen" - und das war zweimal Klicken
-                            fuer eine Absicht.
-
-                            Auch bei einem aktiven Plugin: uninstall()
-                            schaltet es zuerst aus. Sonst waeren es
-                            wieder zwei Klicks.
-                        */ ?>
-                        <?php if ($canWrite): ?>
-                            <?= $view->render('_confirm', [
-                                'label'    => translate('common.remove'),
-                                'question' => translate('account.plugins.confirm_remove', ['name' => $manifest->name]),
-                                'confirm'  => translate('account.plugins.confirm_remove_yes'),
-                                'action'   => $url('/account/plugins'),
-                                'fields'   => [
-                                    'csrf'   => $csrf,
-                                    'action' => 'remove',
-                                    'slug'   => $manifest->slug,
-                                ],
-                            ], null) ?>
-                        <?php endif; ?>
-                    </div>
+                    <?= $view->render('account/_plugin_actions', [
+                        'row'      => $row,
+                        'manifest' => $manifest,
+                        'canWrite' => $canWrite,
+                        'csrf'     => $csrf,
+                    ], null) ?>
                 <?php endif; ?>
             </div>
 
-            <?php if ($manifest->description !== ''): ?>
-                <p style="margin:0 0 10px;"><?= $e($manifest->description) ?></p>
-            <?php endif; ?>
-
-            <?php if ($manifest->requiredPlugins() !== [] || $manifest->optionalPlugins() !== []): ?>
-                <div class="hint">
-                    <?php if ($manifest->requiredPlugins() !== []): ?>
-                        <div><?= $e(translate('account.plugins.requires', ['plugins' => implode(', ', array_keys($manifest->requiredPlugins()))])) ?></div>
-                    <?php endif; ?>
-                    <?php if ($manifest->optionalPlugins() !== []): ?>
-                        <div><?= $e(translate('account.plugins.optional', ['plugins' => implode(', ', array_keys($manifest->optionalPlugins()))])) ?></div>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
-
+            <?php /*
+                Ein Grund, der das Einschalten verhindert, MUSS auch
+                knapp zu sehen sein - sonst steht dort ein Knopf, der
+                nichts tut, und man sucht den Grund in der falschen
+                Ansicht.
+            */ ?>
             <?php if ($row['blockers'] !== []): ?>
-                <div class="note note-warn" style="margin:12px 0 0;">
+                <div class="note note-warn plugin-row-note">
                     <?= $e(implode(' ', $row['blockers'])) ?>
                 </div>
             <?php endif; ?>
+        <?php else: ?>
+            <div class="card">
+                <div class="card-head">
+                    <div>
+                        <h2>
+                            <?= $e($manifest->name) ?>
+                            <?= $abzeichen ?>
+                        </h2>
+                        <div class="hint">
+                            <?= $e(translate('common.version', ['version' => $manifest->version])) ?>
+                            <?php if ($row['installed'] && $row['version'] !== $manifest->version): ?>
+                                <?= $e(translate('account.plugins.installed_version', ['version' => (string) $row['version']])) ?>
+                            <?php endif; ?>
+                            <?php if ($manifest->author !== ''): ?>
+                                &middot; <?= $e($manifest->author) ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
 
-            <?php if ($row['enabled'] && $row['dependents'] !== []): ?>
-                <div class="hint" style="margin-top:10px;">
-                    <?= $e(translate('account.plugins.needed_by', ['plugins' => implode(', ', $row['dependents'])])) ?>
+                    <?php if ($canManage): ?>
+                        <?= $view->render('account/_plugin_actions', [
+                            'row'      => $row,
+                            'manifest' => $manifest,
+                            'canWrite' => $canWrite,
+                            'csrf'     => $csrf,
+                        ], null) ?>
+                    <?php endif; ?>
                 </div>
-            <?php endif; ?>
-        </div>
+
+                <?php if ($manifest->description !== ''): ?>
+                    <p style="margin:0 0 10px;"><?= $e($manifest->description) ?></p>
+                <?php endif; ?>
+
+                <?php if ($manifest->requiredPlugins() !== [] || $manifest->optionalPlugins() !== []): ?>
+                    <div class="hint">
+                        <?php if ($manifest->requiredPlugins() !== []): ?>
+                            <div><?= $e(translate('account.plugins.requires', ['plugins' => implode(', ', array_keys($manifest->requiredPlugins()))])) ?></div>
+                        <?php endif; ?>
+                        <?php if ($manifest->optionalPlugins() !== []): ?>
+                            <div><?= $e(translate('account.plugins.optional', ['plugins' => implode(', ', array_keys($manifest->optionalPlugins()))])) ?></div>
+                        <?php endif; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($row['blockers'] !== []): ?>
+                    <div class="note note-warn" style="margin:12px 0 0;">
+                        <?= $e(implode(' ', $row['blockers'])) ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if ($row['enabled'] && $row['dependents'] !== []): ?>
+                    <div class="hint" style="margin-top:10px;">
+                        <?= $e(translate('account.plugins.needed_by', ['plugins' => implode(', ', $row['dependents'])])) ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
     <?php endforeach; ?>
 <?php endif; ?>

@@ -52,6 +52,8 @@
     "account.plugins.updated_some": "Aktualisiert: %{plugins}",
     "account.plugins.updates_available": "%{count} Plugin(s) lassen sich aktualisieren",
     "account.plugins.version_available": "Version %{version} verfügbar",
+    "account.plugins.view_compact": "Knappe Liste",
+    "account.plugins.view_full": "Ausführliche Liste",
     "account.settings.language_saved": "Sprache gespeichert: %{language}",
     "account.users.added": "Hinzugefügt",
     "account.users.all_permissions": "alle (Superadmin)",

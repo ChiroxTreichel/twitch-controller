@@ -901,3 +901,62 @@ td.actions { text-align: right; white-space: nowrap; }
     border: 1px solid var(--line);
     display: block;
 }
+
+/* -------------------------------------------------------------------
+ *  Knappe Plugin-Liste
+ *
+ *  Eine Zeile je Plugin: Name, Zustand, Knoepfe. Wer zehn Plugins hat,
+ *  scrollt sonst an Beschreibungen und Abhaengigkeiten vorbei, um an
+ *  den Schalter zu kommen - und genau dafuer kommt man auf die Seite.
+ *
+ *  Kein eigener Kasten je Zeile, sondern ein durchgehender Block mit
+ *  Trennlinien: zehn Kaesten mit Abstand dazwischen sind wieder eine
+ *  lange Seite, nur mit weniger Inhalt.
+ * ------------------------------------------------------------------- */
+.plugin-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-bottom: 0;
+    padding: 7px 14px;
+}
+
+/* Die letzte Zeile schliesst den Block ab. */
+.plugin-row:last-of-type { border-bottom: 1px solid var(--line); }
+
+/* Ecken nur aussen - innen stossen die Zeilen aneinander. */
+.plugin-row:first-of-type { border-radius: var(--radius) var(--radius) 0 0; }
+.plugin-row:last-of-type { border-radius: 0 0 var(--radius) var(--radius); }
+
+/* Steht eine Warnung dazwischen, endet der Block davor und beginnt
+   danach neu - sonst haengt die Warnung ohne Rand in der Reihe. */
+.plugin-row + .note { margin: 0 0 10px; border-radius: 0 0 var(--radius) var(--radius); }
+.plugin-row-note + .plugin-row { border-radius: var(--radius) var(--radius) 0 0; }
+
+.plugin-row-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+/* Der Name darf kuerzen, die Knoepfe nicht - sie sind der Grund, warum
+   man hier ist. */
+.plugin-row-name strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.plugin-row .row { flex: 0 0 auto; }
+
+/* Der Umschalter sitzt rechts ueber der Liste. */
+.view-switch {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+}

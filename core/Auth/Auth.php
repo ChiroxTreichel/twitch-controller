@@ -68,8 +68,7 @@ final class Auth
             return null;
         }
 
-        $permissions = json_decode((string) $row['permissions'], true);
-        $row['permissions'] = is_array($permissions) ? array_values(array_map('strval', $permissions)) : [];
+        $row = self::hydrate($row);
 
         // Sliding Session: bei jedem Request auffrischen, aber nicht
         // oefter als einmal pro Minute schreiben.
@@ -85,6 +84,75 @@ final class Auth
         );
 
         return $this->user = $row;
+    }
+
+    /**
+     * Eine Benutzerzeile aus der Datenbank in brauchbare Werte.
+     *
+     * Die zwei JSONB-Felder kommen als Text zurueck. Frueher stand das
+     * Auspacken zweimal da - in user() und in find() - und beim
+     * Dazukommen von preferences waere es genau die Art Stelle, die man
+     * an einem der beiden Orte vergisst. Dann fehlten die Vorlieben
+     * ueberall dort, wo der Benutzer ueber find() geholt wird, ohne
+     * dass irgendwo ein Fehler auftaucht.
+     *
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private static function hydrate(array $row): array
+    {
+        $permissions = json_decode((string) $row['permissions'], true);
+        $row['permissions'] = is_array($permissions) ? array_values(array_map('strval', $permissions)) : [];
+
+        $preferences = json_decode((string) ($row['preferences'] ?? '{}'), true);
+        $row['preferences'] = is_array($preferences) ? $preferences : [];
+
+        return $row;
+    }
+
+    // -----------------------------------------------------------------
+    //  Vorlieben - pro Benutzer, nicht pro Installation
+    // -----------------------------------------------------------------
+
+    /**
+     * Eine eigene Vorliebe des angemeldeten Benutzers.
+     *
+     * Der Unterschied zu $app->settings: dort liegt, was fuer den ganzen
+     * Kanal gilt. Hier liegt, was nur diesen einen Menschen betrifft -
+     * ob die Plugin-Liste knapp steht, zum Beispiel. Zwei Leute am
+     * selben Kanal duerfen das verschieden haben.
+     */
+    public function preference(string $key, mixed $vorgabe = null): mixed
+    {
+        $user = $this->user();
+
+        return $user === null ? $vorgabe : ($user['preferences'][$key] ?? $vorgabe);
+    }
+
+    public function setPreference(string $key, mixed $wert): void
+    {
+        $user = $this->user();
+        if ($user === null) {
+            return;
+        }
+
+        // Zusammenfuegen in der Datenbank und nicht hier: lesen, aendern,
+        // schreiben wuerde bei zwei offenen Reitern die Aenderung des
+        // einen wegwerfen. Der ||-Operator von JSONB legt nur das eine
+        // Feld darueber.
+        $this->app->db->run(
+            'UPDATE users
+                SET preferences = COALESCE(preferences, \'{}\'::jsonb) || CAST(:patch AS JSONB)
+              WHERE twitch_id = :id',
+            [
+                'patch' => (string) json_encode([$key => $wert]),
+                'id'    => (string) $user['twitch_id'],
+            ]
+        );
+
+        // Der Benutzer liegt in diesem Request zwischengespeichert - ohne
+        // das zeigte die Seite nach dem Umschalten noch den alten Wert.
+        $this->user['preferences'][$key] = $wert;
     }
 
     public function isLoggedIn(): bool
@@ -247,8 +315,7 @@ final class Auth
             return null;
         }
 
-        $permissions = json_decode((string) $row['permissions'], true);
-        $row['permissions'] = is_array($permissions) ? array_values(array_map('strval', $permissions)) : [];
+        $row = self::hydrate($row);
 
         return $row;
     }
@@ -261,10 +328,7 @@ final class Auth
         $rows = $this->app->db->all('SELECT * FROM users ORDER BY role DESC, display_name');
 
         foreach ($rows as $index => $row) {
-            $permissions = json_decode((string) $row['permissions'], true);
-            $rows[$index]['permissions'] = is_array($permissions)
-                ? array_values(array_map('strval', $permissions))
-                : [];
+            $rows[$index] = self::hydrate($row);
         }
 
         return $rows;
