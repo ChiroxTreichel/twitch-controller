@@ -203,6 +203,21 @@ h2 { font-size: 1.1rem; margin: 28px 0 12px; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
 /*
+ * hidden soll verbergen. Ueberall.
+ *
+ * [hidden] { display: none } ist nur eine Vorgabe des Browsers, und
+ * JEDE Autoren-Regel schlaegt sie - "display: flex" auf .row zum
+ * Beispiel. Ein el.hidden = true tat dort also nichts, und man sucht
+ * den Fehler im JavaScript, wo keiner ist.
+ *
+ * Dieselbe Falle hatte das Overlay schon einmal; dort steht die
+ * Berichtigung oertlich in goals.css. Hier gilt sie fuer die ganze
+ * Oberflaeche - eine Ausnahme davon waere ein Element, das verborgen
+ * sein soll und trotzdem Platz nimmt, und das gibt es nicht.
+ */
+[hidden] { display: none !important; }
+
+/*
  * Steht eine Zeile direkt vor einer Karte - etwa ein
  * "Zurueck"-Knopf - klebte die Karte bisher daran. .card hat nur
  * Abstand nach unten; das hier ergaenzt ihn nach oben, aber nur dort,

@@ -30,7 +30,7 @@ final class App
      * Kernversion. Plugins koennen dagegen Bedingungen stellen
      * ("requires": { "core": ">=1.0.0" }).
      */
-    public const VERSION = '2.1.0';
+    public const VERSION = '2.1.1';
 
     /**
      * Wie das System heisst. Steht im Seitentitel und in der Kopfzeile.
