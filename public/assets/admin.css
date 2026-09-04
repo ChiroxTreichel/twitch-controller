@@ -315,6 +315,20 @@ label { display: block; font-size: 0.86rem; color: var(--muted); margin-bottom: 
     background: var(--panel-2);
 }
 
+/*
+ * Steht eine Meldung nicht am Anfang, braucht sie Abstand nach oben.
+ *
+ * .note hatte nur margin-bottom - richtig für die Meldungen, die oben
+ * auf einer Seite stehen. Erscheint sie aber als Antwort UNTER etwas,
+ * etwa das Ergebnis des Testfelds im Löschbot unter dem Knopf
+ * "Prüfen", klebte sie daran.
+ *
+ * Zwei Meldungen untereinander rücken dadurch nicht auseinander: in
+ * einem normalen Block fallen benachbarte Ränder zusammen, aus 16
+ * unten und 16 oben werden 16 - nicht 32.
+ */
+* + .note { margin-top: 16px; }
+
 .note-ok    { border-color: rgba(62, 207, 142, 0.4); background: rgba(62, 207, 142, 0.1); }
 .note-warn  { border-color: rgba(245, 166, 35, 0.4); background: rgba(245, 166, 35, 0.1); }
 .note-error { border-color: rgba(239, 77, 77, 0.45); background: rgba(239, 77, 77, 0.1); }
