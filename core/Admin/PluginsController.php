@@ -123,7 +123,7 @@ final class PluginsController
                 case 'disable':
                     $this->app->plugins->disable($slug);
 
-                    return $this->back('/account/plugins', 'Plugin deaktiviert.');
+                    return $this->back('/account/plugins', translate('account.plugins.disabled_hint'));
 
 
                 case 'update':
@@ -132,7 +132,7 @@ final class PluginsController
                         $this->app->plugins->upgradeIfNeeded($manifest);
                     }
 
-                    return $this->back('/account/plugins', 'Plugin aktualisiert.');
+                    return $this->back('/account/plugins', translate('account.plugins.updated_hint'));
 
                 case 'download_update':
                     return $this->installFromRegistry($slug, '/account/plugins');

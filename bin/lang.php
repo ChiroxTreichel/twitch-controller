@@ -453,11 +453,69 @@ const UMSCHRIEBEN = '/(?:^|[^a-z])(?:'
 /** Stellen, an denen ein Text beim Benutzer landet. */
 const ANZEIGESTELLEN = [
     ['/\'(?:label|title|heading|message|detail|summary|question|confirm|placeholder)\'\s*=>\s*\'([^\']{2,})\'/', 'Anzeigefeld'],
-    ['/->back\([^)]*?\'([^\']{4,})\'/', 'Meldung'],
-    ['/->fail\(\s*\'([^\']{4,})\'/', 'Meldung'],
-    ['/Response::text\(\s*\'([^\']{4,})\'/', 'Antworttext'],
-    ['/new (?:RuntimeException|InvalidArgumentException|LogicException)\(\s*\'([^\']{4,})\'/', 'Ausnahme'],
 ];
+
+/**
+ * Dasselbe als Aufruf - hier zaehlt JEDES Argument.
+ *
+ * Frueher stand auch das als ein Suchmuster da, sinngemaess
+ * "->back(  irgendwas  'Text'". Genau daran ist
+ *
+ *     return $this->back('/account/plugins', 'Plugin deaktiviert.');
+ *
+ * vorbeigelaufen: das Muster fand die ERSTE Zeichenkette im Aufruf, und
+ * das ist der Pfad - klein geschrieben, mit Schraegstrichen, also
+ * harmlos. Danach suchte es nicht weiter, und die Meldung dahinter sah
+ * niemand. Zwei deutsche Saetze standen so monatelang im Code, waehrend
+ * der Pruefer "nichts zu beanstanden" meldete.
+ *
+ * Deshalb jetzt zweistufig: die Stelle finden, die Klammern zaehlen,
+ * und alle Zeichenketten darin einzeln pruefen.
+ */
+/**
+ * Eine einfach zitierte Zeichenkette in PHP, samt Maskierungen.
+ *
+ * Steht als eigene Konstante da, weil das Muster in einer
+ * Zeichenkette selbst wieder maskiert werden muss - inmitten der
+ * Schleife war es nicht mehr zu lesen und beim ersten Anfassen falsch.
+ */
+const STRINGLITERAL = '/\'((?:[^\'\\\\]|\\\\.)*)\'/';
+
+const ANZEIGEAUFRUFE = [
+    ['/->back\(/', 'Meldung'],
+    ['/->fail\(/', 'Meldung'],
+    ['/Response::text\(/', 'Antworttext'],
+    ['/new (?:RuntimeException|InvalidArgumentException|LogicException)\(/', 'Ausnahme'],
+];
+
+/** Die Zeilennummer, in der die Stelle $ab liegt. */
+function zeileAn(string $quelle, int $ab): int
+{
+    return substr_count($quelle, "\n", 0, max(0, min($ab, strlen($quelle)))) + 1;
+}
+
+/**
+ * Der Inhalt einer Klammer, die an $ab beginnt - mit Zaehlen, damit ein
+ * verschachtelter Aufruf nicht in der Mitte abschneidet.
+ */
+function klammerInhalt(string $quelle, int $ab): string
+{
+    $tiefe = 0;
+    $laenge = strlen($quelle);
+
+    for ($i = $ab; $i < $laenge && $i < $ab + 2000; $i++) {
+        if ($quelle[$i] === '(') {
+            $tiefe++;
+        } elseif ($quelle[$i] === ')') {
+            $tiefe--;
+            if ($tiefe === 0) {
+                return substr($quelle, $ab + 1, $i - $ab - 1);
+            }
+        }
+    }
+
+    return substr($quelle, $ab, 2000);
+}
 
 /** Schluessel, Klassennamen, Zahlen - kein Anzeigetext. */
 const HARMLOS = '/^(?:[a-z0-9_.:\/-]+|[A-Z][A-Za-z0-9_]*|%\{[a-z_]+\}|[0-9.,\s-]+)$/';
@@ -597,9 +655,17 @@ function ohneKommentare(string $quelle): string
 
     foreach ($tokens as $token) {
         if (is_array($token) && in_array($token[0], [T_COMMENT, T_DOC_COMMENT], true)) {
-            $aus .= str_repeat("
-", substr_count($token[1], "
-"));
+            // Der Kommentar faellt weg, seine Umbrueche bleiben - sonst
+            // rutschen alle Zeilennummern darunter nach oben, und der
+            // Bericht schickt einen an die falsche Stelle.
+            //
+            // Der Umbruch steht hier als \n und nicht als echter
+            // Zeilenumbruch in der Zeichenkette: diese Datei hatte CRLF
+            // als Zeilenende, damit war der Suchtext "\r\n" - und den
+            // gibt es in den geprueften Dateien nicht. Der Zaehler kam
+            // also immer auf 0, jeder Kommentar verschwand samt seinen
+            // Zeilen, und gemeldet wurde Zeile 340 statt 378.
+            $aus .= str_repeat("\n", substr_count($token[1], "\n"));
             continue;
         }
 
@@ -652,42 +718,89 @@ function anzeigeTexte(array $wurzeln): array
         // ueber seinem Argument.
         $quelle = ohneKommentare((string) file_get_contents($pfad));
 
+        // Was von einem Fund uebrig bleibt, nachdem die Ausnahmen
+        // abgezogen sind. Einmal geschrieben, von beiden Durchlaeufen
+        // benutzt - sonst liefen die Ausnahmen der Feldform und der
+        // Aufrufform mit der Zeit auseinander.
+        $melden = static function (string $wert, int $stelle, string $art) use ($quelle, $pfad, &$treffer): void {
+            $harmlos = $art === 'Anzeigefeld' ? HARMLOS_BESCHRIFTUNG : HARMLOS;
+
+            if (preg_match($harmlos, $wert)) {
+                return;
+            }
+            if ($art === 'Antworttext' && in_array($wert, PROTOKOLLTEXTE, true)) {
+                return;
+            }
+            if (in_array($wert, TWITCH_BEGRIFFE, true)) {
+                return;
+            }
+            if (in_array($wert, TECHNISCHE_NAMEN, true)) {
+                return;
+            }
+
+            $zeile = zeileAn($quelle, $stelle);
+
+            // Logzeilen gehen ins Log des Containers, nicht zum
+            // Benutzer. Geprueft wird die Zeile des Treffers und die
+            // darueber - ein Aufruf ueber seinem Argument ist hier
+            // die Regel.
+            if (istLogzeile($quelle, $zeile)) {
+                return;
+            }
+
+            $treffer[] = [$pfad, $zeile, $art . ': ' . $wert];
+        };
+
+        // Erster Durchlauf: die Feldform, 'label' => 'Text'.
         foreach (ANZEIGESTELLEN as [$regex, $art]) {
             if (!preg_match_all($regex, $quelle, $saetze, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
                 continue;
             }
 
             foreach ($saetze as $satz) {
-                [$wert, $stelle] = $satz[1];
-
-                $harmlos = $art === 'Anzeigefeld' ? HARMLOS_BESCHRIFTUNG : HARMLOS;
-
-                if (preg_match($harmlos, $wert)) {
-                    continue;
-                }
-                if ($art === 'Antworttext' && in_array($wert, PROTOKOLLTEXTE, true)) {
-                    continue;
-                }
-                if (in_array($wert, TWITCH_BEGRIFFE, true)) {
-                    continue;
-                }
-                if (in_array($wert, TECHNISCHE_NAMEN, true)) {
-                    continue;
-                }
-
-                $zeile = substr_count($quelle, "\n", 0, $stelle) + 1;
-
-                // Logzeilen gehen ins Log des Containers, nicht zum
-                // Benutzer. Geprueft wird die Zeile des Treffers und die
-                // darueber - ein Aufruf ueber seinem Argument ist hier
-                // die Regel.
-                if (istLogzeile($quelle, $zeile)) {
-                    continue;
-                }
-
-                $treffer[] = [$pfad, $zeile, $art . ': ' . $wert];
+                $melden($satz[1][0], $satz[1][1], $art);
             }
         }
+
+        // Zweiter Durchlauf: die Aufrufform. Hier zaehlt jedes
+        // Argument, nicht nur das erste - siehe ANZEIGEAUFRUFE.
+        foreach (ANZEIGEAUFRUFE as [$regex, $art]) {
+            if (!preg_match_all($regex, $quelle, $saetze, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+                continue;
+            }
+
+            foreach ($saetze as $satz) {
+                $ab = $satz[0][1] + strlen($satz[0][0]) - 1;
+                $inhalt = klammerInhalt($quelle, $ab);
+
+                // Alle Zeichenketten, auch die kurzen - und genau
+                // deshalb ohne Mindestlaenge im Muster.
+                //
+                // Mit einer Mindestlaenge sprang der Sucher ueber ein
+                // kurzes 'a' hinweg und las dann von dessen schliessendem
+                // Anfuehrungszeichen bis zum naechsten oeffnenden: bei
+                // 'a' . $x . 'b' kam " . $x . " heraus und wurde als
+                // Anzeigetext gemeldet. Wer eine Datei mit solchen
+                // Meldungen vor sich hat, glaubt dem Pruefer beim
+                // naechsten Mal nicht mehr.
+                //
+                // So gelesen faellt der Sucher immer auf ein echtes
+                // Ende und beginnt am naechsten echten Anfang.
+                if (!preg_match_all(STRINGLITERAL, $inhalt, $texte, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+                    continue;
+                }
+
+                foreach ($texte as $text) {
+                    if (strlen($text[1][0]) < 4) {
+                        continue;
+                    }
+
+                    // +1, weil klammerInhalt() hinter der Klammer beginnt.
+                    $melden($text[1][0], $ab + 1 + $text[1][1], $art);
+                }
+            }
+        }
+
     }
 
     return $treffer;

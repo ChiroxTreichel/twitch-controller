@@ -91,7 +91,11 @@ final class Http
         if ($raw === false) {
             $error = curl_error($handle);
             curl_close($handle);
-            throw new RuntimeException(sprintf('%s %s fehlgeschlagen: %s', strtoupper($method), $url, $error));
+            throw new RuntimeException(translate('http.request_failed', [
+                'method' => strtoupper($method),
+                'url'    => $url,
+                'error'  => $error,
+            ]));
         }
 
         $status = (int) curl_getinfo($handle, CURLINFO_HTTP_CODE);

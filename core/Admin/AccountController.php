@@ -375,12 +375,12 @@ final class AccountController
                 case 'disconnect_channel':
                     $this->app->twitch->tokens()->delete(TokenStore::BROADCASTER);
 
-                    return $this->back('/account/settings', 'Kanal-Verbindung getrennt.');
+                    return $this->back('/account/settings', translate('settings.channel.disconnected'));
 
                 case 'timezone':
                     $timezone = $request->input('timezone');
                     if (!in_array($timezone, timezone_identifiers_list(), true)) {
-                        return $this->back('/account/settings', null, 'Unbekannte Zeitzone.');
+                        return $this->back('/account/settings', null, translate('settings.timezone_unknown'));
                     }
 
                     $this->app->settings->set('timezone', $timezone);
@@ -428,7 +428,7 @@ final class AccountController
             return $this->back('/account/settings', null, $e->getMessage());
         }
 
-        return $this->back('/account/settings', null, 'Unbekannte Aktion.');
+        return $this->back('/account/settings', null, translate('common.error.unknown_action'));
     }
 
     /**

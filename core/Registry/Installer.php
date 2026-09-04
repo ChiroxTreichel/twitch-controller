@@ -205,13 +205,17 @@ final class Installer
         if ($ok === false) {
             @unlink($target);
             throw new RuntimeException(
-                $error !== '' ? 'Download fehlgeschlagen: ' . $error : translate('install.download_aborted')
+                $error !== ''
+                    ? translate('install.download_failed', ['error' => $error])
+                    : translate('install.download_aborted')
             );
         }
 
         if ($status < 200 || $status >= 300) {
             @unlink($target);
-            throw new RuntimeException("Download fehlgeschlagen (HTTP {$status}).");
+            throw new RuntimeException(translate('install.download_status', [
+                'status' => (string) $status,
+            ]));
         }
 
         if ((int) filesize($target) === 0) {
