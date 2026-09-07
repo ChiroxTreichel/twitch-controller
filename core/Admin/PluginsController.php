@@ -222,10 +222,23 @@ final class PluginsController
         $query = trim($request->get('q'));
         $tag = trim($request->get('tag'));
 
+        // Was schon installiert ist, ist hier nicht die Frage: man kommt
+        // auf diese Seite, um etwas NEUES zu finden. Der Schalter ist
+        // darum aus, solange er nicht ausdruecklich an ist - und weil er
+        // in der Adresse steht, ist "aus" auch nach einem Neuladen
+        // wieder aus.
+        //
+        // Verloren geht dabei nichts: ein installiertes Plugin mit einer
+        // neueren Fassung meldet sich unter "Installierte Plugins", und
+        // dort steht auch der Knopf, der alle aktualisiert.
+        $showInstalled = $request->get('installed') === '1';
+
         $error = $request->get('error');
         $plugins = [];
         $tags = [];
         $needs = [];
+        $states = $this->installStates();
+        $hidden = 0;
 
         try {
             $plugins = $query !== '' ? $registry->search($query) : $registry->all();
@@ -237,10 +250,28 @@ final class PluginsController
                 ));
             }
 
+            if (!$showInstalled) {
+                $vorher = count($plugins);
+
+                $plugins = array_values(array_filter(
+                    $plugins,
+                    static fn (array $p): bool => ($states[(string) $p['slug']]['installed'] ?? false) === false
+                ));
+
+                // Wie viele weggefallen sind, steht neben dem Schalter.
+                // Ohne die Zahl waere eine leere Liste zweideutig: nichts
+                // gefunden, oder alles schon installiert?
+                $hidden = $vorher - count($plugins);
+            }
+
             $tags = $registry->tags();
 
             // Je Eintrag, was mitkaeme. Steht schon in der Liste, damit
             // die Ueberraschung nicht erst nach dem Klick kommt.
+            //
+            // NACH dem Filtern: fuer einen Eintrag, der gar nicht
+            // angezeigt wird, muss niemand die Abhaengigkeiten
+            // ausrechnen.
             $dependencies = new Dependencies($this->app);
             foreach ($plugins as $eintrag) {
                 $needs[(string) $eintrag['slug']] = $dependencies->describe($eintrag);
@@ -266,7 +297,9 @@ final class PluginsController
             'csrf'       => $this->app->auth->csrfToken(),
             'notice'     => $request->get('notice'),
             'error'      => $error,
-            'states'     => $this->installStates(),
+            'states'     => $states,
+            'showInstalled' => $showInstalled,
+            'hidden'     => $hidden,
         ]));
     }
 

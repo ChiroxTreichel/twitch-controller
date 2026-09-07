@@ -18,6 +18,8 @@
  * @var string $notice
  * @var string $error
  * @var array<string, array{installed: bool, enabled: bool, version: ?string}> $states
+ * @var bool $showInstalled  Auch anzeigen, was schon installiert ist?
+ * @var int $hidden          Wie viele deswegen weggefallen sind
  */
 ?>
 <h1><?= $e(translate('account.plugins.tab_find')) ?></h1>
@@ -51,11 +53,57 @@
         <?php if ($tag !== ''): ?>
             <input type="hidden" name="tag" value="<?= $e($tag) ?>">
         <?php endif; ?>
+        <?php /*
+            Der Schalterzustand faehrt mit. Ohne das faellt er bei jeder
+            Suche auf "aus" zurueck - man haette ihn also eingeschaltet
+            und suchte trotzdem ohne Installierte.
+        */ ?>
+        <?php if ($showInstalled ?? false): ?>
+            <input type="hidden" name="installed" value="1">
+        <?php endif ?>
         <button class="btn btn-small" type="submit"><?= $e(translate('common.search')) ?></button>
         <?php if ($query !== '' || $tag !== ''): ?>
             <a class="btn btn-ghost btn-small" href="<?= $e($url('/account/plugins/find')) ?>"><?= $e(translate('market.show_all')) ?></a>
         <?php endif; ?>
     </form>
+
+    <?php /*
+        Der Schalter fuer die schon installierten.
+
+        Ein Link und kein Formular: die Seite wird ueber die Adresse
+        gesteuert, und ein Link ist genau das - er laesst sich
+        anklicken, in einem neuen Tab oeffnen und als Lesezeichen
+        merken. Ein Absende-Knopf koennte das alles nicht.
+
+        Aus, solange er nicht ausdruecklich an ist - und weil er in der
+        Adresse steht, ist er nach einem Neuladen wieder aus. Das ist
+        gewollt: man kommt auf diese Seite, um etwas NEUES zu finden.
+    */ ?>
+    <div class="row" style="margin-top:12px;">
+        <a class="switch switch-small<?= ($showInstalled ?? false) ? ' is-on' : '' ?>"
+           href="<?= $e($url('/account/plugins/find?' . http_build_query(array_filter([
+               'q'         => $query,
+               'tag'       => $tag,
+               'installed' => ($showInstalled ?? false) ? '' : '1',
+           ], static fn (string $wert): bool => $wert !== '')))) ?>"
+           title="<?= $e(translate('market.show_installed')) ?>"
+           aria-label="<?= $e(translate('market.show_installed')) ?>">
+            <span class="switch-track"><span class="switch-knob"></span></span>
+        </a>
+
+        <span class="hint">
+            <?= $e(translate('market.show_installed')) ?>
+
+            <?php /*
+                Wie viele deswegen fehlen. Ohne die Zahl waere eine
+                leere Liste zweideutig: nichts gefunden, oder alles
+                schon installiert?
+            */ ?>
+            <?php if (!($showInstalled ?? false) && ($hidden ?? 0) > 0): ?>
+                <?= $e(translate('market.hidden_installed', ['count' => (string) $hidden])) ?>
+            <?php endif ?>
+        </span>
+    </div>
 
     <?php if ($tags !== []): ?>
         <div class="row" style="margin-top:12px;">
@@ -77,7 +125,14 @@
 <?php if ($plugins === [] && $error === ''): ?>
     <div class="card">
         <div class="empty">
-            <?php if ($query !== '' || $tag !== ''): ?>
+            <?php if (!($showInstalled ?? false) && ($hidden ?? 0) > 0): ?>
+                <?php /*
+                    Nicht "nichts gefunden": es wurde etwas gefunden,
+                    es ist nur schon installiert. Der falsche Satz
+                    schickt einen auf die Suche nach einem Fehler.
+                */ ?>
+                <?= $e(translate('market.all_installed', ['count' => (string) $hidden])) ?>
+            <?php elseif ($query !== '' || $tag !== ''): ?>
                 <?= $e(translate('market.nothing_found')) ?><br>
                 <span class="hint"><?= $e(translate('market.try_other')) ?></span>
             <?php else: ?>
