@@ -46,6 +46,7 @@ if (function_exists('pcntl_signal')) {
 }
 
 $booted = false;
+$pluginStand = '';
 
 while ($running) {
     try {
@@ -77,13 +78,41 @@ while ($running) {
             fwrite(STDERR, "[worker] Update fehlgeschlagen, Einzelheiten stehen in den Einstellungen.\n");
         }
 
-        // Plugins erst laden, wenn eingerichtet ist. Danach einmal - der
-        // Prozess wird bei Aenderungen neu gestartet.
+        // Plugins erst laden, wenn eingerichtet ist. Danach einmal: ein
+        // geladenes Plugin laesst sich nicht wieder entladen, und
+        // zweimal geladen haengt es seine Hooks zweimal ein.
         if (!$booted) {
             $app->plugins->boot();
             $booted = true;
+            $pluginStand = $app->plugins->fingerprint();
             fwrite(STDOUT, '[worker] Plugins geladen: '
                 . (implode(', ', $app->plugins->bootedSlugs()) ?: 'keine') . "\n");
+        }
+
+        // Hat sich seitdem etwas an den Plugins geaendert?
+        //
+        // Das MUSS hier stehen. Der Webserver installiert, schaltet ab
+        // und aktualisiert - dieser Prozess laeuft weiter und merkt
+        // nichts davon:
+        //
+        //   neu installiert    seine Hooks fehlen, also lief seine
+        //                      Hintergrundarbeit nie an
+        //   abgeschaltet       seine Hooks bleiben, also laeuft sie
+        //                      weiter
+        //   aktualisiert       die alten Dateien bleiben geladen
+        //
+        // Woran es gemerkt wird, steht in PluginManager::fingerprint():
+        // Slug, Fassung und Schalter, frisch aus der Datenbank. Eine
+        // Abfrage je Takt, und die Antwort ist eine Handvoll Zeilen.
+        //
+        // Die Antwort auf eine Aenderung ist ein Neustart und kein
+        // Nachladen: Hooks lassen sich nicht abmelden, und eine zweite
+        // Runde boot() haenge dieselben Zuhoerer ein zweites Mal ein.
+        // Docker startet uns wieder - genau wie nach einem Update.
+        $jetzt = $app->plugins->fingerprint();
+        if ($jetzt !== $pluginStand) {
+            fwrite(STDOUT, "[worker] Plugins haben sich geaendert, starte neu.\n");
+            exit(0);
         }
 
         $app->hooks->dispatch('cron.tick');

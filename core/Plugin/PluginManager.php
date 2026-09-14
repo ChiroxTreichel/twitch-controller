@@ -347,6 +347,53 @@ final class PluginManager
         return $this->booted;
     }
 
+    /**
+     * Ein Fingerabdruck dessen, was installiert ist.
+     *
+     * Slug, Fassung und Schalter - mehr entscheidet nicht darueber, was
+     * boot() laedt. Zwei gleiche Abdruecke heissen: dieselbe Runde
+     * Plugins, derselbe Code.
+     *
+     * Gebraucht wird das vom Worker. Er laeuft tagelang und laedt seine
+     * Plugins genau einmal; der Webserver installiert, schaltet ab und
+     * aktualisiert derweil weiter. Ohne diesen Vergleich merkt der
+     * Worker nichts davon - ein neu installiertes Plugin haette dort nie
+     * Hintergrundarbeit, ein abgeschaltetes liefe weiter.
+     *
+     * FRISCH aus der Datenbank, nicht aus dem Zwischenspeicher: der
+     * haelt die Antwort fuer die Dauer des Prozesses fest, und genau die
+     * ist im Worker tagealt.
+     */
+    public function fingerprint(): string
+    {
+        return self::fingerprintOf($this->registered(true));
+    }
+
+    /**
+     * Der Abdruck zu fertig gelesenen Zeilen.
+     *
+     * Getrennt von fingerprint(), damit er ohne Datenbank pruefbar ist -
+     * und das ist er wert: waere er unsortiert, liesse eine andere
+     * Reihenfolge derselben Zeilen den Worker im Kreis neu starten.
+     *
+     * @param array<string, array<string, mixed>> $rows
+     */
+    public static function fingerprintOf(array $rows): string
+    {
+        $zeilen = [];
+
+        foreach ($rows as $slug => $row) {
+            $zeilen[] = strtolower((string) $slug)
+                . ':' . (string) ($row['version'] ?? '')
+                . ':' . ((bool) ($row['enabled'] ?? false) ? '1' : '0');
+        }
+
+        // Sortiert, damit die Reihenfolge der Abfrage nichts aendert.
+        sort($zeilen);
+
+        return implode('|', $zeilen);
+    }
+
     // -----------------------------------------------------------------
     //  Schreiben
     // -----------------------------------------------------------------

@@ -1262,13 +1262,31 @@ sonst halten die Port 80 und den Netz-Alias fest. Daten liegen in
 ```bash
 docker compose logs -f web worker     # Logs mitlesen
 docker compose ps                     # Was läuft
-docker compose restart worker         # nach Änderungen an Plugin-Hooks
+docker compose restart worker         # nach Änderungen an Plugin-Dateien
 docker compose exec web bash          # in den Container
 ```
 
 Änderungen am PHP-Code wirken sofort — der Code ist in die Container
-gemountet. Nur der `worker` lädt Plugins einmal beim Start und braucht
-deshalb einen Neustart.
+gemountet. Nur der `worker` lädt Plugins einmal beim Start: ein
+geladenes Plugin lässt sich nicht entladen, und ein zweites `boot()`
+hinge dieselben Hooks ein zweites Mal ein.
+
+Beim **Installieren, Abschalten oder Aktualisieren über die Oberfläche**
+merkt er das inzwischen selbst. Er vergleicht je Takt
+`PluginManager::fingerprint()` — Slug, Fassung und Schalter, frisch aus
+der Datenbank — mit dem Stand beim Laden und beendet sich bei einem
+Unterschied; Docker startet ihn wieder (`restart: always`), genauso wie
+nach einem Update.
+
+> Das war lange ein stiller Fehler: ein über den Marktplatz
+> installiertes Plugin bekam nie ein `cron.tick`, bis der Container aus
+> einem anderen Grund neu startete. Aufgefallen ist es an
+> Live-Benachrichtigungen, die nie kamen; getroffen hat es jedes Plugin
+> mit Hintergrundarbeit.
+
+Ein Neustart von Hand bleibt nötig, wenn sich **Dateien** eines Plugins
+ändern, ohne dass sich seine Fassung ändert — also beim Entwickeln im
+gemounteten Ordner.
 
 Es gibt bewusst kein Composer und keinen Build-Schritt: ein kleiner
 PSR-4-Autoloader in `core/Support/Autoloader.php` reicht, damit sich das
