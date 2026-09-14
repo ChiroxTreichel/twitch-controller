@@ -482,6 +482,11 @@ final class Client
             'screenshots' => $screenshots,
             'requires'    => is_array($entry['requires'] ?? null) ? $entry['requires'] : [],
             'optional'    => is_array($entry['optional'] ?? null) ? $entry['optional'] : [],
+            // Womit sich dieses Plugin NICHT vertraegt. Muss schon im
+            // Katalog stehen: die Sperre soll greifen, bevor
+            // heruntergeladen wird, und vor dem Download gibt es hier
+            // kein plugin.json.
+            'conflicts'   => is_array($entry['conflicts'] ?? null) ? $entry['conflicts'] : [],
             'download'    => $download,
             // Adresse des Langtextes. Geholt wird er erst, wenn jemand
             // die Beschreibungsseite oeffnet - so bleibt der Katalog

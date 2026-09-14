@@ -238,6 +238,7 @@ final class PluginsController
         $tags = [];
         $needs = [];
         $states = $this->installStates();
+        $blocked = [];
         $hidden = 0;
 
         try {
@@ -275,6 +276,15 @@ final class PluginsController
             $dependencies = new Dependencies($this->app);
             foreach ($plugins as $eintrag) {
                 $needs[(string) $eintrag['slug']] = $dependencies->describe($eintrag);
+
+                // Und womit es sich NICHT vertraegt. Am Knopf und nicht
+                // erst nach dem Klick: eine Sperre, die man erst
+                // erfaehrt, wenn man sie ausgeloest hat, ist eine
+                // Fehlermeldung und kein Hinweis.
+                $gegner = $dependencies->conflictsOf($eintrag);
+                if ($gegner !== []) {
+                    $blocked[(string) $eintrag['slug']] = array_column($gegner, 'name');
+                }
             }
         } catch (Throwable $e) {
             if ($error === '') {
@@ -298,6 +308,7 @@ final class PluginsController
             'notice'     => $request->get('notice'),
             'error'      => $error,
             'states'     => $states,
+            'blocked'    => $blocked,
             'showInstalled' => $showInstalled,
             'hidden'     => $hidden,
         ]));
@@ -347,6 +358,10 @@ final class PluginsController
             'notice'    => $request->get('notice'),
             'error'     => $request->get('error'),
             'coreOk'    => $this->coreSatisfies($plugin),
+            // Dieselbe Sperre wie in der Liste. Die Detailseite hat
+            // einen eigenen Knopf, und wer sie direkt aufruft, kaeme
+            // sonst an der Liste vorbei.
+            'blocked'   => array_column((new Dependencies($this->app))->conflictsOf($plugin), 'name'),
         ]));
     }
 
@@ -502,6 +517,18 @@ final class PluginsController
 
         if ($package === null) {
             return $this->back($back, null, translate('market.not_in_catalog'));
+        }
+
+        // Vertraegt es sich mit dem, was schon da ist?
+        //
+        // Hier und nicht nur am Knopf: der Knopf ist die Hoeflichkeit,
+        // diese Zeile ist die Regel. Ein abgeschicktes Formular kommt
+        // auch aus einem Lesezeichen.
+        $gegner = (new Dependencies($this->app))->conflictsOf($package);
+        if ($gegner !== []) {
+            return $this->back($back, null, translate('market.conflicts_with', [
+                'plugins' => implode(', ', array_column($gegner, 'name')),
+            ]));
         }
 
         $plan = (new Dependencies($this->app))->plan($slug);

@@ -18,6 +18,7 @@
  * @var string $notice
  * @var string $error
  * @var array<string, array{installed: bool, enabled: bool, version: ?string}> $states
+ * @var array<string, list<string>> $blocked  Slug => Namen, die im Weg stehen
  * @var bool $showInstalled  Auch anzeigen, was schon installiert ist?
  * @var int $hidden          Wie viele deswegen weggefallen sind
  */
@@ -179,7 +180,16 @@
 
             <div class="row">
                 <a class="btn btn-ghost btn-small" href="<?= $e($detailUrl) ?>"><?= $e(translate('common.view')) ?></a>
-                <?php if ($canManage && $canWrite && ($state === null || $neuer)): ?>
+
+                <?php $imWeg = $blocked[$plugin['slug']] ?? []; ?>
+
+                <?php /*
+                    Steht etwas im Weg, gibt es keinen Knopf - und zwar
+                    KEINEN abgeschalteten: ein Knopf, den man nicht
+                    druecken kann, laesst einen nach der Ursache suchen.
+                    Der Satz darunter nennt sie.
+                */ ?>
+                <?php if ($imWeg === [] && $canManage && $canWrite && ($state === null || $neuer)): ?>
                     <?php
                     // Was noch dazukaeme. Als Rueckfrage am Knopf,
                     // damit niemand ungefragt zwei Plugins installiert.
@@ -221,6 +231,12 @@
         <?php if ($plugin['summary'] !== ''): ?>
             <p style="margin:0;"><?= $e($plugin['summary']) ?></p>
         <?php endif; ?>
+
+        <?php if ($imWeg !== []): ?>
+            <div class="note note-warn" style="margin:8px 0 0;">
+                <?= $e(translate('market.conflicts_with', ['plugins' => implode(', ', $imWeg)])) ?>
+            </div>
+        <?php endif ?>
 
         <?php if (($needs[$plugin['slug']] ?? []) !== []): ?>
             <p class="hint" style="margin:8px 0 0;">

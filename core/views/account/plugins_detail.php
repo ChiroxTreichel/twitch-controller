@@ -10,6 +10,7 @@
  * @var string $readme     README des Plugins, schon als HTML
  * @var string $readmeErr  Grund, falls sie nicht geholt werden konnte
  * @var list<array{slug: string, name: string, state: string}> $needs
+ * @var list<string> $blocked  Namen installierter Plugins, die im Weg stehen
  * @var array<string, mixed> $plugin
  * @var array{installed: bool, enabled: bool, version: ?string}|null $state
  * @var bool $canManage
@@ -78,6 +79,13 @@ $neuer = $state !== null
         <div class="row">
             <?php if (!$coreOk): ?>
                 <span class="badge badge-error"><?= $e(translate('market.needs_newer_core')) ?></span>
+            <?php elseif ($blocked !== []): ?>
+                <?php /*
+                    Kein Knopf, auch kein abgeschalteter: einer, den man
+                    nicht druecken kann, laesst einen nach der Ursache
+                    suchen. Sie steht im Kasten darunter.
+                */ ?>
+                <span class="badge badge-error"><?= $e(translate('market.conflicts_badge')) ?></span>
             <?php elseif ($canManage && $canWrite && ($state === null || $neuer)): ?>
                 <?php
                 // Was noch dazukommt. Steht als Rueckfrage am Knopf,
@@ -120,6 +128,12 @@ $neuer = $state !== null
             <?php endif; ?>
         </div>
     </div>
+
+    <?php if ($blocked !== []): ?>
+        <div class="note note-warn" style="margin:0 0 14px;">
+            <?= $e(translate('market.conflicts_with', ['plugins' => implode(', ', $blocked)])) ?>
+        </div>
+    <?php endif ?>
 
     <?php if (!$coreOk): ?>
         <div class="note note-warn" style="margin:0 0 14px;">

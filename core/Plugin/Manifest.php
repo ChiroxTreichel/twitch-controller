@@ -15,14 +15,24 @@ use RuntimeException;
  *   "version": "1.0.0",
  *   "description": "Wunschlisten-Spenden von Throne als Alert",
  *   "author": "Talutah",
- *   "requires": { "core": ">=1.0.0" },
- *   "optional": { "alerts": ">=1.0.0" }
+ *   "requires":  { "core": ">=1.0.0" },
+ *   "optional":  { "alerts": ">=1.0.0" },
+ *   "conflicts": { "streamlabs-tip-goals": "*" }
  * }
  *
  * "requires" sind harte Abhaengigkeiten: fehlt eine, laesst sich das
  * Plugin nicht aktivieren. "optional" sind weiche: das Plugin laeuft
  * auch ohne, kann aber mehr, wenn das andere da ist - Throne bringt zum
  * Beispiel nur dann Alerts, wenn das Alerts-Plugin aktiv ist.
+ *
+ * "conflicts" ist das Gegenteil von "requires": solange eines der
+ * genannten Plugins INSTALLIERT ist, laesst sich dieses hier nicht
+ * installieren. Gedacht fuer zwei, die dasselbe tun - zwei Plugins, die
+ * beide Spenden auf dasselbe Ziel buchen, zaehlten jede Spende doppelt.
+ *
+ * Gemeint ist installiert, nicht eingeschaltet: ein abgeschaltetes
+ * Plugin hat seine Tabelle und seine Einstellungen noch, und wer
+ * wechseln will, soll das eine wirklich loswerden.
  *
  * Der Schluessel "core" in beiden Listen bezieht sich auf die
  * Kernversion, nicht auf ein Plugin.
@@ -37,6 +47,7 @@ final class Manifest
     /**
      * @param array<string, string> $requires
      * @param array<string, string> $optional
+     * @param array<string, string> $conflicts
      * @param array<string, mixed>  $raw
      */
     private function __construct(
@@ -47,6 +58,7 @@ final class Manifest
         public readonly string $author,
         public readonly array $requires,
         public readonly array $optional,
+        public readonly array $conflicts,
         public readonly string $directory,
         public readonly array $raw,
     ) {
@@ -92,6 +104,7 @@ final class Manifest
             author: trim((string) ($decoded['author'] ?? '')),
             requires: self::constraints($decoded['requires'] ?? []),
             optional: self::constraints($decoded['optional'] ?? []),
+            conflicts: self::constraints($decoded['conflicts'] ?? []),
             directory: rtrim($directory, '/'),
             raw: $decoded,
         );
@@ -138,6 +151,23 @@ final class Manifest
         unset($optional['core']);
 
         return $optional;
+    }
+
+    /**
+     * Plugins, die neben diesem nicht installiert sein duerfen.
+     *
+     * "core" hat hier keinen Sinn - man kann den Kern nicht
+     * deinstallieren - und wird darum wie bei den anderen beiden
+     * herausgenommen, falls es jemand hineinschreibt.
+     *
+     * @return array<string, string>
+     */
+    public function conflictingPlugins(): array
+    {
+        $conflicts = $this->conflicts;
+        unset($conflicts['core']);
+
+        return $conflicts;
     }
 
     public function coreConstraint(): ?string

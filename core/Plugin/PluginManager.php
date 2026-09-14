@@ -7,6 +7,7 @@ namespace TwitchController\Core\Plugin;
 use TwitchController\Core\App;
 use TwitchController\Core\Config\Settings;
 use TwitchController\Core\Overlay\Bus;
+use TwitchController\Core\Registry\Dependencies;
 use RuntimeException;
 use Throwable;
 
@@ -179,7 +180,61 @@ final class PluginManager
             }
         }
 
+        foreach ($this->conflicting($slug) as $gegner) {
+            $problems[] = translate('plugin.blocker.conflict', [
+                'name' => $gegner['name'],
+            ]);
+        }
+
         return $problems;
+    }
+
+    /**
+     * Installierte Plugins, die neben diesem nicht sein duerfen.
+     *
+     * In BEIDE Richtungen gefragt: dieses hier nennt eines, oder eines
+     * nennt dieses hier. Sonst haenge die Sperre daran, welches der
+     * beiden zuerst geschrieben wurde - und ein spaeter dazugekommenes
+     * Plugin koennte sich neben ein aelteres setzen, das nichts von ihm
+     * weiss.
+     *
+     * Gemeint ist INSTALLIERT, nicht eingeschaltet: ein abgeschaltetes
+     * Plugin hat seine Tabelle und seine Einstellungen noch, und wer
+     * wechseln will, soll das eine wirklich loswerden.
+     *
+     * @return list<array{slug: string, name: string}>
+     */
+    public function conflicting(string $slug): array
+    {
+        $slug = strtolower(trim($slug));
+        $manifest = $this->manifest($slug);
+        if ($manifest === null) {
+            return [];
+        }
+
+        $installiert = [];
+
+        foreach ($this->discover() as $kandidat) {
+            if ($kandidat->slug === $slug || !$this->isInstalled($kandidat->slug)) {
+                continue;
+            }
+
+            $installiert[$kandidat->slug] = [
+                'name'      => $kandidat->name,
+                'version'   => $kandidat->version,
+                'conflicts' => $kandidat->conflictingPlugins(),
+            ];
+        }
+
+        // Dieselbe Entscheidung wie im Marktplatz, und darum dieselbe
+        // Funktion: eine zweite Fassung liefe frueher oder spaeter
+        // auseinander, und dann duerfte man ein Plugin installieren,
+        // das sich nicht aktivieren laesst.
+        return Dependencies::conflictsBetween([
+            'slug'      => $slug,
+            'version'   => $manifest->version,
+            'conflicts' => $manifest->conflictingPlugins(),
+        ], $installiert);
     }
 
     /**

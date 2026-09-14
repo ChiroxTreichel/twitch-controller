@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TwitchController\Core\Registry;
 
 use TwitchController\Core\App;
+use TwitchController\Core\Plugin\VersionConstraint;
 
 /**
  * ===================================================================
@@ -166,6 +167,124 @@ final class Dependencies
         }
 
         return array_values(array_unique($slugs));
+    }
+
+    /**
+     * Womit sich dieser Katalogeintrag NICHT vertraegt - sofern es
+     * installiert ist.
+     *
+     * Gefragt wird in BEIDE Richtungen: der Eintrag nennt ein
+     * installiertes Plugin, oder ein installiertes Plugin nennt ihn.
+     * Sonst haenge die Sperre daran, welches der beiden zuerst
+     * geschrieben wurde.
+     *
+     * Die eine Richtung kommt aus dem KATALOG und nicht aus einem
+     * Manifest: vor dem Download liegt hier keine plugin.json, und
+     * genau dann soll die Sperre schon greifen.
+     *
+     * @param array<string, mixed> $entry Katalogeintrag
+     * @return list<array{slug: string, name: string}>
+     */
+    public function conflictsOf(array $entry): array
+    {
+        $installiert = [];
+
+        foreach ($this->app->plugins->discover() as $kandidat) {
+            if (!$this->app->plugins->isInstalled($kandidat->slug)) {
+                continue;
+            }
+
+            $installiert[$kandidat->slug] = [
+                'name'      => $kandidat->name,
+                'version'   => $kandidat->version,
+                'conflicts' => $kandidat->conflictingPlugins(),
+            ];
+        }
+
+        // Installiert, aber der Ordner ist weg: dann gibt es kein
+        // Manifest und damit keine Gegenrichtung - der Name bleibt der
+        // Slug. Ausgeschlossen wird trotzdem: die Tabellen und
+        // Einstellungen dieses Plugins stehen noch.
+        foreach (array_keys($this->app->plugins->registered()) as $slug) {
+            if (!isset($installiert[$slug])) {
+                $installiert[$slug] = [
+                    'name'      => $slug,
+                    'version'   => (string) $this->app->plugins->installedVersion($slug),
+                    'conflicts' => [],
+                ];
+            }
+        }
+
+        return self::conflictsBetween($entry, $installiert);
+    }
+
+    /**
+     * Die eigentliche Entscheidung, ohne Datenbank.
+     *
+     * Abgetrennt, weil sie darueber bestimmt, ob sich ein Plugin
+     * installieren laesst - und weil sie in beide Richtungen fragt, was
+     * man leicht falsch herum baut.
+     *
+     * @param array<string, mixed> $entry Katalogeintrag oder Manifest-Form
+     * @param array<string, array{name: string, version: string, conflicts: array<string, string>}> $installed
+     * @return list<array{slug: string, name: string}>
+     */
+    public static function conflictsBetween(array $entry, array $installed): array
+    {
+        $slug = strtolower(trim((string) ($entry['slug'] ?? '')));
+        if ($slug === '') {
+            return [];
+        }
+
+        $gefunden = [];
+
+        // Richtung 1: was der Eintrag selbst ausschliesst.
+        foreach (is_array($entry['conflicts'] ?? null) ? $entry['conflicts'] : [] as $anderer => $constraint) {
+            $anderer = strtolower(trim((string) $anderer));
+
+            if ($anderer === '' || $anderer === 'core' || $anderer === $slug || !isset($installed[$anderer])) {
+                continue;
+            }
+
+            // Eine Fassungsangabe ist erlaubt: "vertraegt sich nicht mit
+            // dem alten Foo" ist eine andere Aussage als "vertraegt sich
+            // nicht mit Foo".
+            if (!VersionConstraint::satisfies((string) $installed[$anderer]['version'], (string) $constraint)) {
+                continue;
+            }
+
+            $gefunden[$anderer] = ['slug' => $anderer, 'name' => (string) $installed[$anderer]['name']];
+        }
+
+        // Richtung 2: was ein installiertes Plugin gegen diesen Eintrag
+        // hat. Ohne sie haenge die Sperre daran, welches der beiden
+        // zuerst geschrieben wurde - ein spaeter dazugekommenes Plugin
+        // koennte sich neben ein aelteres setzen, das nichts von ihm
+        // weiss.
+        $fassung = (string) ($entry['version'] ?? '');
+
+        foreach ($installed as $anderer => $zeile) {
+            if ($anderer === $slug || isset($gefunden[$anderer])) {
+                continue;
+            }
+
+            foreach ($zeile['conflicts'] as $genannt => $constraint) {
+                if (strtolower(trim((string) $genannt)) !== $slug) {
+                    continue;
+                }
+
+                // Ohne bekannte Fassung wird nicht gefiltert: lieber
+                // sperren als zwei Plugins nebeneinander, die sich
+                // ausschliessen.
+                if ($fassung !== '' && !VersionConstraint::satisfies($fassung, (string) $constraint)) {
+                    continue;
+                }
+
+                $gefunden[$anderer] = ['slug' => $anderer, 'name' => (string) $zeile['name']];
+            }
+        }
+
+        return array_values($gefunden);
     }
 
     /**
