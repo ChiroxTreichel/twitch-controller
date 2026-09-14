@@ -74,6 +74,10 @@ EMAIL=''
 PROXY_MODE=''
 PROXY_NET=''
 ASSUME_YES=0
+RECONFIGURE=0
+# Wurde beim Laufen mindestens eine Frage uebersprungen, weil sie schon
+# beantwortet war? Dann soll einmal dastehen, wie man sie doch aendert.
+KEPT_ANSWERS=0
 DO_START=1
 AUTO_INSTALL=0
 NO_PULL=0
@@ -103,6 +107,8 @@ nur dafür da, die Fragen vorab zu beantworten:
                        npm  = eigener Reverse Proxy ist schon da
   --network <name>     Docker-Netz des eigenen Proxys (wird sonst erkannt)
   --email <adresse>    Kontakt für Let's Encrypt (optional)
+  --reconfigure        Alle Fragen noch einmal stellen, auch die schon
+                       beantworteten
   --no-pull            Nicht nach Updates sehen
   --no-start           Nur vorbereiten, nicht starten
   --yes                Keine Rückfragen, Vorgaben verwenden
@@ -112,8 +118,12 @@ nur dafür da, die Fragen vorab zu beantworten:
                        --yes nichts installiert.
   --help               Diese Hilfe
 
-Ein zweiter Aufruf ist gefahrlos: vorhandene Werte in der .env bleiben
-stehen, ein vorhandener Klon wird nur aktualisiert.
+Ein zweiter Aufruf ist gefahrlos und WORTKARG: was schon beantwortet ist -
+Domain, HTTPS-Weg, Kontaktadresse - wird uebernommen und nicht erneut
+gefragt. Ein vorhandener Klon wird nur aktualisiert.
+
+Etwas aendern geht einzeln (--domain, --proxy, --email) oder mit
+--reconfigure, das wieder alles fragt.
 USAGE
 }
 
@@ -126,6 +136,7 @@ while [ $# -gt 0 ]; do
         --email)   EMAIL="${2:-}"; shift 2 ;;
         --proxy)   PROXY_MODE="${2:-}"; shift 2 ;;
         --network) PROXY_NET="${2:-}"; shift 2 ;;
+        --reconfigure) RECONFIGURE=1; shift ;;
         --no-pull)  NO_PULL=1; shift ;;
         --no-start) DO_START=0; shift ;;
         --install-deps) AUTO_INSTALL=1; shift ;;
@@ -748,9 +759,17 @@ if [ -z "$DOMAIN" ]; then
         ''|twitch.example.com) CURRENT_DOMAIN='' ;;
     esac
 
-    dim "Die Adresse, die du später im Browser eingibst - ohne https://"
-    dim "Beispiel: twitch.deinedomain.de"
-    DOMAIN="$(ask 'Domain' "$CURRENT_DOMAIN")"
+    if [ -n "$CURRENT_DOMAIN" ] && [ "$RECONFIGURE" = "0" ]; then
+        # Schon beantwortet. Ein zweiter Aufruf ist fast immer ein
+        # Update, und dabei ist jede Frage, deren Antwort danebensteht,
+        # eine Gelegenheit, sich zu vertippen.
+        DOMAIN="$CURRENT_DOMAIN"
+        KEPT_ANSWERS=1
+    else
+        dim "Die Adresse, die du später im Browser eingibst - ohne https://"
+        dim "Beispiel: twitch.deinedomain.de"
+        DOMAIN="$(ask 'Domain' "$CURRENT_DOMAIN")"
+    fi
 fi
 
 DOMAIN="${DOMAIN#http://}"
@@ -770,6 +789,12 @@ esac
 env_set APP_DOMAIN "$DOMAIN"
 env_set APP_URL "https://$DOMAIN"
 ok "https://$DOMAIN"
+
+# Einmal sagen, wie man das aendert - sonst ist die Antwort auf eine
+# nicht gestellte Frage nicht mehr erreichbar.
+if [ "$KEPT_ANSWERS" = "1" ]; then
+    dim "Unverändert. Ändern mit --domain <neu> oder --reconfigure."
+fi
 
 # Zeigt die Domain wirklich hierher? Das ist der haeufigste Grund,
 # warum es hinterher nicht klappt - also lieber jetzt sagen.
@@ -817,10 +842,22 @@ if [ -n "$PROXY_LINE" ]; then
 fi
 
 if [ -z "$PROXY_MODE" ]; then
-    if [ "$FRESH" = "0" ] && [ -n "$(env_get COMPOSE_FILE)" ] \
-       && [ "$(env_get COMPOSE_FILE)" != "docker-compose.yaml" ]; then
-        PROXY_MODE='npm'
-        info "Wie bei der letzten Einrichtung: vorhandener Reverse Proxy."
+    CURRENT_COMPOSE="$(env_get COMPOSE_FILE)"
+
+    if [ "$FRESH" = "0" ] && [ "$RECONFIGURE" = "0" ] && [ -n "$CURRENT_COMPOSE" ]; then
+        # Schon entschieden - und zwar in BEIDE Richtungen. Bisher wurde
+        # nur der fremde Proxy wiedererkannt; wer HTTPS selbst einrichten
+        # liess, bekam die Auswahl bei jedem Update erneut vorgelegt.
+        case "$CURRENT_COMPOSE" in
+            docker-compose.yaml)
+                PROXY_MODE='auto'
+                info "Wie bei der letzten Einrichtung: HTTPS wird selbst eingerichtet."
+                ;;
+            *)
+                PROXY_MODE='npm'
+                info "Wie bei der letzten Einrichtung: vorhandener Reverse Proxy."
+                ;;
+        esac
     else
         DEFAULT_CHOICE=1
         if [ -n "$DETECTED_NAME" ]; then
@@ -851,10 +888,19 @@ case "$PROXY_MODE" in
 
         if [ -z "$EMAIL" ]; then
             CURRENT_EMAIL="$(env_get ACME_EMAIL)"
-            printf '\n'
-            dim "Optional: An diese Adresse warnt Let's Encrypt, falls die"
-            dim "Verlängerung des Zertifikats mal scheitert. Leer ist auch ok."
-            EMAIL="$(ask 'E-Mail (Enter = keine)' "$CURRENT_EMAIL")"
+
+            if [ "$FRESH" = "0" ] && [ "$RECONFIGURE" = "0" ]; then
+                # Hier zaehlt nicht der Wert, sondern die Einrichtung:
+                # "keine Adresse" ist eine gueltige Antwort, und wer sie
+                # gegeben hat, soll nicht bei jedem Update erneut gefragt
+                # werden. Darum FRESH und nicht "ist leer".
+                EMAIL="$CURRENT_EMAIL"
+            else
+                printf '\n'
+                dim "Optional: An diese Adresse warnt Let's Encrypt, falls die"
+                dim "Verlängerung des Zertifikats mal scheitert. Leer ist auch ok."
+                EMAIL="$(ask 'E-Mail (Enter = keine)' "$CURRENT_EMAIL")"
+            fi
         fi
         env_set ACME_EMAIL "$EMAIL"
 
