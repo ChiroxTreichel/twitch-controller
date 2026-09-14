@@ -93,9 +93,56 @@ final class Db
     public function run(string $sql, array $params = []): PDOStatement
     {
         $statement = $this->pdo()->prepare($sql);
-        $statement->execute($params);
+
+        // Jeden Wert EINZELN binden, mit seinem Typ.
+        //
+        // execute($params) bindet alles als Zeichenkette, und dabei wird
+        // aus PHPs false eine LEERE Zeichenkette. Postgres nimmt '' fuer
+        // boolean nicht an:
+        //
+        //   ungueltige Eingabesyntax fuer Typ boolean: »«
+        //
+        // Das ist boesartig, weil true funktioniert: daraus wird '1',
+        // und das laesst Postgres durchgehen. Eine Abfrage, die "an"
+        // schreibt, laeuft also - und dieselbe Abfrage mit "aus" wirft.
+        // In der Live-Benachrichtigung hat genau das die ganze Runde
+        // abgebrochen, sobald ein beobachteter Kanal NICHT live war; die
+        // Zeitstempel blieben eine Woche stehen, und im Log stand eine
+        // Meldung, die nach einem Datenbankfehler aussah.
+        foreach ($params as $name => $value) {
+            $statement->bindValue(
+                // Sowohl :name als auch ? werden unterstuetzt - bei
+                // Fragezeichen zaehlt PDO ab 1, das Feld ab 0.
+                is_int($name) ? $name + 1 : ':' . ltrim($name, ':'),
+                $value,
+                self::paramType($value)
+            );
+        }
+
+        $statement->execute();
 
         return $statement;
+    }
+
+    /**
+     * Mit welchem Typ ein Wert gebunden wird.
+     *
+     * Abgetrennt, weil das die eigentliche Entscheidung ist und sich so
+     * ohne Datenbank pruefen laesst. Der Fehler selbst ist es nicht: den
+     * loest erst Postgres aus, und der Weg dorthin geht ueber einen
+     * Server.
+     */
+    public static function paramType(mixed $value): int
+    {
+        return match (true) {
+            is_bool($value) => PDO::PARAM_BOOL,
+            $value === null => PDO::PARAM_NULL,
+            // Alles andere bleibt Zeichenkette, so wie bisher.
+            // Insbesondere Zahlen: die stehen in diesem Projekt
+            // reihenweise in Ausdruecken wie (:tage || ' days'), und die
+            // brauchen Text.
+            default => PDO::PARAM_STR,
+        };
     }
 
     /**
