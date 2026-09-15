@@ -600,6 +600,21 @@ final class PluginManager
         );
 
         $this->registered = null;
+
+        // Das Overlay muss neu laden.
+        //
+        // Installieren und Abschalten taten das schon; Aktualisieren
+        // nicht - und genau dort faellt es am ehesten auf. Eine laufende
+        // Browserquelle haelt die Adressen fest, mit denen sie gestartet
+        // ist, samt ihrem ?v=-Stempel. Ein Plugin, das sein Geruest oder
+        // sein Aussehen aendert, kommt bei ihr also nie an, und der
+        // Streamer sieht nach dem Update dasselbe wie davor.
+        //
+        // Hier und nicht im Plugin: ein Update KANN alles aendern, und
+        // jedes Plugin einzeln daran zu erinnern hiesse, dass es eines
+        // vergisst.
+        (new Bus($this->app))->invalidate();
+
         $this->app->hooks->dispatch('plugin.upgraded', $manifest->slug, $installed, $manifest->version);
     }
 
