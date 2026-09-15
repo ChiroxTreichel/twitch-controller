@@ -1257,6 +1257,27 @@ sonst halten die Port 80 und den Netz-Alias fest. Daten liegen in
 
 ---
 
+### Einstellungsseiten eines Plugins
+
+Der Hook `plugin.settings` setzt die Knöpfe in der Plugin-Liste. Ein
+Plugin darf **mehrere** anbieten — hinter dem Slug steht dann ein
+Doppelpunkt und ein beliebiger Zusatz:
+
+```php
+$hooks->on('plugin.settings', static function (array $links): array {
+    $links['tip-goals']            = ['label' => 'Zugang',  'href' => '/…/settings'];
+    $links['tip-goals:appearance'] = ['label' => 'Aussehen', 'href' => '/…/appearance'];
+
+    return $links;
+});
+```
+
+Alles bis zum ersten Doppelpunkt ist der Slug. Ein Plugin mit nur einer
+Seite schreibt weiter nur den Slug.
+
+> Bis Kern 2.3.0 war genau **eine** Seite je Plugin möglich; eine zweite
+> fiel still weg, und der Knopf fehlte einfach.
+
 ## Betrieb und Entwicklung
 
 ```bash

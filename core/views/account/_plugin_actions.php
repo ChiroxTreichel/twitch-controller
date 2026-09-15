@@ -17,11 +17,17 @@
  */
 ?>
 <div class="row">
-    <?php if ($row['enabled'] && $row['settings'] !== null): ?>
-        <a class="btn btn-ghost btn-small"
-           href="<?= $e($url($row['settings']['href'])) ?>">
-            <?= $e($row['settings']['label']) ?>
-        </a>
+    <?php /*
+        Ein Plugin darf MEHRERE Einstellungsseiten anbieten - etwa
+        Zugangsdaten und Aussehen. Vorher war es genau eine, und die
+        zweite fiel still weg.
+    */ ?>
+    <?php if ($row['enabled']): ?>
+        <?php foreach ($row['settings'] as $seite): ?>
+            <a class="btn btn-ghost btn-small" href="<?= $e($url($seite['href'])) ?>">
+                <?= $e($seite['label']) ?>
+            </a>
+        <?php endforeach ?>
     <?php endif; ?>
 
     <?php if ($row['catalog'] !== null): ?>

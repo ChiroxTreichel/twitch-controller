@@ -71,7 +71,7 @@ final class PluginsController
                         : null,
                 'blockers'   => $this->app->plugins->blockers($manifest->slug),
                 'dependents' => $this->app->plugins->activeDependents($manifest->slug),
-                'settings'   => $settingsPages[$manifest->slug] ?? null,
+                'settings'   => $settingsPages[$manifest->slug] ?? [],
             ];
         }
 
@@ -710,12 +710,32 @@ final class PluginsController
         }
 
         $clean = [];
-        foreach ($pages as $slug => $page) {
+        foreach ($pages as $schluessel => $page) {
             if (!is_array($page) || ($page['href'] ?? '') === '') {
                 continue;
             }
 
-            $clean[strtolower((string) $slug)] = [
+            // MEHRERE Seiten je Plugin.
+            //
+            // Vorher gab es genau eine, und der Schluessel war der Slug.
+            // Ein Plugin mit Zugangsdaten UND einem Aussehen konnte die
+            // zweite Seite darum nicht anbieten - sie fiel still weg,
+            // und der Knopf fehlte einfach.
+            //
+            // Jetzt darf hinter dem Slug ein Doppelpunkt und ein
+            // beliebiger Zusatz stehen:
+            //
+            //   $links['tip-goals']            die erste Seite
+            //   $links['tip-goals:appearance'] eine weitere
+            //
+            // Alles bis zum ersten Doppelpunkt ist der Slug. Plugins
+            // mit nur einer Seite aendern sich dadurch nicht.
+            $slug = strtolower(trim(explode(':', (string) $schluessel, 2)[0]));
+            if ($slug === '') {
+                continue;
+            }
+
+            $clean[$slug][] = [
                 'label' => (string) ($page['label'] ?? 'Einstellungen'),
                 'href'  => (string) $page['href'],
             ];
