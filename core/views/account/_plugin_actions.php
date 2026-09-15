@@ -86,6 +86,11 @@
                 'action' => 'remove',
                 'slug'   => $manifest->slug,
             ],
+            // Der Knopf steht ganz aussen in der Reihe - ohne das
+            // klappte die Frage nach rechts aus dem Fenster. Das Skript
+            // merkt das inzwischen auch von selbst; hier steht es
+            // trotzdem, damit es ohne JavaScript stimmt.
+            'right'  => true,
         ], null) ?>
     <?php endif; ?>
 </div>

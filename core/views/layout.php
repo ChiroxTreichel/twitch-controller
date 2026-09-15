@@ -230,6 +230,69 @@ try {
             alleZu(null);
         }
     });
+
+    /*
+     * Beim Oeffnen nachsehen, ob der Kasten ins Fenster passt.
+     *
+     * Ohne das steht er halb neben der Seite, sobald der Knopf weit
+     * rechts sitzt - in der Plugin-Liste steht "Entfernen" ganz aussen,
+     * und die Frage war nicht mehr zu lesen.
+     *
+     * Die Vorlage darf das weiterhin selbst festlegen (confirm-right).
+     * Gemessen wird nur, wenn sie es NICHT getan hat: eine ausdrueckliche
+     * Angabe ist eine Entscheidung, und die soll nicht von einer
+     * Fensterbreite ueberstimmt werden.
+     *
+     * Gemessen wird beim Oeffnen und nicht einmal am Anfang: der Kasten
+     * hat zugeklappt keine Groesse, und die Seite kann sich bis dahin
+     * verschoben haben.
+     */
+    function ausrichten(kasten) {
+        if (kasten.classList.contains('confirm-right')) {
+            return;
+        }
+
+        var feld = kasten.querySelector('.confirm-panel');
+        if (!feld) {
+            return;
+        }
+
+        // Erst zuruecksetzen: beim zweiten Oeffnen koennte die
+        // Entscheidung von vorhin noch stehen, und das Fenster ist
+        // vielleicht ein anderes.
+        kasten.classList.remove('confirm-flip');
+
+        var platz = feld.getBoundingClientRect();
+        if (platz.right <= window.innerWidth - 8) {
+            return;
+        }
+
+        kasten.classList.add('confirm-flip');
+
+        // Passt es nach links auch nicht, war die erste Lage die
+        // bessere - ein Kasten, der links heraussteht, ist nicht besser
+        // als einer, der rechts heraussteht.
+        if (feld.getBoundingClientRect().left < 8) {
+            kasten.classList.remove('confirm-flip');
+        }
+    }
+
+    /*
+     * <details> kennt kein "wird gleich geoeffnet", nur das toggle
+     * DANACH - und genau dann steht der Kasten schon falsch. Sichtbar
+     * wird das trotzdem nicht: das Ausrichten passiert im selben
+     * Bilddurchlauf, bevor der Browser zeichnet.
+     *
+     * toggle steigt nicht auf, darum true als dritter Wert: so faengt
+     * ein einziger Zuhoerer alle Kaesten, auch spaeter dazugekommene.
+     */
+    document.addEventListener('toggle', function (ereignis) {
+        var kasten = ereignis.target;
+
+        if (kasten instanceof Element && kasten.matches('details.confirm') && kasten.open) {
+            ausrichten(kasten);
+        }
+    }, true);
 }());
 </script>
 

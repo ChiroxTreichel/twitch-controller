@@ -820,8 +820,11 @@ td.actions { text-align: right; white-space: nowrap; }
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 
-/* Nach rechts öffnen, wenn der Knopf am rechten Rand sitzt. */
-.confirm.confirm-right .confirm-panel {
+/* Nach links öffnen, wenn der Knopf am rechten Rand sitzt.
+   confirm-right setzt die Vorlage, confirm-flip das Skript, wenn es
+   beim Öffnen merkt, dass der Kasten sonst aus dem Fenster ragt. */
+.confirm.confirm-right .confirm-panel,
+.confirm.confirm-flip .confirm-panel {
     left: auto;
     right: 0;
 }
