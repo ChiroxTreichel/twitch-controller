@@ -298,7 +298,12 @@ final class AccountController
             'updateVersion'    => $updater->currentVersion(),
             // Der Pfad, unter dem diese Installation wirklich liegt -
             // bei der Einrichtung angegeben, nicht geraten.
-            'installPath'      => $this->app->root,
+            // Der Pfad auf dem SERVER, nicht im Container. $app->root
+            // ist dort immer /var/www/html - der Einhaengepunkt, nicht
+            // der Ordner, den ein Mensch eintippt. Geschrieben hat ihn
+            // install.sh; wer noch nicht damit eingerichtet hat, hat
+            // ihn nicht, und dann wird kein Pfad erfunden.
+            'installPath'      => trim((string) $this->app->env->get('INSTALL_PATH', '')),
             'updatePossible'   => $updater->isGitCheckout() && $updater->gitAvailable(),
             'navGroups'        => $navGroups,
         ];

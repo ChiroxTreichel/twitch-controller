@@ -790,6 +790,16 @@ env_set APP_DOMAIN "$DOMAIN"
 env_set APP_URL "https://$DOMAIN"
 ok "https://$DOMAIN"
 
+# Wo die Installation auf DIESEM Rechner liegt.
+#
+# Im Container heisst der Ordner immer /var/www/html - das ist der
+# Einhaengepunkt, nicht der Pfad, den ein Mensch eintippt. Die
+# Oberflaeche zeigte deshalb "cd /var/www/html && sudo ./install.sh",
+# und das fuehrt nirgendwohin.
+#
+# Nur dieses Skript kennt den echten Pfad, also schreibt es ihn auf.
+env_set INSTALL_PATH "$ROOT"
+
 # Einmal sagen, wie man das aendert - sonst ist die Antwort auf eine
 # nicht gestellte Frage nicht mehr erreichbar.
 if [ "$KEPT_ANSWERS" = "1" ]; then

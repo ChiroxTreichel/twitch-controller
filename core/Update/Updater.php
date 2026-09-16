@@ -147,7 +147,7 @@ final class Updater
      */
     public function status(): array
     {
-        return [
+        $stand = [
             'checked_at'   => $this->app->settings->int('update_checked_at', 0),
             'available'    => $this->app->settings->bool('update_available', false),
             'behind'       => $this->app->settings->int('update_behind', 0),
@@ -156,6 +156,29 @@ final class Updater
             'requested_at' => $this->app->settings->int('update_requested_at', 0),
             'last_result'  => (array) $this->app->settings->get('update_last_result', []),
         ];
+
+        // Das Ergebnis gilt nur fuer den Stand, gegen den gerechnet
+        // wurde.
+        //
+        // Wer auf der Konsole "git pull" macht - und dazu fordert diese
+        // Meldung ja selbst auf -, bewegt HEAD, ohne dass die Anwendung
+        // davon erfaehrt. Danach stand hier weiter "Es gibt eine neuere
+        // Version" samt dem Befehl, den man gerade ausgefuehrt hatte.
+        //
+        // Nachgesehen wird nur, wenn ueberhaupt etwas gemeldet ist.
+        if ($stand['available']) {
+            $gemerkt = $this->app->settings->string('update_checked_head');
+            [$ok, $jetzt] = $this->git(['rev-parse', '--short', 'HEAD']);
+
+            if ($ok && $gemerkt !== '' && trim($jetzt) !== $gemerkt) {
+                $stand['available'] = false;
+                $stand['behind'] = 0;
+                $stand['needs_shell'] = false;
+                $stand['subject'] = '';
+            }
+        }
+
+        return $stand;
     }
 
     // -----------------------------------------------------------------
@@ -203,12 +226,18 @@ final class Updater
 
         $needsShell = self::needsShell(explode("\n", $changed));
 
+        // Gegen WELCHEN Stand gerechnet wurde. Bewegt sich HEAD danach -
+        // etwa durch ein "git pull" auf der Konsole -, gilt das
+        // Ergebnis nicht mehr; status() sieht darum nach.
+        [, $kopf] = $this->git(['rev-parse', '--short', 'HEAD']);
+
         $this->app->settings->setMany([
-            'update_checked_at'  => time(),
-            'update_available'   => $behind > 0,
-            'update_behind'      => $behind,
-            'update_subject'     => $behind > 0 ? $subject : '',
-            'update_needs_shell' => $behind > 0 && $needsShell,
+            'update_checked_at'   => time(),
+            'update_available'    => $behind > 0,
+            'update_behind'       => $behind,
+            'update_subject'      => $behind > 0 ? $subject : '',
+            'update_needs_shell'  => $behind > 0 && $needsShell,
+            'update_checked_head' => trim($kopf),
         ]);
 
         return [

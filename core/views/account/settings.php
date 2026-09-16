@@ -97,9 +97,28 @@ use TwitchController\Core\Support\Dates;
                     <p style="margin:10px 0 0;">
                         <?= $e(translate('settings.system.needs_shell')) ?>
                     </p>
+                    <?php /*
+                        Der Pfad steht nur da, wenn er bekannt ist.
+
+                        Vorher stand hier $app->root - und das ist im
+                        Container /var/www/html, der Einhaengepunkt.
+                        Wer das eintippt, landet nirgends. Lieber der
+                        Befehl ohne cd und ein Wort dazu, als ein Pfad,
+                        der nicht stimmt.
+                    */ ?>
                     <p class="mono" style="background:var(--bg);padding:10px 12px;border-radius:9px;border:1px solid var(--line);margin:8px 0 0;">
-                        cd <?= $e($installPath) ?> &amp;&amp; sudo ./install.sh
+                        <?php if ($installPath !== ''): ?>
+                            cd <?= $e($installPath) ?> &amp;&amp; sudo ./install.sh
+                        <?php else: ?>
+                            sudo ./install.sh
+                        <?php endif ?>
                     </p>
+
+                    <?php if ($installPath === ''): ?>
+                        <p class="hint" style="margin:6px 0 0;">
+                            <?= $e(translate('settings.system.where')) ?>
+                        </p>
+                    <?php endif ?>
                 <?php elseif ($canManage): ?>
                     <form method="post" action="<?= $e($url('/account/settings')) ?>"
                           style="margin-top:12px;">
