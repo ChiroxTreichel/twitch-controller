@@ -113,6 +113,7 @@ final class Twitch
         //   channel.cheer            -> bits:read
         //   channel.raid             -> kein Scope
         //   stream.online / .offline -> kein Scope
+        //   channel.channel_points_* -> channel:read:redemptions
         //   channel.chat.*           -> user:read:chat + user:bot am
         //                               mitlesenden Konto, channel:bot
         //                               am Kanal
@@ -126,6 +127,12 @@ final class Twitch
             'moderator:read:followers',
             'channel:read:subscriptions',
             'bits:read',
+            // Kanalpunkte. Steht hier, weil der KERN die Einloesungen
+            // abonniert - ein Abo ohne die passende Freigabe lehnt
+            // Twitch mit "subscription missing proper authorization"
+            // ab, und auf der Zustimmungsseite taucht die Zeile gar
+            // nicht erst auf.
+            'channel:read:redemptions',
             // Chat mitlesen und schreiben
             'user:read:chat',
             'user:write:chat',
