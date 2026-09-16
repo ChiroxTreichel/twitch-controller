@@ -25,24 +25,36 @@
     <div class="note note-error"><?= $e($error) ?></div>
 <?php endif; ?>
 
+<?php /*
+    Aufgebaut wie die Quelle auf der Overlay-Seite: die Adresse steht
+    IM Satz, der sagt, was man mit ihr tut, und der Knopf steht
+    darunter in einer eigenen Zeile.
+
+    Vorher stand sie hier in einem schreibgeschuetzten Feld ueber dem
+    Satz - zwei Seiten, die dasselbe erklaeren, taten es auf zwei
+    Arten.
+*/ ?>
 <div class="card">
     <div class="card-head">
         <h2><?= $e(translate('account.activity.link_title')) ?></h2>
-        <a class="btn btn-small" href="<?= $e($feedUrl) ?>" target="_blank" rel="noreferrer"><?= $e(translate('common.open')) ?></a>
     </div>
 
-    <div class="field">
-        <input class="input mono" type="text" readonly value="<?= $e($feedUrl) ?>"
-               onclick="this.select()">
-    </div>
-
-    <p class="hint">
-        <?php // Ohne $e: der Platzhalter ist eigenes Markup. ?>
-        <?= translate('account.activity.obs_hint', ['menu' => '<strong>' . $e(translate('account.activity.obs_menu')) . '</strong>']) ?>
+    <p>
+        <?php // Ohne $e: die Platzhalter sind eigenes Markup. ?>
+        <?= translate('account.activity.obs_hint', [
+            'menu' => '<strong>' . $e(translate('account.activity.obs_menu')) . '</strong>',
+            'url'  => '<span class="mono">' . $e($feedUrl) . '</span>',
+        ]) ?>
     </p>
     <p class="hint">
         <?= translate('account.activity.not_for_viewers', ['source' => '<em>' . $e(translate('account.activity.browser_source')) . '</em>']) ?>
     </p>
+
+    <div class="row">
+        <a class="btn btn-ghost btn-small" href="<?= $e($feedUrl) ?>" target="_blank" rel="noopener">
+            <?= $e(translate('account.activity.open_feed')) ?>
+        </a>
+    </div>
 </div>
 
 <form method="post" action="<?= $e($url('/account/activities')) ?>">
