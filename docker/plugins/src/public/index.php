@@ -245,7 +245,34 @@ foreach (@scandir(PLUGIN_ROOT) ?: [] as $name) {
 
 // Nach Namen, damit die Liste im Marktplatz eine Ordnung hat, die
 // nicht von der Dateisystemreihenfolge abhaengt.
-usort($plugins, static fn (array $a, array $b): int => strcasecmp($a['name'], $b['name']));
+//
+// Nicht mit strcasecmp: das vergleicht Bytes, und ein ö sind in UTF-8
+// zwei davon, beide groesser als jeder Buchstabe. Sobald zwei Namen
+// bis zum Umlaut gleich anfangen, stuende der mit dem Umlaut hinten -
+// "Chat - Löschbot" hinter "Chat - Lupe". Und weil gleich danach auf
+// MAX_RESULTS gekuerzt wird, entscheidet die Sortierung nicht nur
+// ueber die Reihenfolge, sondern darueber, WER noch mitkommt.
+// Gefaltet wird vor dem Kleinschreiben, und beide Schreibweisen stehen
+// in der Tabelle: strtolower() kennt nur ASCII. Danach ist alles
+// Uebriggebliebene ASCII - mbstring liegt in diesem Bild nicht bei.
+$schluessel = static fn (string $name): string => strtolower(strtr($name, [
+    'Ä' => 'a', 'ä' => 'a', 'Ö' => 'o', 'ö' => 'o',
+    'Ü' => 'u', 'ü' => 'u', 'ß' => 'ss',
+    'Á' => 'a', 'á' => 'a', 'À' => 'a', 'à' => 'a',
+    'Â' => 'a', 'â' => 'a', 'Å' => 'a', 'å' => 'a',
+    'É' => 'e', 'é' => 'e', 'È' => 'e', 'è' => 'e',
+    'Ê' => 'e', 'ê' => 'e',
+    'Í' => 'i', 'í' => 'i', 'Ì' => 'i', 'ì' => 'i',
+    'Î' => 'i', 'î' => 'i',
+    'Ó' => 'o', 'ó' => 'o', 'Ò' => 'o', 'ò' => 'o',
+    'Ô' => 'o', 'ô' => 'o', 'Ø' => 'o', 'ø' => 'o',
+    'Ú' => 'u', 'ú' => 'u', 'Ù' => 'u', 'ù' => 'u',
+    'Û' => 'u', 'û' => 'u',
+    'Ç' => 'c', 'ç' => 'c', 'Ñ' => 'n', 'ñ' => 'n',
+]));
+
+usort($plugins, static fn (array $a, array $b): int
+    => strcmp($schluessel($a['name']), $schluessel($b['name'])));
 
 echo json_encode(
     [

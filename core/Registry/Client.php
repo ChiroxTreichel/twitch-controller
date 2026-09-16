@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace TwitchController\Core\Registry;
 
 use TwitchController\Core\App;
+use TwitchController\Core\Plugin\Manifest;
 use TwitchController\Core\Support\Http;
 use TwitchController\Core\Support\Markdown;
 use RuntimeException;
@@ -422,7 +423,15 @@ final class Client
             }
         }
 
-        ksort($plugins);
+        // Nach dem Namen, so wie die installierten Plugins daneben.
+        // Der Katalogserver sortiert schon selbst - aber er ist eine
+        // fremde Gegenstelle, und zwei Listen im selben Fenster, die
+        // verschieden sortiert sind, sehen aus wie ein Fehler.
+        //
+        // Ueber den Slug geht es nicht: er ist der Ordnername und
+        // stimmt mit dem Namen nicht mehr ueberein.
+        uasort($plugins, static fn (array $a, array $b): int
+            => Manifest::compareNames((string) $a['name'], (string) $b['name']));
 
         return array_values($plugins);
     }

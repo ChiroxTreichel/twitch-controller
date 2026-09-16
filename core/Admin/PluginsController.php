@@ -75,6 +75,14 @@ final class PluginsController
             ];
         }
 
+        // Nach dem Namen, nicht nach dem Ordner. discover() liefert
+        // nach Slug - fuer die Bootreihenfolge richtig, fuer eine
+        // Liste, die jemand liest, nicht: "Alerts - Throne" gehoert
+        // zu den Alerts und nicht dorthin, wo der Ordner "throne"
+        // faellt.
+        usort($rows, static fn (array $a, array $b): int
+            => Manifest::compareNames($a['manifest']->name, $b['manifest']->name));
+
         // Was liesse sich jetzt aktualisieren? Fuer den Knopf "Alle
         // aktualisieren" - und damit er verschwindet, wenn es nichts
         // zu tun gibt.

@@ -176,6 +176,61 @@ final class Manifest
     }
 
     /**
+     * Zwei Anzeigenamen vergleichen, fuer sort() und usort().
+     *
+     * Sortiert wurde frueher nach dem Slug. Solange "twitch-alerts"
+     * auch "Twitch - Alerts" hiess, fiel das nicht auf; seit die Art
+     * vorn steht, schon: in der Liste stand "Alerts - Throne" zwischen
+     * "Streaminfo - Tags" und "Chat - Timer", weil der Ordner "throne"
+     * heisst. Wer eine Liste liest, sortiert nach dem, was er SIEHT.
+     *
+     * Der Slug bleibt die Ordnung von discover(): daran haengt die
+     * Reihenfolge, in der Plugins booten, und die soll sich nicht
+     * aendern, nur weil jemand ein Plugin umbenennt.
+     *
+     * strcasecmp allein reicht nicht: es vergleicht Bytes, und ein ö
+     * sind in UTF-8 zwei davon, beide groesser als jeder Buchstabe.
+     * Sobald zwei Namen bis zum Umlaut gleich anfangen, stuende der mit
+     * dem Umlaut hinten - "Chat - Löschbot" hinter "Chat - Lupe".
+     */
+    public static function compareNames(string $a, string $b): int
+    {
+        return strcmp(self::sortKey($a), self::sortKey($b));
+    }
+
+    /**
+     * Der Name, auf das reduziert, wonach einer im Alphabet sucht:
+     * Kleinschreibung, und Umlaute auf ihren Grundbuchstaben (DIN
+     * 5007-1 - ö sortiert wie o, nicht wie oe).
+     *
+     * Gefaltet wird VOR dem Kleinschreiben, und beide Schreibweisen
+     * stehen in der Tabelle: strtolower() kennt nur ASCII, ein "Ö"
+     * bliebe also ein "Ö" und faende seinen Eintrag nicht mehr. Danach
+     * ist alles Uebriggebliebene ASCII, und mbstring wird nicht
+     * gebraucht - die Erweiterung ist auf keinem Server garantiert.
+     */
+    private static function sortKey(string $name): string
+    {
+        $gefaltet = strtr($name, [
+            'Ä' => 'a', 'ä' => 'a', 'Ö' => 'o', 'ö' => 'o',
+            'Ü' => 'u', 'ü' => 'u', 'ß' => 'ss',
+            'Á' => 'a', 'á' => 'a', 'À' => 'a', 'à' => 'a',
+            'Â' => 'a', 'â' => 'a', 'Å' => 'a', 'å' => 'a',
+            'É' => 'e', 'é' => 'e', 'È' => 'e', 'è' => 'e',
+            'Ê' => 'e', 'ê' => 'e',
+            'Í' => 'i', 'í' => 'i', 'Ì' => 'i', 'ì' => 'i',
+            'Î' => 'i', 'î' => 'i',
+            'Ó' => 'o', 'ó' => 'o', 'Ò' => 'o', 'ò' => 'o',
+            'Ô' => 'o', 'ô' => 'o', 'Ø' => 'o', 'ø' => 'o',
+            'Ú' => 'u', 'ú' => 'u', 'Ù' => 'u', 'ù' => 'u',
+            'Û' => 'u', 'û' => 'u',
+            'Ç' => 'c', 'ç' => 'c', 'Ñ' => 'n', 'ñ' => 'n',
+        ]);
+
+        return strtolower($gefaltet);
+    }
+
+    /**
      * @param mixed $value
      * @return array<string, string>
      */
