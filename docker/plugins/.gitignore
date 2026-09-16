@@ -6,3 +6,8 @@
 # Verfolgt waere es ein Repository im Repository - und jedes
 # veroeffentlichte Paket ein Commit in diesem hier.
 /src/plugins/
+
+# Die Einstellungen dieses Stacks: Netzname und Adresse. Keine
+# Geheimnisse, aber sie gehoeren dem Server und nicht dem Repository -
+# und ein "git pull" dort soll nicht ueber sie stolpern.
+/.env
