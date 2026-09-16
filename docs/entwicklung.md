@@ -122,6 +122,22 @@ Der Ordnername muss dem `slug` entsprechen, und `plugin.php` muss
 existieren — sonst wird das Plugin beim Einlesen übersprungen und der Grund
 protokolliert.
 
+#### Zwei Namen, zwei Orte
+
+`name` im Manifest ist der Name **im Katalog und in der Pluginliste**. Dort
+steht die Art vorn, damit man findet, was man sucht: `Chat - Befehle`,
+`Alerts - Twitch`, `Tip-Goals - PayPal`. Danach wird auch sortiert
+(`Manifest::compareNames()`); der Slug ist der Ordnername und taugt dafür
+nicht mehr.
+
+Der Sprachschlüssel `<präfix>.name` ist der Name **im Programm**: Menüpunkt,
+Seitenüberschrift, Reiter. Dort ist der kurze gemeint — `Befehle` steht in
+der Gruppe `Chat`, und `Chat - Befehle` sagte dasselbe zweimal.
+
+Die beiden dürfen auseinanderlaufen, und sie sollen es. Eine Prüfung in
+`audit.py` meldet den Rückfall: ein Menüpunkt, der mit dem Namen seiner
+Gruppe anfängt.
+
 ### Lebenszyklus
 
 | Aktion | Was passiert |
