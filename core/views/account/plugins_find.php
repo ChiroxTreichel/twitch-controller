@@ -22,6 +22,20 @@
  * @var bool $showInstalled  Auch anzeigen, was schon installiert ist?
  * @var int $hidden          Wie viele deswegen weggefallen sind
  */
+
+/*
+    Die Filter der Liste reisen mit jedem Installieren-Knopf mit.
+
+    Sonst stuende nach jeder Installation wieder der ganze Katalog da:
+    die Weiterleitung geht auf diese Seite zurueck, und ohne diese
+    Felder weiss sie nicht mehr, wonach gesucht war. Bei dreissig
+    Plugins tippt man die Suche dreissigmal neu.
+*/
+$filterFelder = array_filter([
+    'q'         => $query,
+    'tag'       => $tag,
+    'installed' => $showInstalled ? '1' : '',
+], static fn (string $wert): bool => $wert !== '');
 ?>
 <h1><?= $e(translate('account.plugins.tab_find')) ?></h1>
 <p class="lead"><?= $e(translate('market.lead')) ?></p>
@@ -210,7 +224,7 @@
                                 'csrf'   => $csrf,
                                 'action' => 'install',
                                 'slug'   => $plugin['slug'],
-                            ],
+                            ] + $filterFelder,
                             'danger'   => false,
                             'right'    => true,
                         ], null) ?>
@@ -219,6 +233,9 @@
                             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                             <input type="hidden" name="action" value="install">
                             <input type="hidden" name="slug" value="<?= $e($plugin['slug']) ?>">
+                            <?php foreach ($filterFelder as $feld => $wert): ?>
+                                <input type="hidden" name="<?= $e($feld) ?>" value="<?= $e($wert) ?>">
+                            <?php endforeach ?>
                             <button class="btn btn-small" type="submit">
                                 <?= $e($neuer ? translate('common.update') : translate('common.install')) ?>
                             </button>

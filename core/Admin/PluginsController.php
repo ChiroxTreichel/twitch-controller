@@ -374,9 +374,37 @@ final class PluginsController
 
         $action = $request->input('action');
         $slug = $request->input('slug');
-        $back = $slug !== '' && $action === 'install'
-            ? '/account/plugins/find/' . rawurlencode($slug)
-            : '/account/plugins/find';
+
+        // Wohin danach? Dorthin, wo geklickt wurde.
+        //
+        // Vorher ging es IMMER auf die Beschreibungsseite des gerade
+        // installierten Plugins - auch wenn der Knopf in der Liste
+        // stand. Wer dreissig Plugins installieren will, klickt sich
+        // dann dreissigmal zurueck, und die Suche ist jedes Mal weg.
+        //
+        // Die Beschreibungsseite schickt darum "from=detail" mit; von
+        // dort ist Bleiben richtig, denn man liest ja ueber dieses eine
+        // Plugin.
+        if ($request->input('from') === 'detail' && $slug !== '' && $action === 'install') {
+            $back = '/account/plugins/find/' . rawurlencode($slug);
+        } else {
+            // Zurueck in die Liste - mit denselben Filtern. Ohne sie
+            // stuende nach jeder Installation wieder der ganze Katalog
+            // da, und die Suche waere zu wiederholen.
+            //
+            // Zusammengesetzt aus einzelnen, bekannten Feldern und
+            // nicht aus einer mitgeschickten Adresse: ein Formularfeld,
+            // das das Ziel einer Weiterleitung bestimmt, ist eine
+            // offene Tuer.
+            $filter = array_filter([
+                'q'         => trim($request->input('q')),
+                'tag'       => trim($request->input('tag')),
+                'installed' => $request->input('installed') === '1' ? '1' : '',
+            ], static fn (string $wert): bool => $wert !== '');
+
+            $back = '/account/plugins/find'
+                . ($filter === [] ? '' : '?' . http_build_query($filter));
+        }
 
         try {
             switch ($action) {
@@ -767,8 +795,17 @@ final class PluginsController
             $query['error'] = $error;
         }
 
+        if ($query === []) {
+            return Response::redirect($this->app->url($path));
+        }
+
+        // Der Pfad kann selbst schon Filter tragen (die Liste nach dem
+        // Installieren). Dann gehoert die Meldung mit & daran und nicht
+        // mit einem zweiten ?.
         return Response::redirect(
-            $this->app->url($path) . ($query === [] ? '' : '?' . http_build_query($query))
+            $this->app->url($path)
+            . (str_contains($path, '?') ? '&' : '?')
+            . http_build_query($query)
         );
     }
 }

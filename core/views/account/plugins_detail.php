@@ -108,6 +108,10 @@ $neuer = $state !== null
                             'csrf'   => $csrf,
                             'action' => 'install',
                             'slug'   => $plugin['slug'],
+                            // Von HIER aus ist Bleiben richtig: man
+                            // liest ueber dieses eine Plugin. Aus der
+                            // Liste heraus geht es in die Liste zurueck.
+                            'from'   => 'detail',
                         ],
                         'danger'   => false,
                         'small'    => false,
@@ -118,6 +122,12 @@ $neuer = $state !== null
                         <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                         <input type="hidden" name="action" value="install">
                         <input type="hidden" name="slug" value="<?= $e($plugin['slug']) ?>">
+                        <?php /*
+                            Von HIER aus ist Bleiben richtig: man liest
+                            ueber dieses eine Plugin. Aus der Liste
+                            heraus geht es in die Liste zurueck.
+                        */ ?>
+                        <input type="hidden" name="from" value="detail">
                         <button class="btn" type="submit">
                             <?= $e($neuer ? translate('common.update') : translate('common.install')) ?>
                         </button>

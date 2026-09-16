@@ -30,9 +30,29 @@ final class Response
     /**
      * @param array<string, string> $headers
      */
+    /**
+     * Eine HTML-Seite.
+     *
+     * Mit no-store, und das ist keine Feinheit: jede Seite hier zeigt
+     * einen ZUSTAND - welche Plugins installiert sind, was im Menue
+     * steht, wer angemeldet ist. Ohne die Kopfzeile darf der Browser
+     * eine schon besuchte Adresse aus seinem Speicher beantworten, und
+     * genau das passierte nach einer Installation: die Weiterleitung
+     * landete auf einer Seite, die der Browser noch von vorhin hatte -
+     * mit dem alten Menue. Erst ein Neuladen holte den neuen Stand.
+     *
+     * Der zweite Grund ist der Zurueck-Knopf: auf einem geteilten
+     * Rechner soll nach dem Abmelden nichts mehr aus dem Speicher
+     * kommen.
+     *
+     * Ueberschreibbar bleibt es - $headers hat Vorrang.
+     */
     public static function html(string $body, int $status = 200, array $headers = []): self
     {
-        return new self($status, $body, $headers + ['Content-Type' => 'text/html; charset=utf-8']);
+        return new self($status, $body, $headers + [
+            'Content-Type'  => 'text/html; charset=utf-8',
+            'Cache-Control' => 'no-store, must-revalidate',
+        ]);
     }
 
     public static function text(string $body, int $status = 200): self
