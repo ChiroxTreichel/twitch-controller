@@ -255,6 +255,29 @@ läuft deshalb auch dann noch, wenn eine andere Seite streikt. Dort kannst
 du das System aktualisieren und die Sprache umstellen. Meistens ist damit
 alles wieder in Ordnung, ohne dass du auf die Konsole musst.
 
+**`git pull` sagt, lokale Änderungen würden überschrieben — obwohl du
+nichts geändert hast.** Sieh nach, was git meint:
+
+```bash
+cd /opt/overlays && git diff --stat
+```
+
+Steht dort eine lange Liste, aber am Ende `0 insertions(+), 0
+deletions(-)`, sind es nur Dateirechte. Das passiert nach einem
+`chmod -R`. Setz sie wieder gerade:
+
+```bash
+cd /opt/overlays && sudo find . -path ./.git -prune -o -type d -exec chmod 755 {} + && sudo find . -path ./.git -prune -o -type f -exec chmod 644 {} +
+```
+
+```bash
+cd /opt/overlays && sudo chmod +x install.sh && sudo chmod 600 .env && sudo chown -R 33:33 plugins public/uploads && sudo chmod -R a+rwX plugins public/uploads
+```
+
+Danach geht `git pull` durch. **`chmod -R 777` ist keine Lösung**,
+sondern ein Risiko: dann darf jeder Benutzer auf dem Server den
+Programmcode ändern, den dein Webserver ausführt.
+
 **Irgendwas anderes.** Dieser Befehl zeigt dir, was der Server gerade
 macht:
 
