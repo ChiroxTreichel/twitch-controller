@@ -86,6 +86,35 @@ final class FeedController
     }
 
     /**
+     * Aeltere Ereignisse - fuer das Nachladen beim Scrollen.
+     *
+     * Das Gegenstueck zu updates(): dort das Neue oben, hier das Alte
+     * unten. Gezaehlt wird in Ereignissen und nicht in Seiten, weil der
+     * Feed oben waechst - eine Seitennummer zeigte nach jedem
+     * eingetroffenen Ereignis woandershin.
+     *
+     * "done" sagt, dass nichts mehr kommt. Ohne das faende der Browser
+     * nie ein Ende und fragte bis zum Sankt-Nimmerleins-Tag weiter.
+     */
+    public function more(Request $request): Response
+    {
+        $filters = new Filters($this->app);
+
+        $selected = $filters->selected($request->query);
+        $range = $filters->range($request->query);
+
+        $limit = self::limit($request);
+        $offset = max(0, (int) $request->get('offset'));
+
+        $result = $this->collect($selected, $range, $limit, $offset);
+
+        return Response::json([
+            'events' => $result['events'],
+            'done'   => count($result['events']) < $limit,
+        ]);
+    }
+
+    /**
      * Liest Ereignisse, bereitet sie auf und wirft aus, was nicht zur
      * Auswahl passt.
      *

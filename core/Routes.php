@@ -125,6 +125,13 @@ final class Routes
             'auth' => true,
             'permission' => 'Account.Activity.View',
         ]);
+        // Aelteres beim Scrollen. Muss VOR keiner {param}-Route stehen -
+        // unter /obs gibt es keine, aber das bleibt so nur, solange
+        // niemand eine hinzufuegt.
+        $router->get('/obs/more', [$feed, 'more'], [
+            'auth' => true,
+            'permission' => 'Account.Activity.View',
+        ]);
 
         // Plugins: zwei Reiter, eigene Detailseiten
         $router->get('/account/plugins', [$plugins, 'installed'], [

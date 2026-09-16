@@ -1,11 +1,14 @@
 <?php
 /**
- * Der Aktivitaeten-Feed (/obs). Eigenstaendige Seite ohne Adminrahmen,
- * damit sie als Browser-Dock in OBS taugt.
+ * Der Aktivitaeten-Feed (/obs). Eigenstaendige Seite ohne Adminrahmen:
+ * gedacht als eigenes Dock in OBS.
  *
- * Der Kopf ist absichtlich eine einzige Zeile: kein Titel, kein
- * Statustext, der Filter sitzt als Knopf mit drin. In einem schmalen
- * Dock ist jede gesparte Zeile eine Zeile mehr Feed.
+ * Aussehen und Bedienung kommen aus dem alten System und sind von dort
+ * uebernommen - Karten statt Zeilen, durchsichtiger Grund,
+ * Filter-Popover mit Aufklapp-Navigation, Nachladen beim Scrollen.
+ *
+ * Der durchsichtige Grund ist Absicht und kein Versehen: das Dock
+ * liegt auf OBS' eigener Flaeche, und die bringt ihre Farbe mit.
  *
  * @var \TwitchController\Core\App $app
  * @var callable $e
@@ -35,33 +38,6 @@ $link = static function (array $changes) use ($url, $query): string {
 
     return $url('/obs') . ($params === [] ? '' : '?' . http_build_query($params));
 };
-
-/** Filterbaum als verschachtelte Liste. */
-$zweig = static function (array $knoten, int $tiefe) use (&$zweig, $e, $selected): string {
-    $html = '<ul class="tree' . ($tiefe > 0 ? ' is-nested' : '') . '">';
-
-    foreach ($knoten as $node) {
-        $hatKinder = $node['children'] !== [];
-        $angehakt = !$hatKinder && in_array($node['key'], $selected, true);
-
-        $html .= '<li>';
-        $html .= '<label>';
-        $html .= '<input type="checkbox" data-key="' . $e($node['key']) . '"';
-        $html .= $hatKinder ? ' data-parent="1"' : ' name="filter[]" value="' . $e($node['key']) . '"';
-        $html .= $angehakt ? ' checked' : '';
-        $html .= '>';
-        $html .= '<span>' . $e($node['label']) . '</span>';
-        $html .= '</label>';
-
-        if ($hatKinder) {
-            $html .= $zweig($node['children'], $tiefe + 1);
-        }
-
-        $html .= '</li>';
-    }
-
-    return $html . '</ul>';
-};
 ?>
 <!doctype html>
 <html lang="<?= $e($language) ?>">
@@ -70,467 +46,918 @@ $zweig = static function (array $knoten, int $tiefe) use (&$zweig, $e, $selected
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= $e(translate('nav.activity_title')) ?></title>
     <style>
+        /* -----------------------------------------------------------
+         *  Die Farben und Masse des alten Systems, Wert fuer Wert.
+         * ----------------------------------------------------------- */
         :root {
-            --bg: #0e1014;
-            --panel: #16191f;
-            --panel-2: #1d2129;
-            --line: #272c36;
-            --ink: #e9ecf1;
-            --muted: #98a1b0;
-            --accent: #9146ff;
-            --ok: #3ecf8e;
-            --error: #ef4d4d;
             color-scheme: dark;
+            --bg: rgba(8, 10, 18, 0.82);
+            --panel: rgba(18, 22, 36, 0.88);
+            --border: rgba(255, 255, 255, 0.08);
+            --text: #f4f7fb;
+            --muted: #95a0b8;
+            --accent: #b06cff;
+            --badge: rgba(176, 108, 255, 0.18);
+            --button: rgba(255, 255, 255, 0.08);
+            --button-hover: rgba(255, 255, 255, 0.14);
         }
 
         * { box-sizing: border-box; }
 
-        body {
+        html, body {
             margin: 0;
-            background: var(--bg);
-            color: var(--ink);
-            font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            min-height: 100%;
+            background: transparent;
+            color: var(--text);
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+            overflow-x: hidden;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
         }
 
-        /* --- Kopf: genau eine Zeile ------------------------------------ */
+        html::-webkit-scrollbar,
+        body::-webkit-scrollbar { display: none; }
 
-        header {
-            position: sticky;
-            top: 0;
-            z-index: 20;
+        body {
+            width: 100vw;
+            min-height: 100vh;
+            padding: 18px;
+        }
+
+        .feed {
+            width: 100%;
+            display: grid;
+            gap: 12px;
+        }
+
+        /* --- Kopf ---------------------------------------------------- */
+
+        .feed-head {
             display: flex;
-            gap: 6px;
+            justify-content: space-between;
             align-items: center;
-            padding: 6px 8px;
-            background: var(--panel);
-            border-bottom: 1px solid var(--line);
+            gap: 12px;
         }
 
-        header .grow { flex: 1; }
-
-        select, .btn, summary.btn {
-            padding: 4px 9px;
-            background: var(--bg);
-            border: 1px solid var(--line);
-            border-radius: 7px;
-            color: var(--ink);
-            font: inherit;
-            font-size: 0.84rem;
-            cursor: pointer;
-            text-decoration: none;
-            white-space: nowrap;
-        }
-
-        .btn:hover, select:hover, summary.btn:hover { border-color: var(--accent); }
-        .btn.is-on, summary.btn.is-on { background: rgba(145, 70, 255, 0.18); border-color: var(--accent); }
-
-        /* Verbindungsanzeige als Punkt statt als Textzeile. */
-        .dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--ok);
-            flex: none;
-        }
-
-        .dot.is-off { background: var(--muted); }
-        .dot.is-error { background: var(--error); }
-
-        /* --- Filter als Klappfeld im Kopf ------------------------------ */
-
-        details.filter { position: relative; }
-        details.filter summary { list-style: none; }
-        details.filter summary::-webkit-details-marker { display: none; }
-
-        .filter-panel {
-            position: absolute;
-            top: calc(100% + 6px);
-            left: 0;
-            z-index: 30;
-            width: max(260px, 80vw);
-            max-width: 420px;
-            max-height: 70vh;
-            overflow: auto;
-            padding: 12px;
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
-        }
-
-        ul.tree { list-style: none; margin: 0; padding: 0; }
-        ul.tree.is-nested { padding-left: 18px; }
-        ul.tree li { margin: 1px 0; }
-
-        ul.tree label {
+        .feed-head-left,
+        .feed-head-right {
             display: flex;
-            gap: 7px;
             align-items: center;
-            padding: 2px 0;
-            font-size: 0.88rem;
-            cursor: pointer;
-        }
-
-        /* Elternknoten etwas hervorheben, damit die Ebene erkennbar ist. */
-        ul.tree > li > label > span { font-weight: 500; }
-        ul.tree.is-nested > li > label > span { font-weight: 400; }
-
-        .panel-actions {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-            margin-top: 12px;
-            padding-top: 10px;
-            border-top: 1px solid var(--line);
-        }
-
-        /* --- Liste ----------------------------------------------------- */
-
-        main { padding: 8px; }
-
-        .event {
-            display: flex;
             gap: 10px;
-            align-items: baseline;
-            padding: 7px 10px;
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 9px;
-            margin-bottom: 5px;
         }
 
-        .event.is-new { animation: einblenden 0.9s ease-out; }
+        .control-button {
+            appearance: none;
+            border: 0;
+            border-radius: 999px;
+            background: var(--button);
+            color: var(--text);
+            padding: 10px 14px;
+            font-size: 14px;
+            line-height: 1;
+            cursor: pointer;
+            transition: background 0.15s ease;
 
-        @keyframes einblenden {
-            from { background: var(--panel-2); transform: translateY(-3px); }
-            to   { background: var(--panel); transform: none; }
-        }
-
-        .event time {
-            color: var(--muted);
-            font-size: 0.79rem;
-            white-space: nowrap;
-            font-variant-numeric: tabular-nums;
-        }
-
-        .badge {
+            /* "Kompakt" ist ein Link und kein Knopf - der Zustand steht
+               in der Adresse, damit er ein Lesezeichen ueberlebt. Ohne
+               die naechsten beiden Zeilen saehe er als einziger
+               unterstrichen aus. */
+            text-decoration: none;
             display: inline-block;
+        }
+
+        /* Eingeschaltet: dieselbe Faerbung wie die angehakten Zeilen im
+           Filter, damit man den Zustand sieht, ohne ihn zu erraten. */
+        .control-button.is-on {
+            background: rgba(176, 108, 255, 0.35);
+        }
+
+        .control-button:hover { background: var(--button-hover); }
+
+        /* --- Der Filter ---------------------------------------------- */
+
+        .filter-menu { position: relative; }
+
+        .filter-menu > summary { list-style: none; }
+        .filter-menu > summary::-webkit-details-marker { display: none; }
+
+        .filter-popover {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 0;
+            z-index: 10;
+            min-width: 260px;
+            max-width: 320px;
+            padding: 10px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-range {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 4px 10px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .filter-range label {
+            font-size: 12px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .control-select {
+            flex: 1;
+            appearance: none;
+            background-color: rgba(20, 23, 36, 0.95);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 28px 6px 10px;
+            font: inherit;
+            cursor: pointer;
+            background-image: url("data:image/svg+xml;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path fill='%2395a0b8' d='M0 0l5 6 5-6z'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+        }
+
+        .control-select option { background-color: #1a1d2c; color: var(--text); }
+        .control-select option:checked { background-color: rgba(176, 108, 255, 0.35); }
+
+        .filter-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 4px 8px;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 8px;
+        }
+
+        .filter-back {
+            appearance: none;
+            background: transparent;
+            border: 0;
+            color: var(--text);
+            font-size: 22px;
+            line-height: 1;
+            padding: 4px 8px;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        .filter-back:hover { background: var(--button); }
+        .filter-back[hidden] { display: none; }
+
+        .filter-breadcrumb {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .filter-items {
+            display: grid;
+            gap: 4px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: transparent;
+            color: var(--text);
+            font-size: 14px;
+            cursor: pointer;
+            border: 0;
+            width: 100%;
+            text-align: left;
+            appearance: none;
+        }
+
+        .filter-row:hover { background: var(--button); }
+
+        .filter-row input[type="checkbox"] {
+            margin: 0;
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+
+        .filter-row .filter-label { flex: 1; }
+
+        .filter-row .filter-count {
+            font-size: 12px;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.06);
             padding: 2px 8px;
             border-radius: 999px;
-            font-size: 0.77rem;
-            font-weight: 600;
-            white-space: nowrap;
-            background: var(--panel-2);
-            color: var(--muted);
         }
 
-        .who { font-weight: 600; }
-        .msg { color: var(--muted); flex: 1; word-break: break-word; }
+        .filter-row .filter-arrow { font-size: 16px; color: var(--muted); }
 
-        /* --- Kompakt fuer schmale Docks -------------------------------- */
-
-        body.is-compact main { padding: 4px; }
-        body.is-compact .event {
-            padding: 4px 7px;
-            margin-bottom: 2px;
-            border-radius: 6px;
-            gap: 7px;
-        }
-        body.is-compact .msg { display: none; }
-        body.is-compact time { font-size: 0.73rem; }
-
-        .empty { padding: 36px 16px; text-align: center; color: var(--muted); }
-
-        .pager {
+        .filter-actions {
             display: flex;
-            gap: 8px;
-            align-items: center;
-            margin-top: 12px;
-            color: var(--muted);
-            font-size: 0.84rem;
+            gap: 6px;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border);
         }
 
-        @media (max-width: 620px) {
-            .msg { display: none; }
+        .filter-bulk {
+            flex: 1;
+            appearance: none;
+            background: var(--button);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 8px;
+            cursor: pointer;
         }
+
+        .filter-bulk:hover { background: var(--button-hover); }
+
+        /* --- Meldungen ----------------------------------------------- */
+
+        .feed-empty,
+        .feed-error {
+            padding: 14px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+        }
+
+        .feed-error {
+            border-color: rgba(255, 96, 96, 0.35);
+            color: #ffd4d4;
+        }
+
+        /* --- Die Ereigniskarten -------------------------------------- */
+
+        #event-list {
+            gap: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .event-card {
+            padding: 14px 16px;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            backdrop-filter: blur(8px);
+            max-width: calc(100vw - 21px);
+        }
+
+        .event-card.is-compact .event-bottom { display: none; }
+
+        .event-top {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .event-main {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .event-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: var(--badge);
+            color: #ead8ff;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+            justify-self: start;
+        }
+
+        .event-title {
+            font-size: 24px;
+            line-height: 1.15;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .event-time {
+            font-size: 22px;
+            line-height: 1.1;
+            color: var(--muted);
+            white-space: nowrap;
+            justify-self: end;
+        }
+
+        .event-card.is-compact .event-title { font-size: 22px; }
+
+        .event-message {
+            font-size: 20px;
+            line-height: 1.35;
+            color: var(--text);
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .event-message-empty { min-height: 1px; }
+
+        /* Die Farbe je Ereignisart. Im alten System stand sie als
+           style-Attribut an jeder Karte; als Klasse steht sie einmal
+           hier und nicht hundertmal im Dokument. */
 <?php foreach ($badges as $key => $badge): ?>
         .badge-<?= $e($key) ?> { background: <?= $e($badge['bg']) ?>; color: <?= $e($badge['text']) ?>; }
 <?php endforeach; ?>
+
+        /* --- Der Schalter -------------------------------------------- */
+
+        .toggle-wrap {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 52px;
+            height: 30px;
+            display: inline-block;
+            flex-shrink: 0;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 999px;
+            cursor: pointer;
+            pointer-events: none;
+            transition: background 0.15s ease;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            left: 4px;
+            top: 4px;
+            border-radius: 50%;
+            background: #fff;
+            transition: transform 0.15s ease;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background: rgba(176, 108, 255, 0.55);
+        }
+
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(22px);
+        }
+
+        /* --- Nachladen ----------------------------------------------- */
+
+        .feed-loader {
+            height: 18px;
+            font-size: 13px;
+            color: var(--muted);
+            text-align: center;
+        }
+
+        body.is-paused .feed-loader { opacity: 0.75; }
+
+        /* --- Schmale Docks ------------------------------------------- */
+
+        @media (max-width: 720px) {
+            body { padding: 8px; }
+
+            .feed-head, .event-card { border-radius: 10px; }
+
+            .feed-head { align-items: flex-start; gap: 8px; }
+            .feed-head-left, .feed-head-right { gap: 8px; }
+
+            .control-button { padding: 7px 10px; font-size: 12px; }
+
+            .toggle-wrap { gap: 8px; font-size: 12px; }
+            .toggle-switch { width: 46px; height: 26px; }
+            .toggle-slider::before { width: 18px; height: 18px; }
+            .toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+            .feed-empty, .feed-error, .event-card { padding: 10px 12px; }
+
+            .event-top { gap: 8px; margin-bottom: 6px; }
+            .event-main { gap: 8px; }
+
+            .event-badge { padding: 4px 8px; font-size: 16px; }
+            .event-time { font-size: 15px; }
+
+            .event-title {
+                font-size: 17px;
+                line-height: 1.1;
+                min-width: 0;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            .event-card.is-compact .event-title { font-size: 16px; }
+
+            .event-message {
+                font-size: 14px;
+                line-height: 1.25;
+                min-width: 0;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        }
     </style>
 </head>
 <body class="<?= $compact ? 'is-compact' : '' ?>">
 
-<header>
-    <details class="filter" id="filter">
-        <summary class="btn <?= $allSelected ? '' : 'is-on' ?>" title="Filter">
-            Filter<?= $allSelected ? '' : ' (' . $e((string) count($selected)) . ')' ?>
-        </summary>
+<main class="feed">
+    <header class="feed-head">
+        <div class="feed-head-left">
+            <details class="filter-menu" id="filter-menu">
+                <summary class="control-button"><?= $e(translate('feed.ui.filter')) ?></summary>
 
-        <div class="filter-panel">
-            <form method="get" action="<?= $e($url('/obs')) ?>" id="filter-form">
-                <input type="hidden" name="range" value="<?= $e($range) ?>">
-                <?php if ($compact): ?>
-                    <input type="hidden" name="compact" value="1">
-                <?php endif; ?>
+                <div class="filter-popover">
+                    <div class="filter-range">
+                        <label for="range"><?= $e(translate('feed.ui.range')) ?></label>
+                        <select class="control-select" id="range"
+                                onchange="location.href=this.value">
+                            <?php foreach ($ranges as $key => $option): ?>
+                                <option value="<?= $e($link(['range' => $key, 'page' => null])) ?>"
+                                    <?= $range === $key ? 'selected' : '' ?>><?= $e($option['label']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
 
-                <?= $zweig($tree, 0) ?>
+                    <?php /*
+                        Der Baum wird NICHT hier ausgeschrieben, sondern
+                        vom Skript aufgeblaettert - eine Ebene zur Zeit,
+                        mit Brotkrume und Zurueck-Knopf. So war es im
+                        alten System, und in einem schmalen Dock ist ein
+                        voll ausgeklappter Baum unbedienbar.
+                    */ ?>
+                    <div class="filter-nav">
+                        <button type="button" class="filter-back" id="filter-back" hidden
+                                aria-label="<?= $e(translate('feed.ui.back')) ?>">&lsaquo;</button>
+                        <div class="filter-breadcrumb" id="filter-breadcrumb"><?= $e(translate('feed.ui.filter')) ?></div>
+                    </div>
 
-                <div class="panel-actions">
-                    <button class="btn" type="submit">Anwenden</button>
-                    <button class="btn" type="button" data-all>Alles</button>
-                    <button class="btn" type="button" data-none>Nichts</button>
+                    <div class="filter-items" id="filter-items"></div>
+
+                    <div class="filter-actions">
+                        <button type="button" class="filter-bulk" data-bulk="all"><?= $e(translate('feed.ui.all')) ?></button>
+                        <button type="button" class="filter-bulk" data-bulk="none"><?= $e(translate('feed.ui.none')) ?></button>
+                    </div>
                 </div>
-            </form>
+            </details>
+
+            <a class="control-button<?= $compact ? ' is-on' : '' ?>"
+               href="<?= $e($link(['compact' => $compact ? null : '1'])) ?>"><?= $e(translate('feed.ui.compact')) ?></a>
         </div>
-    </details>
 
-    <select onchange="location.href=this.value" title="Zeitraum">
-        <?php foreach ($ranges as $key => $option): ?>
-            <option value="<?= $e($link(['range' => $key, 'page' => null])) ?>"
-                <?= $range === $key ? 'selected' : '' ?>><?= $e($option['label']) ?></option>
-        <?php endforeach; ?>
-    </select>
+        <div class="feed-head-right">
+            <button id="reload-feed" class="control-button" type="button"><?= $e(translate('feed.ui.reload')) ?></button>
 
-    <a class="btn <?= $compact ? 'is-on' : '' ?>"
-       href="<?= $e($link(['compact' => $compact ? null : '1'])) ?>" title="Kompakte Ansicht">Kompakt</a>
+            <?php if ($refresh > 0): ?>
+                <div class="toggle-wrap">
+                    <span id="pause-label"><?= $e(translate('feed.ui.pause')) ?></span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="pause" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            <?php endif; ?>
+        </div>
+    </header>
 
-    <span class="grow"></span>
-
-    <?php if ($refresh > 0): ?>
-        <span class="dot" id="dot" title="Verbindung"></span>
-        <button class="btn is-on" id="pause" type="button" title="Nachladen anhalten">Pause</button>
+    <?php if ($events === []): ?>
+        <section class="feed-empty" id="feed-empty">
+            <?php if ($selected === []): ?>
+                <?= $e(translate('feed.empty.nothing_selected')) ?>
+            <?php else: ?>
+                <?= $e(translate('feed.empty.no_events')) ?>
+            <?php endif; ?>
+        </section>
     <?php endif; ?>
-</header>
 
-<main>
-    <div id="liste">
-        <?php if ($events === []): ?>
-            <div class="empty">
-                <?php if ($selected === []): ?>
-                    <?= $e(translate('feed.empty.nothing_selected')) ?>
-                <?php else: ?>
-                    <?= $e(translate('feed.empty.no_events')) ?><br>
-                    <?= $e(translate('feed.empty.hint')) ?>
-                <?php endif; ?>
-            </div>
-        <?php endif; ?>
-
+    <section id="event-list">
         <?php foreach ($events as $event): ?>
-            <div class="event">
-                <time><?= $e($event['time']) ?></time>
-                <span class="badge badge-<?= $e($event['style']) ?>"><?= $e($event['badge']) ?></span>
-                <span class="who"><?= $e($event['title']) ?></span>
-                <?php if ($event['message'] !== ''): ?>
-                    <span class="msg"><?= $e($event['message']) ?></span>
-                <?php endif; ?>
-            </div>
+            <article class="event-card<?= $event['message'] === '' ? ' is-compact' : '' ?>">
+                <div class="event-top">
+                    <div class="event-badge badge-<?= $e($event['style']) ?>"><?= $e($event['badge']) ?></div>
+                    <div class="event-time"><?= $e($event['time']) ?></div>
+                </div>
+                <div class="event-main">
+                    <div class="event-title"><?= $e($event['title']) ?></div>
+                </div>
+                <div class="event-bottom">
+                    <?php if ($event['message'] !== ''): ?>
+                        <div class="event-message"><?= $e($event['message']) ?></div>
+                    <?php else: ?>
+                        <div class="event-message event-message-empty"></div>
+                    <?php endif; ?>
+                </div>
+            </article>
         <?php endforeach; ?>
-    </div>
+    </section>
 
-    <?php if ($pages > 1): ?>
-        <div class="pager">
-            <?php if ($page > 1): ?>
-                <a class="btn" href="<?= $e($link(['page' => $page - 1])) ?>"><?= $e(translate('feed.pager.newer')) ?></a>
-            <?php endif; ?>
-            <span><?= $e(translate('feed.pager.position', [
-                'page'  => (string) $page,
-                'pages' => (string) $pages,
-            ])) ?></span>
-            <?php if ($page < $pages): ?>
-                <a class="btn" href="<?= $e($link(['page' => $page + 1])) ?>"><?= $e(translate('feed.pager.older')) ?></a>
-            <?php endif; ?>
-        </div>
-    <?php endif; ?>
+    <div id="feed-loader" class="feed-loader"></div>
 </main>
 
 <script>
 (function () {
     'use strict';
 
-    var ziel = <?= json_encode($url('/obs')) ?>;
+    var baum = <?= json_encode($tree) ?>;
     var alleBlaetter = <?= json_encode($leaves) ?>;
+    var gewaehlt = <?= json_encode($selected) ?>;
+    var ziel = <?= json_encode($url('/obs')) ?>;
 
-    // ---- Filterbaum: Eltern schalten ihre Kinder -------------------
+    var texte = {
+        filter:  <?= json_encode(translate('feed.ui.filter')) ?>,
+        pause:   <?= json_encode(translate('feed.ui.pause')) ?>,
+        weiter:  <?= json_encode(translate('feed.ui.resume')) ?>,
+        laedt:   <?= json_encode(translate('feed.ui.loading')) ?>,
+        ende:    <?= json_encode(translate('feed.ui.end')) ?>,
+        gestoert: <?= json_encode(translate('feed.connection_lost')) ?>
+    };
 
-    var form = document.getElementById('filter-form');
+    // =============================================================
+    //  Der Filter: eine Ebene zur Zeit
+    // =============================================================
+    var pfad = [];
 
-    function kinderVon(li) {
-        return Array.prototype.slice.call(li.querySelectorAll('input[type=checkbox]'))
-            .filter(function (box) { return !box.hasAttribute('data-parent'); });
+    var items = document.getElementById('filter-items');
+    var krume = document.getElementById('filter-breadcrumb');
+    var zurueck = document.getElementById('filter-back');
+
+    function knotenAn(pfad) {
+        var knoten = { children: baum };
+
+        for (var i = 0; i < pfad.length; i++) {
+            var gefunden = null;
+
+            (knoten.children || []).forEach(function (k) {
+                if (k.key === pfad[i]) { gefunden = k; }
+            });
+
+            if (!gefunden) { return null; }
+            knoten = gefunden;
+        }
+
+        return knoten;
     }
 
-    function elternAktualisieren() {
-        // Von innen nach aussen, damit verschachtelte Eltern stimmen.
-        var eltern = Array.prototype.slice.call(form.querySelectorAll('input[data-parent]')).reverse();
+    /** Alle Blaetter unterhalb eines Knotens - er selbst, wenn er eins ist. */
+    function blaetterUnter(knoten) {
+        if (!knoten) { return []; }
 
-        eltern.forEach(function (box) {
-            var blaetter = kinderVon(box.closest('li'));
-            var an = blaetter.filter(function (b) { return b.checked; }).length;
+        var kinder = knoten.children || [];
+        if (kinder.length === 0) { return knoten.key ? [knoten.key] : []; }
 
-            box.checked = an === blaetter.length && an > 0;
-            box.indeterminate = an > 0 && an < blaetter.length;
+        var raus = [];
+        kinder.forEach(function (kind) {
+            raus = raus.concat(blaetterUnter(kind));
         });
+
+        return raus;
     }
 
-    if (form) {
-        form.addEventListener('change', function (event) {
-            var box = event.target;
-            if (box.type !== 'checkbox') { return; }
+    function brotkrume() {
+        var teile = [texte.filter];
+        var knoten = { children: baum };
 
-            if (box.hasAttribute('data-parent')) {
-                kinderVon(box.closest('li')).forEach(function (kind) {
-                    kind.checked = box.checked;
+        for (var i = 0; i < pfad.length; i++) {
+            var naechster = null;
+            (knoten.children || []).forEach(function (k) {
+                if (k.key === pfad[i]) { naechster = k; }
+            });
+
+            if (!naechster) { break; }
+            teile.push(naechster.label);
+            knoten = naechster;
+        }
+
+        return teile.join(' › ');
+    }
+
+    function zeichne() {
+        var knoten = knotenAn(pfad);
+        if (!knoten) { pfad = []; knoten = { children: baum }; }
+
+        var kinder = knoten.children || [];
+
+        krume.textContent = brotkrume();
+        zurueck.hidden = pfad.length === 0;
+        items.textContent = '';
+
+        kinder.forEach(function (kind) {
+            var blaetter = blaetterUnter(kind);
+            var an = blaetter.filter(function (b) { return gewaehlt.indexOf(b) !== -1; });
+
+            var zeile = document.createElement('div');
+            zeile.className = 'filter-row';
+
+            var box = document.createElement('input');
+            box.type = 'checkbox';
+            box.checked = an.length === blaetter.length && blaetter.length > 0;
+            box.indeterminate = an.length > 0 && an.length < blaetter.length;
+
+            box.addEventListener('change', function () {
+                blaetter.forEach(function (blatt) {
+                    var stelle = gewaehlt.indexOf(blatt);
+
+                    if (box.checked && stelle === -1) { gewaehlt.push(blatt); }
+                    if (!box.checked && stelle !== -1) { gewaehlt.splice(stelle, 1); }
+                });
+
+                zeichne();
+            });
+
+            var beschriftung = document.createElement('span');
+            beschriftung.className = 'filter-label';
+            beschriftung.textContent = kind.label;
+
+            zeile.appendChild(box);
+            zeile.appendChild(beschriftung);
+
+            // Ein Knoten mit Kindern fuehrt eine Ebene tiefer. Die Zahl
+            // daneben sagt, wie viele davon an sind - sonst muesste man
+            // hineingehen, um es zu sehen.
+            if ((kind.children || []).length > 0) {
+                var zahl = document.createElement('span');
+                zahl.className = 'filter-count';
+                zahl.textContent = an.length + '/' + blaetter.length;
+
+                var pfeil = document.createElement('span');
+                pfeil.className = 'filter-arrow';
+                pfeil.textContent = '›';
+
+                zeile.appendChild(zahl);
+                zeile.appendChild(pfeil);
+
+                // Nur die Beschriftung geht tiefer, nicht das Kaestchen:
+                // sonst blaetterte jedes Anhaken eine Ebene weiter.
+                beschriftung.style.cursor = 'pointer';
+                beschriftung.addEventListener('click', function () {
+                    pfad.push(kind.key);
+                    zeichne();
                 });
             }
 
-            elternAktualisieren();
+            items.appendChild(zeile);
         });
-
-        form.querySelector('[data-all]').addEventListener('click', function () {
-            form.querySelectorAll('input[type=checkbox]').forEach(function (box) {
-                box.checked = true;
-                box.indeterminate = false;
-            });
-        });
-
-        form.querySelector('[data-none]').addEventListener('click', function () {
-            form.querySelectorAll('input[type=checkbox]').forEach(function (box) {
-                box.checked = false;
-                box.indeterminate = false;
-            });
-        });
-
-        // Auswahl zu einem kurzen Parameter zusammenfassen. Ist alles
-        // angehakt, kommt gar kein Parameter in die Adresse - dann
-        // bleibt der Link auch gueltig, wenn spaeter neue Arten
-        // dazukommen.
-        form.addEventListener('submit', function (event) {
-            event.preventDefault();
-
-            var gewaehlt = Array.prototype.slice
-                .call(form.querySelectorAll('input[name="filter[]"]:checked'))
-                .map(function (box) { return box.value; });
-
-            var params = new URLSearchParams();
-            params.set('range', form.querySelector('[name=range]').value);
-            if (form.querySelector('[name=compact]')) { params.set('compact', '1'); }
-
-            if (gewaehlt.length !== alleBlaetter.length) {
-                params.set('filter', gewaehlt.join(','));
-            }
-
-            location.href = ziel + '?' + params.toString();
-        });
-
-        elternAktualisieren();
     }
 
-    // Klick daneben schliesst das Klappfeld.
-    var klappfeld = document.getElementById('filter');
-    document.addEventListener('click', function (event) {
-        if (klappfeld.open && !klappfeld.contains(event.target)) {
-            klappfeld.open = false;
-        }
+    zurueck.addEventListener('click', function () {
+        pfad.pop();
+        zeichne();
     });
 
-    // ---- Nachladen -------------------------------------------------
+    Array.prototype.forEach.call(document.querySelectorAll('[data-bulk]'), function (knopf) {
+        knopf.addEventListener('click', function () {
+            gewaehlt = knopf.getAttribute('data-bulk') === 'all' ? alleBlaetter.slice() : [];
+            zeichne();
+            uebernehmen();
+        });
+    });
 
-    var refresh = <?= (int) $refresh ?>;
-    if (!refresh) { return; }
+    /**
+     * Die Auswahl in die Adresse schreiben und neu laden.
+     *
+     * Ist alles angehakt, kommt gar kein Parameter mit - dann bleibt
+     * der Link auch gueltig, wenn spaeter neue Arten dazukommen.
+     */
+    function uebernehmen() {
+        var params = new URLSearchParams();
+        params.set('range', <?= json_encode($range) ?>);
+        <?php if ($compact): ?>params.set('compact', '1');<?php endif ?>
 
-    var liste = document.getElementById('liste');
-    var dot = document.getElementById('dot');
-    var pause = document.getElementById('pause');
-    var latest = <?= (int) $latest ?>;
-    var laeuft = true;
-    var timer = null;
-
-    var quelle = <?= json_encode($url('/obs/updates')) ?>
-        + '?range=' + encodeURIComponent(<?= json_encode($range) ?>)
-        + <?= $allSelected ? "''" : "'&filter=' + encodeURIComponent(" . json_encode(implode(',', $selected)) . ")" ?>;
-
-    function zustand(klasse, titel) {
-        if (!dot) { return; }
-        dot.className = 'dot' + (klasse ? ' ' + klasse : '');
-        dot.title = titel;
-    }
-
-    function zeile(event) {
-        var el = document.createElement('div');
-        el.className = 'event is-new';
-
-        var zeit = document.createElement('time');
-        zeit.textContent = event.time;
-
-        var badge = document.createElement('span');
-        badge.className = 'badge badge-' + event.style;
-        badge.textContent = event.badge;
-
-        var wer = document.createElement('span');
-        wer.className = 'who';
-        wer.textContent = event.title;
-
-        el.appendChild(zeit);
-        el.appendChild(badge);
-        el.appendChild(wer);
-
-        if (event.message) {
-            var msg = document.createElement('span');
-            msg.className = 'msg';
-            msg.textContent = event.message;
-            el.appendChild(msg);
+        if (gewaehlt.length !== alleBlaetter.length) {
+            // Leere Auswahl heisst WIRKLICH leer. Ein fehlender
+            // Parameter bedeutet dem Server "kein Filter" - also alles.
+            params.set('filter', gewaehlt.length === 0 ? '__keine__' : gewaehlt.join(','));
         }
 
-        return el;
+        location.href = ziel + '?' + params.toString();
     }
 
-    function holen() {
-        fetch(quelle + '&since_id=' + latest, { credentials: 'same-origin' })
+    // Beim Zuklappen uebernehmen, nicht bei jedem Haken: sonst laedt
+    // die Seite mitten im Auswaehlen neu.
+    var menue = document.getElementById('filter-menu');
+    var standBeimOeffnen = gewaehlt.join(',');
+
+    menue.addEventListener('toggle', function () {
+        if (menue.open) {
+            standBeimOeffnen = gewaehlt.join(',');
+            return;
+        }
+
+        if (gewaehlt.join(',') !== standBeimOeffnen) { uebernehmen(); }
+    });
+
+    document.addEventListener('click', function (event) {
+        if (menue.open && !menue.contains(event.target)) { menue.open = false; }
+    });
+
+    zeichne();
+
+    // =============================================================
+    //  Karten bauen
+    // =============================================================
+    function karte(event) {
+        var artikel = document.createElement('article');
+        artikel.className = 'event-card' + (event.message ? '' : ' is-compact');
+
+        var oben = document.createElement('div');
+        oben.className = 'event-top';
+
+        var abzeichen = document.createElement('div');
+        abzeichen.className = 'event-badge badge-' + event.style;
+        abzeichen.textContent = event.badge;
+
+        var zeit = document.createElement('div');
+        zeit.className = 'event-time';
+        zeit.textContent = event.time;
+
+        oben.appendChild(abzeichen);
+        oben.appendChild(zeit);
+
+        var mitte = document.createElement('div');
+        mitte.className = 'event-main';
+
+        var name = document.createElement('div');
+        name.className = 'event-title';
+        name.textContent = event.title;
+        mitte.appendChild(name);
+
+        var unten = document.createElement('div');
+        unten.className = 'event-bottom';
+
+        var text = document.createElement('div');
+        text.className = 'event-message' + (event.message ? '' : ' event-message-empty');
+        if (event.message) { text.textContent = event.message; }
+        unten.appendChild(text);
+
+        artikel.appendChild(oben);
+        artikel.appendChild(mitte);
+        artikel.appendChild(unten);
+
+        return artikel;
+    }
+
+    var liste = document.getElementById('event-list');
+    var lader = document.getElementById('feed-loader');
+
+    document.getElementById('reload-feed').addEventListener('click', function () {
+        location.reload();
+    });
+
+    // =============================================================
+    //  Aelteres beim Scrollen
+    // =============================================================
+    var abstand = <?= (int) $limit ?>;
+
+    // Wie viele Ereignisse schon hinter uns liegen - und zwar vom
+    // Anfang der Liste gezaehlt, nicht ab dieser Seite.
+    //
+    // Die Blaetterleiste ist weg, aber der Parameter "page" gilt noch:
+    // wer ein Lesezeichen auf ?page=3 hat, faengt bei 100 an. Zaehlte
+    // man hier nur die gezeigten Karten, holte das Nachladen die
+    // Ereignisse 50 bis 100 - also die, die man gerade uebersprungen
+    // hat.
+    var geladen = <?= (int) (($page - 1) * $limit + count($events)) ?>;
+    var amEnde = <?= count($events) < $limit ? 'true' : 'false' ?>;
+    var laedt = false;
+
+    var suchparameter = 'range=' + encodeURIComponent(<?= json_encode($range) ?>)
+        + '&limit=' + abstand
+        <?= $allSelected ? '' : "+ '&filter=' + encodeURIComponent(" . json_encode(implode(',', $selected)) . ")" ?>;
+
+    function mehr() {
+        if (laedt || amEnde) { return; }
+
+        laedt = true;
+        lader.textContent = texte.laedt;
+
+        fetch(<?= json_encode($url('/obs/more')) ?> + '?' + suchparameter + '&offset=' + geladen,
+            { credentials: 'same-origin' })
             .then(function (antwort) {
                 if (!antwort.ok) { throw new Error('Status ' + antwort.status); }
                 return antwort.json();
             })
             .then(function (daten) {
-                zustand('', 'verbunden');
+                (daten.events || []).forEach(function (event) {
+                    liste.appendChild(karte(event));
+                });
 
-                if (typeof daten.latest === 'number' && daten.latest > latest) {
-                    latest = daten.latest;
+                geladen += (daten.events || []).length;
+                amEnde = !!daten.done;
+                lader.textContent = amEnde ? texte.ende : '';
+                laedt = false;
+
+                // Passt alles ins Fenster, loest kein Scrollen aus -
+                // dann muss von selbst weitergeladen werden, sonst
+                // haengt der Feed bei der ersten Seite fest.
+                if (!amEnde && document.body.scrollHeight <= window.innerHeight) { mehr(); }
+            })
+            .catch(function (fehler) {
+                lader.textContent = texte.gestoert + fehler.message;
+                laedt = false;
+            });
+    }
+
+    window.addEventListener('scroll', function () {
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) { mehr(); }
+    });
+
+    if (amEnde) { lader.textContent = ''; } else { mehr(); }
+
+    // =============================================================
+    //  Neues von oben
+    // =============================================================
+    var refresh = <?= (int) $refresh ?>;
+    if (!refresh) { return; }
+
+    var neuestes = <?= (int) $latest ?>;
+    var uhr = null;
+
+    var quelle = <?= json_encode($url('/obs/updates')) ?> + '?' + suchparameter;
+
+    function holen() {
+        fetch(quelle + '&since_id=' + neuestes, { credentials: 'same-origin' })
+            .then(function (antwort) {
+                if (!antwort.ok) { throw new Error('Status ' + antwort.status); }
+                return antwort.json();
+            })
+            .then(function (daten) {
+                if (typeof daten.latest === 'number' && daten.latest > neuestes) {
+                    neuestes = daten.latest;
                 }
 
                 if (!daten.events || !daten.events.length) { return; }
 
-                var leer = liste.querySelector('.empty');
+                var leer = document.getElementById('feed-empty');
                 if (leer) { leer.remove(); }
 
                 // Antwort ist neueste zuerst - von hinten einfuegen,
                 // damit die Reihenfolge oben stimmt.
                 for (var i = daten.events.length - 1; i >= 0; i--) {
-                    liste.insertBefore(zeile(daten.events[i]), liste.firstChild);
+                    liste.insertBefore(karte(daten.events[i]), liste.firstChild);
                 }
 
-                while (liste.children.length > 400) {
-                    liste.removeChild(liste.lastChild);
-                }
+                // Was oben dazukommt, verschiebt das Fenster nach
+                // unten: der Abstand fuer das Nachladen muss mitwachsen,
+                // sonst kaemen dieselben Karten ein zweites Mal.
+                geladen += daten.events.length;
             })
-            .catch(function (fehler) {
-                zustand('is-error', <?= json_encode(translate('feed.connection_lost')) ?> + fehler.message);
-            });
+            .catch(function () { /* Beim naechsten Mal wieder. */ });
     }
 
-    function starten() { timer = setInterval(holen, refresh * 1000); }
+    function starten() { uhr = setInterval(holen, refresh * 1000); }
 
-    if (pause) {
-        pause.addEventListener('click', function () {
-            laeuft = !laeuft;
-            pause.textContent = laeuft ? 'Pause' : 'Weiter';
-            pause.classList.toggle('is-on', laeuft);
+    var schalter = document.getElementById('pause');
+    var schild = document.getElementById('pause-label');
 
-            if (laeuft) {
+    if (schalter) {
+        schalter.addEventListener('change', function () {
+            document.body.classList.toggle('is-paused', !schalter.checked);
+            schild.textContent = schalter.checked ? texte.pause : texte.weiter;
+
+            if (schalter.checked) {
                 starten();
                 holen();
             } else {
-                clearInterval(timer);
-                zustand('is-off', 'angehalten');
+                clearInterval(uhr);
             }
         });
     }
