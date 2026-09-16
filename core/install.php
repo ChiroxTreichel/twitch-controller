@@ -56,6 +56,21 @@ $db->run("
 // Dateien fuer ein Ja/Nein.
 $db->run("ALTER TABLE users ADD COLUMN IF NOT EXISTS preferences JSONB NOT NULL DEFAULT '{}'::jsonb");
 
+// Die zugewiesene Rolle (2.4.1).
+//
+// Bisher war eine Rolle nur ein Knopf, der Rechte KOPIERTE: wer
+// "Editor" bekam, bekam die Liste, die "Editor" an jenem Tag bedeutete.
+// Kam spaeter ein Plugin mit einem neuen Recht dazu, wuchs die Rolle -
+// und kein einziger Editor bekam es. Schlimmer noch: die Oberflaeche
+// verglich die gespeicherte Liste mit der Rolle und schrieb ab da
+// "Angepasst" an den Benutzer, obwohl niemand etwas angepasst hatte.
+//
+// Jetzt steht hier der NAME. Die Rechte werden bei jeder Pruefung aus
+// ihm aufgeloest - eine Rolle ist damit ein Zustand und keine
+// Momentaufnahme. Leer heisst "eigene Auswahl", und die steht weiter
+// in permissions.
+$db->run("ALTER TABLE users ADD COLUMN IF NOT EXISTS permission_role TEXT NOT NULL DEFAULT ''");
+
 // Rechte-Namen auf Englisch (2.0.0).
 //
 // Die Namen standen bis dahin auf Deutsch: "Konto.Benutzer.Manage".

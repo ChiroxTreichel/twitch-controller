@@ -91,6 +91,12 @@ final class AccountController
             'active'    => 'account/users',
             'tab'       => 'permissions',
             'target'    => $ziel,
+            // Die Rechte, die WIRKLICH gelten - bei einer Rolle die
+            // aus ihr, sonst die eigene Auswahl. Die Vorlage darf
+            // nicht selbst in $target['permissions'] greifen: dort
+            // steht bei einem Rolleninhaber der Stand von damals.
+            'have'      => $this->app->auth->permissionsOf($ziel),
+            'role'      => (string) ($ziel['permission_role'] ?? ''),
             'tree'      => $this->app->auth->permissionTree(),
             'presets'   => $this->app->auth->rolePresets(),
             'count'     => $this->app->auth->permissionCount($ziel),
@@ -157,7 +163,12 @@ final class AccountController
                         return $this->back($rechteSeite, null, translate('account.users.no_such_preset'));
                     }
 
-                    $this->app->auth->setPermissions($twitchId, $vorlagen[$name]['keys']);
+                    // setRole und nicht setPermissions: gespeichert wird
+                    // der Name, aufgeloest wird bei jedem Laden. Sonst
+                    // waere die Rolle wieder nur eine Momentaufnahme,
+                    // und ein spaeter dazukommendes Recht kaeme bei
+                    // niemandem an.
+                    $this->app->auth->setRole($twitchId, $name);
 
                     return $this->back($rechteSeite, translate('account.users.preset_applied', [
                         'role' => $vorlagen[$name]['label'],

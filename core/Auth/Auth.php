@@ -68,7 +68,7 @@ final class Auth
             return null;
         }
 
-        $row = self::hydrate($row);
+        $row = $this->hydrate($row);
 
         // Sliding Session: bei jedem Request auffrischen, aber nicht
         // oefter als einmal pro Minute schreiben.
@@ -99,7 +99,7 @@ final class Auth
      * @param array<string, mixed> $row
      * @return array<string, mixed>
      */
-    private static function hydrate(array $row): array
+    private function hydrate(array $row): array
     {
         $permissions = json_decode((string) $row['permissions'], true);
         $row['permissions'] = is_array($permissions) ? array_values(array_map('strval', $permissions)) : [];
@@ -107,7 +107,43 @@ final class Auth
         $preferences = json_decode((string) ($row['preferences'] ?? '{}'), true);
         $row['preferences'] = is_array($preferences) ? $preferences : [];
 
+        $row['permission_role'] = trim((string) ($row['permission_role'] ?? ''));
+
         return $row;
+    }
+
+    /**
+     * Die Rechte, die jemand WIRKLICH hat.
+     *
+     * Hat er eine Rolle, kommen sie aus ihr - und zwar so, wie sie
+     * heute aussieht. Das ist der Unterschied zu frueher: damals wurden
+     * die Rechte beim Zuweisen kopiert, und ein Recht, das spaeter
+     * dazukam, erreichte keinen einzigen Editor.
+     *
+     * Aufgeloest wird HIER und nicht beim Laden des Benutzers. Der
+     * Grund ist die Reihenfolge: rolePresets() fragt den Rechtekatalog,
+     * und in dem stehen die Rechte der Plugins erst, wenn die geladen
+     * sind. Wer den Benutzer vorher anfasst, bekaeme eine Rolle ohne
+     * Plugin-Rechte - und weil der Benutzer zwischengespeichert wird,
+     * bliebe das den ganzen Aufruf lang so.
+     *
+     * @param array<string, mixed> $user
+     * @return list<string>
+     */
+    public function permissionsOf(array $user): array
+    {
+        $rolle = trim((string) ($user['permission_role'] ?? ''));
+        $vorlagen = $this->rolePresets();
+
+        if ($rolle !== '' && isset($vorlagen[$rolle])) {
+            return $vorlagen[$rolle]['keys'];
+        }
+
+        // Ohne Rolle gilt die eigene Auswahl. Sie steht auch bei einem
+        // Rolleninhaber daneben - als Ausgangspunkt, wenn er die Rolle
+        // verlaesst, und als Rueckfall, wenn die Rolle verschwindet,
+        // weil das Plugin ging, das sie mitbrachte.
+        return array_values(array_map('strval', (array) ($user['permissions'] ?? [])));
     }
 
     // -----------------------------------------------------------------
@@ -181,7 +217,7 @@ final class Auth
             return true;
         }
 
-        return in_array($permission, (array) ($user['permissions'] ?? []), true);
+        return in_array($permission, $this->permissionsOf($user), true);
     }
 
     // -----------------------------------------------------------------
@@ -315,7 +351,7 @@ final class Auth
             return null;
         }
 
-        $row = self::hydrate($row);
+        $row = $this->hydrate($row);
 
         return $row;
     }
@@ -328,7 +364,7 @@ final class Auth
         $rows = $this->app->db->all('SELECT * FROM users ORDER BY role DESC, display_name');
 
         foreach ($rows as $index => $row) {
-            $rows[$index] = self::hydrate($row);
+            $rows[$index] = $this->hydrate($row);
         }
 
         return $rows;
@@ -342,12 +378,56 @@ final class Auth
         $valid = $this->flatPermissionKeys();
         $filtered = array_values(array_intersect(array_map('strval', $permissions), $valid));
 
+        // Wer einzelne Haken setzt, hat keine Rolle mehr, sondern eine
+        // eigene Auswahl. Bliebe die Rolle stehen, gewaenne sie beim
+        // naechsten Laden - und die gerade gesetzten Haken waeren weg,
+        // ohne dass eine Meldung es saegte.
         $this->app->db->run(
-            'UPDATE users SET permissions = CAST(:permissions AS JSONB) WHERE twitch_id = :id',
+            'UPDATE users
+                SET permissions = CAST(:permissions AS JSONB),
+                    permission_role = \'\'
+              WHERE twitch_id = :id',
             ['id' => $twitchId, 'permissions' => (string) json_encode($filtered)]
         );
 
         $this->app->hooks->dispatch('user.permissions_changed', $twitchId, $filtered);
+    }
+
+    /**
+     * Eine Rolle zuweisen.
+     *
+     * Gespeichert wird der NAME. Die Rechte daraus werden bei jedem
+     * Laden aufgeloest - deshalb kommt ein Recht, das spaeter zur Rolle
+     * dazukommt, bei allen an, die sie haben.
+     *
+     * Die Liste wird trotzdem mitgeschrieben: sie ist der Ausgangspunkt,
+     * wenn jemand die Rolle spaeter verlaesst, und der Rueckfall, wenn
+     * die Rolle verschwindet - etwa weil ein Plugin ging, das sie
+     * mitbrachte.
+     */
+    public function setRole(string $twitchId, string $rolle): void
+    {
+        $vorlagen = $this->rolePresets();
+
+        if (!isset($vorlagen[$rolle])) {
+            throw new RuntimeException(translate('account.users.no_such_preset'));
+        }
+
+        $keys = $vorlagen[$rolle]['keys'];
+
+        $this->app->db->run(
+            'UPDATE users
+                SET permissions = CAST(:permissions AS JSONB),
+                    permission_role = :rolle
+              WHERE twitch_id = :id',
+            [
+                'id'          => $twitchId,
+                'rolle'       => $rolle,
+                'permissions' => (string) json_encode($keys),
+            ]
+        );
+
+        $this->app->hooks->dispatch('user.permissions_changed', $twitchId, $keys);
     }
 
     public function removeUser(string $twitchId): void
@@ -577,6 +657,17 @@ final class Auth
                 'description' => translate('roles.readonly.hint'),
                 'keys'        => $nurAnsehen,
             ],
+            // Admin: wirklich alles, auch was spaeter dazukommt.
+            //
+            // Nicht dasselbe wie Superadmin: der ist der Kanalinhaber,
+            // steht in users.role und laesst sich nicht vergeben. Ein
+            // Admin ist ein Mensch, dem man alles anvertraut - und dem
+            // man es auch wieder nehmen kann.
+            'admin' => [
+                'label'       => translate('roles.admin'),
+                'description' => translate('roles.admin.hint'),
+                'keys'        => $alle,
+            ],
             'helper' => [
                 'label'       => translate('roles.helper'),
                 'description' => translate('roles.helper.hint'),
@@ -605,10 +696,27 @@ final class Auth
             return translate('roles.superadmin');
         }
 
-        $rechte = array_map('strval', (array) ($user['permissions'] ?? []));
+        // Die zugewiesene Rolle, falls es eine gibt.
+        //
+        // Frueher wurde hier die Rechteliste mit jeder Rolle VERGLICHEN.
+        // Das ging so lange gut, bis ein Plugin ein Recht mitbrachte:
+        // die Rolle wuchs, die gespeicherte Liste nicht, und ab da stand
+        // "Angepasst" an einem Benutzer, an dem niemand etwas angepasst
+        // hatte.
+        $vorlagen = $this->rolePresets();
+        $rolle = trim((string) ($user['permission_role'] ?? ''));
+
+        if ($rolle !== '' && isset($vorlagen[$rolle])) {
+            return $vorlagen[$rolle]['label'];
+        }
+
+        // Ohne Rolle: passt die Auswahl trotzdem genau auf eine, wird
+        // sie so benannt. Das betrifft die Benutzer, die es vor dieser
+        // Aenderung schon gab - ihnen fehlt der Name, nicht die Rechte.
+        $rechte = $this->permissionsOf($user);
         sort($rechte);
 
-        foreach ($this->rolePresets() as $vorlage) {
+        foreach ($vorlagen as $vorlage) {
             $vergleich = $vorlage['keys'];
             sort($vergleich);
 
@@ -635,7 +743,7 @@ final class Auth
         }
 
         return [
-            'have'  => count((array) ($user['permissions'] ?? [])),
+            'have'  => count($this->permissionsOf($user)),
             'total' => $gesamt,
             'all'   => false,
         ];

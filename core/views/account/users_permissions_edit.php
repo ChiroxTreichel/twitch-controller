@@ -12,6 +12,8 @@
  * @var callable $url
  * @var string $tab
  * @var array<string, mixed> $target
+ * @var list<string> $have   die geltenden Rechte
+ * @var string $role        zugewiesene Rolle, leer = eigene Auswahl
  * @var array<string, array{label: string, features: array<string, array{label: string, permissions: array<string, array{label: string, description: string}>}}>> $tree
  * @var array<string, array{label: string, description: string, keys: list<string>}> $presets
  * @var array{have: int, total: int, all: bool} $count
@@ -23,7 +25,7 @@
 
 $darfVerwalten = permission('Account.Users.Manage');
 $aenderbar = $darfVerwalten && !$isSuper;
-$hat = array_map('strval', (array) ($target['permissions'] ?? []));
+$hat = $have;
 $id = (string) $target['twitch_id'];
 $liste = $url('/account/users/permissions');
 ?>
@@ -64,6 +66,20 @@ $liste = $url('/account/users/permissions');
         </div>
         <p class="hint"><?= $e(translate('account.users.presets_hint')) ?></p>
 
+        <?php /*
+            Welche Rolle gilt - und was das bedeutet.
+
+            Der Satz steht da, weil man den Unterschied sonst nicht
+            sieht: eine Rolle waechst mit, eine eigene Auswahl nicht.
+            Wer das nicht weiss, wundert sich spaeter, warum ein neues
+            Recht bei dem einen ankommt und beim anderen nicht.
+        */ ?>
+        <?php if ($role !== '' && isset($presets[$role])): ?>
+            <div class="note note-ok">
+                <?= $e(translate('account.users.role_active', ['role' => $presets[$role]['label']])) ?>
+            </div>
+        <?php endif ?>
+
         <div class="row">
             <?php foreach ($presets as $key => $preset): ?>
                 <form method="post" action="<?= $e($url('/account/users')) ?>">
@@ -71,7 +87,7 @@ $liste = $url('/account/users/permissions');
                     <input type="hidden" name="action" value="preset">
                     <input type="hidden" name="twitch_id" value="<?= $e($id) ?>">
                     <input type="hidden" name="preset" value="<?= $e((string) $key) ?>">
-                    <button class="btn btn-ghost btn-small" type="submit"
+                    <button class="btn btn-small<?= $role === (string) $key ? '' : ' btn-ghost' ?>" type="submit"
                             title="<?= $e($preset['description']) ?>">
                         <?= $e(translate('account.users.set_role', ['role' => $preset['label']])) ?>
                     </button>
