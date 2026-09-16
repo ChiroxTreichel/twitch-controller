@@ -1,0 +1,8 @@
+# Das geklonte Plugin-Repository. Es gehoert nicht hierher, es wird
+# hier nur ausgeliefert:
+#
+#   git clone git@github.com:ChiroxTreichel/twitch-controller-plugins.git src/plugins
+#
+# Verfolgt waere es ein Repository im Repository - und jedes
+# veroeffentlichte Paket ein Commit in diesem hier.
+/src/plugins/

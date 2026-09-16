@@ -41,6 +41,60 @@ final class Updater
         'install.sh',
     ];
 
+    /**
+     * Ausnahmen von SHELL_PATHS.
+     *
+     * docker/plugins/ ist der Katalogserver: ein eigener Stack mit
+     * eigener Compose-Datei, den genau eine Person betreibt und den die
+     * Container dieser Installation nie anfassen. Er liegt nur dort,
+     * weil er zum Projekt gehoert.
+     *
+     * Ohne die Ausnahme verlangte jede Aenderung am Katalog von JEDER
+     * Installation einen Gang auf die Konsole - fuer einen Ordner, den
+     * sie nicht einmal benutzt.
+     *
+     * @var list<string>
+     */
+    private const SHELL_EXCEPTIONS = [
+        'docker/plugins/',
+    ];
+
+    /**
+     * Braucht dieses Update einen Menschen auf dem Server?
+     *
+     * Eigene Methode und nicht mitten in check(): dort haengt sie
+     * hinter Git und Netz, und eine Pruefung haette den Vergleich
+     * nachbauen muessen - womit sie geprueft haette, ob zwei Nachbauten
+     * zueinander passen.
+     *
+     * @param list<string> $dateien Pfade, wie git diff --name-only sie liefert
+     */
+    public static function needsShell(array $dateien): bool
+    {
+        foreach ($dateien as $datei) {
+            $datei = trim($datei);
+
+            if ($datei === '') {
+                continue;
+            }
+
+            // Die Ausnahme zuerst: sie ist spezieller als die Regel.
+            foreach (self::SHELL_EXCEPTIONS as $ausnahme) {
+                if (str_starts_with($datei, $ausnahme)) {
+                    continue 2;
+                }
+            }
+
+            foreach (self::SHELL_PATHS as $pfad) {
+                if (str_starts_with($datei, $pfad)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     public function __construct(private readonly App $app)
     {
     }
@@ -147,19 +201,7 @@ final class Updater
         [, $subject] = $this->git(['log', '-1', '--format=%s', 'FETCH_HEAD']);
         [, $changed] = $this->git(['diff', '--name-only', 'HEAD', 'FETCH_HEAD']);
 
-        $needsShell = false;
-        foreach (explode("\n", $changed) as $file) {
-            $file = trim($file);
-            if ($file === '') {
-                continue;
-            }
-            foreach (self::SHELL_PATHS as $path) {
-                if (str_starts_with($file, $path)) {
-                    $needsShell = true;
-                    break 2;
-                }
-            }
-        }
+        $needsShell = self::needsShell(explode("\n", $changed));
 
         $this->app->settings->setMany([
             'update_checked_at'  => time(),
