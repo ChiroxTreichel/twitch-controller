@@ -1069,6 +1069,35 @@ if command -v curl >/dev/null 2>&1; then
     fi
 fi
 
+# Der Name, unter dem der Proxy die Anwendung findet, steht NICHT in
+# docker-compose.yaml, sondern in docker-compose.npm.yaml - und die
+# greift nur, wenn sie in COMPOSE_FILE steht.
+#
+# Fehlt sie, startet trotzdem alles fehlerfrei: die Container laufen,
+# die Datenbank meldet sich, die Anwendung antwortet auf dem lokalen
+# Port. Nur der Proxy findet nichts, und das faellt erst auf, wenn die
+# Seite nicht kommt. Darum wird hier nachgesehen, ob der Name wirklich
+# am laufenden Container haengt.
+if [ "$PROXY_MODE" = "npm" ]; then
+    WEB_ID="$($DC ps -q web 2>/dev/null | head -n1)"
+    WEB_ALIASES=''
+
+    if [ -n "$WEB_ID" ]; then
+        WEB_ALIASES="$($DOCKER_SUDO docker inspect \
+            -f '{{range $n, $c := .NetworkSettings.Networks}}{{range $c.Aliases}}{{.}}{{"\n"}}{{end}}{{end}}' \
+            "$WEB_ID" 2>/dev/null || true)"
+    fi
+
+    if printf '%s\n' "$WEB_ALIASES" | grep -qx 'overlays'; then
+        ok "Im Netz \"$PROXY_NET\" unter dem Namen \"overlays\" erreichbar"
+    else
+        warn "Der Name \"overlays\" haengt nicht am Container - so findet der Proxy nichts."
+        dim "Er steht in docker-compose.npm.yaml, und die muss in der .env stehen:"
+        dim "  COMPOSE_FILE=docker-compose.yaml:docker-compose.npm.yaml"
+        dim "Nachsehen:  $DC config | grep -A3 aliases"
+    fi
+fi
+
 # --- 9. Anleitung für den Rest --------------------------------------------
 
 printf '\n%s========================================================%s\n' "$C_OK" "$C_RESET"
@@ -1084,6 +1113,8 @@ if [ "$PROXY_MODE" = "npm" ]; then
     printf '    Scheme            http\n'
     printf '    Forward Hostname  %soverlays%s\n' "$C_BOLD" "$C_RESET"
     printf '    Forward Port      %s80%s\n\n' "$C_BOLD" "$C_RESET"
+    printf '  "overlays" ist kein Zufall: der Name steht als Netz-Alias in\n'
+    printf '  docker-compose.npm.yaml. In docker-compose.yaml steht er nicht.\n\n'
     printf '  Im Reiter "SSL": "Request a new SSL Certificate" anhaken,\n'
     printf '  dazu "Force SSL". Speichern.\n'
     SCHRITT=$((SCHRITT + 1))

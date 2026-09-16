@@ -40,6 +40,9 @@ services:
     restart: always
 
   # --- Webserver: Verwaltung, Login, Webhooks, Plugin-Routen -------------
+  # Hier steht KEIN Netz-Alias. Wer mit einem eigenen Reverse Proxy
+  # arbeitet, findet "overlays" in docker-compose.npm.yaml - die Datei
+  # wird ueber COMPOSE_FILE in der .env dazugeschaltet.
   web:
     <<: *php
     ports:
