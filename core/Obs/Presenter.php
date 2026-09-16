@@ -60,7 +60,7 @@ final class Presenter
             'badge'   => trim((string) ($filtered['badge'] ?? $eventType)),
             'style'   => (string) ($filtered['style'] ?? 'system'),
             'title'   => trim((string) ($filtered['title'] ?? self::actor($row, $payload))),
-            'message' => self::message($row),
+            'message' => self::message($row, $payload),
             'filter'  => (string) ($filtered['filter'] ?? 'system'),
         ];
     }
@@ -170,6 +170,25 @@ final class Presenter
                     'filter' => 'raids',
                 ];
 
+            // Kanalpunkte. Der Name der Belohnung IST das Abzeichen -
+            // "Kanalpunkte" stuende an jeder Zeile gleich da und sagte
+            // nichts; interessant ist, was eingeloest wurde.
+            case 'twitch.channel.channel_points_custom_reward_redemption.add':
+                return [
+                    'badge'  => self::rewardTitle($payload, translate('badge.reward')),
+                    'style'  => 'reward',
+                    'title'  => self::name($actor),
+                    'filter' => 'rewards',
+                ];
+
+            case 'twitch.channel.channel_points_automatic_reward_redemption.add':
+                return [
+                    'badge'  => self::rewardTitle($payload, translate('badge.reward_auto')),
+                    'style'  => 'reward_auto',
+                    'title'  => self::name($actor),
+                    'filter' => 'rewards',
+                ];
+
             case 'twitch.stream.online':
                 return ['badge' => translate('badge.stream_online'), 'style' => 'stream_online', 'title' => self::name($actor), 'filter' => 'system.stream'];
 
@@ -225,11 +244,36 @@ final class Presenter
     /**
      * @param array<string, mixed> $row
      */
-    private static function message(array $row): string
+    /**
+     * Der Name der eingeloesten Belohnung.
+     *
+     * @param array<string, mixed> $payload
+     */
+    private static function rewardTitle(array $payload, string $ersatz): string
+    {
+        $reward = is_array($payload['reward'] ?? null) ? $payload['reward'] : [];
+        $titel = trim((string) ($reward['title'] ?? ''));
+
+        return $titel !== '' ? $titel : $ersatz;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param array<string, mixed> $payload
+     */
+    private static function message(array $row, array $payload = []): string
     {
         $message = trim((string) ($row['message'] ?? ''));
         if ($message === '') {
             return '';
+        }
+
+        // Bei einer Kanalpunkt-Einloesung steht der Name der Belohnung
+        // schon im Abzeichen. Kommt er auch noch als "[Name] Text" in
+        // der Nachricht, stuende er zweimal in derselben Zeile.
+        $titel = self::rewardTitle($payload, '');
+        if ($titel !== '' && str_starts_with($message, '[' . $titel . ']')) {
+            $message = trim(substr($message, strlen($titel) + 2));
         }
 
         // Steuerzeichen raus, Zeilenumbrueche zu Leerzeichen - im Feed

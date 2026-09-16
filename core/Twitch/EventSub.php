@@ -111,6 +111,24 @@ final class EventSub
             ['type' => 'stream.online',  'version' => '1', 'condition' => $channel],
             ['type' => 'stream.offline', 'version' => '1', 'condition' => $channel],
 
+            // Kanalpunkte. Braucht channel:read:redemptions - ohne die
+            // Freigabe scheitert das Abo, und sync() meldet es unter
+            // "failed", statt alles andere mitzureissen.
+            //
+            // Zwei Arten, und sie sind nicht dasselbe: "custom" sind
+            // die Belohnungen, die der Kanal selbst anlegt, "automatic"
+            // die von Twitch vorgegebenen (Nachricht hervorheben,
+            // Gifs und so weiter). Die Legacy hatte beide.
+            //
+            // Die automatischen liegen auf Version 2: Version 1 hat
+            // Twitch abgekuendigt. Sollte das hier fehlschlagen, steht
+            // es im Abgleichsbericht - die custom-Belohnungen kommen
+            // davon unabhaengig an.
+            ['type' => 'channel.channel_points_custom_reward_redemption.add',
+                'version' => '1', 'condition' => $channel],
+            ['type' => 'channel.channel_points_automatic_reward_redemption.add',
+                'version' => '2', 'condition' => $channel],
+
             // Chat. Die Bedingung hat zwei Seiten: broadcaster_user_id
             // ist der Kanal, user_id derjenige, dessen Chatfenster
             // mitgelesen wird - also das Konto, mit dem wir im Chat

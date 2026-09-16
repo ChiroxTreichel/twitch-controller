@@ -48,6 +48,26 @@ final class Badges
             'sub_end'        => ['label' => translate('badge.sub_end'),       'bg' => '#4a4f5a', 'text' => '#ffffff'],
             'bits'           => ['label' => translate('badge.bits'),           'bg' => '#d94f8a', 'text' => '#ffffff'],
             'raid'           => ['label' => translate('badge.raid'),           'bg' => '#ff6a3d', 'text' => '#1a1a1a'],
+            // Kanalpunkte. Im alten System waren das die einzigen
+            // halbdurchsichtigen Abzeichen: #ff5c8533 und #ff8d5c33,
+            // also 20 % Deckung ueber dem Feed-Hintergrund.
+            //
+            // Hier stehen sie deckend, und zwar ausgerechnet:
+            //
+            //   #ff5c85 zu 20 % ueber #0e1014  ->  #3e1f2b
+            //   #ff8d5c zu 20 % ueber #0e1014  ->  #3e2922
+            //
+            // Der Grund ist der Farbwaehler in der Verwaltung. Das ist
+            // ein <input type="color">, und der kennt keine
+            // Transparenz: er haette die achtstellige Angabe verworfen
+            // und beim ersten Speichern Schwarz hinterlassen. Ein
+            // Vorgabewert, den die eigene Oberflaeche nicht bearbeiten
+            // kann, ist keiner.
+            //
+            // Aussehen tut es dasselbe - solange der Hintergrund der
+            // des Feeds ist, und der steht in feed.php als --bg.
+            'reward'         => ['label' => translate('badge.reward'),         'bg' => '#3e1f2b', 'text' => '#ffdbe6'],
+            'reward_auto'    => ['label' => translate('badge.reward_auto'),    'bg' => '#3e2922', 'text' => '#ffe4d6'],
             'stream_online'  => ['label' => translate('badge.stream_online'),      'bg' => '#3ecf8e', 'text' => '#0e1014'],
             'stream_offline' => ['label' => translate('badge.stream_offline'),     'bg' => '#3a3f4a', 'text' => '#ffffff'],
             'system'         => ['label' => translate('badge.system'),         'bg' => '#272c36', 'text' => '#98a1b0'],

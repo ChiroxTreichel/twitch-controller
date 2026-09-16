@@ -106,6 +106,11 @@ final class Filters
 
             ['key' => 'raids',             'label' => 'Raids',     'order' => 60],
 
+            // Ein Knoten fuer beide Arten - eigene und automatische
+            // Belohnungen. So hatte es das alte System auch: wer nach
+            // Kanalpunkten filtert, will sie alle sehen.
+            ['key' => 'rewards',           'label' => translate('feed.filter.rewards'), 'order' => 70],
+
             ['key' => 'system',            'label' => translate('feed.filter.system'),    'order' => 90],
             ['key' => 'system.stream',     'label' => translate('feed.filter.stream'),    'parent' => 'system', 'order' => 20],
             ['key' => 'system.other',      'label' => translate('feed.filter.other'), 'parent' => 'system', 'order' => 90],
