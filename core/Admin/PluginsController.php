@@ -534,7 +534,7 @@ final class PluginsController
      * voraussetzt.
      *
      * Wer auf "Installieren" klickt, soll nicht selbst herausfinden
-     * muessen, dass Twitch-Alerts das Alerts-Plugin braucht. Er soll es
+     * muessen, dass Alerts - Twitch das Alerts-Plugin braucht. Er soll es
      * aber erfahren: die Detailseite sagt es vorher, und die Meldung
      * danach zaehlt auf, was zusaetzlich dazugekommen ist.
      */

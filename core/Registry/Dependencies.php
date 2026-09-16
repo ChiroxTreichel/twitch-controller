@@ -12,7 +12,7 @@ use TwitchController\Core\Plugin\VersionConstraint;
  *  Was mitinstalliert werden muss
  * ===================================================================
  *
- * Ein Plugin kann andere voraussetzen: Twitch-Alerts braucht Alerts.
+ * Ein Plugin kann andere voraussetzen: Alerts - Twitch braucht Alerts.
  * Wer im Marktplatz auf "Installieren" klickt, soll das nicht selbst
  * herausfinden muessen - aber er soll es vorher erfahren.
  *
