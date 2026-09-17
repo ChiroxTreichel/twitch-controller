@@ -47,6 +47,13 @@ try {
     <?php endforeach ?>
 </head>
 <body>
+<?php /*
+    Der Streifen, der beim Abschicken oben durchlaeuft. Er steht immer
+    im Dokument und ist nur unsichtbar - ein Element, das erst
+    entsteht, kann nicht ueberblenden. Siehe admin.js.
+*/ ?>
+<div id="ov-busy"></div>
+
 <div class="shell">
     <aside class="sidebar">
         <div class="brand">

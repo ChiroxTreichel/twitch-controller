@@ -978,3 +978,53 @@ td.actions { text-align: right; white-space: nowrap; }
     justify-content: flex-end;
     margin-bottom: 10px;
 }
+
+/*
+ * Der Streifen, der sagt: es passiert gerade etwas.
+ *
+ * Seit Formulare ohne Seitenwechsel abgeschickt werden, fehlt die
+ * Rueckmeldung, die der Browser frueher von selbst gab - beim Laden
+ * drehte sich sein Rad. "Alle aktualisieren" holt Dateien von einem
+ * anderen Server und dauert; ohne ein Zeichen sieht das aus, als waere
+ * der Klick ins Leere gegangen, und man klickt noch einmal.
+ *
+ * Oben quer statt als Rad in der Mitte: es verdeckt nichts und haelt
+ * niemanden auf. Wer weiterlesen will, kann das.
+ */
+#ov-busy {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 2px;
+    width: 100%;
+    z-index: 9999;
+
+    /* Unsichtbar, solange nichts laeuft - aber im Dokument: ein
+       Element, das erst entsteht, kann nicht ueberblenden. */
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+    background: linear-gradient(90deg,
+        transparent 0%, var(--accent) 40%, var(--accent) 60%, transparent 100%);
+    background-size: 40% 100%;
+    background-repeat: no-repeat;
+}
+
+html[data-busy="1"] #ov-busy {
+    opacity: 1;
+    animation: ov-busy-lauf 1.1s ease-in-out infinite;
+}
+
+@keyframes ov-busy-lauf {
+    from { background-position: -40% 0; }
+    to   { background-position: 140% 0; }
+}
+
+/* Wer Bewegung abgestellt hat, bekommt den Streifen ruhig - aber er
+   ist da, und das ist die Auskunft, um die es geht. */
+@media (prefers-reduced-motion: reduce) {
+    html[data-busy="1"] #ov-busy {
+        animation: none;
+        background-size: 100% 100%;
+    }
+}

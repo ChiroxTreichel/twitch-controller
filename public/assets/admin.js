@@ -206,14 +206,49 @@
     //  Abschicken
     // -----------------------------------------------------------------
 
+    /*
+     * Die Adresse eines Formulars - ueber das ATTRIBUT, niemals ueber
+     * formular.action.
+     *
+     * Ein Formular stellt seine Felder als Eigenschaften bereit, und
+     * die verdecken dabei die eigenen. Jedes Formular hier hat ein
+     * <input name="action"> - "formular.action" ist damit dieses FELD
+     * und nicht die Adresse. Geschickt wurde an
+     * "[object HTMLInputElement]", und das Aktualisieren von Plugins
+     * ging ins Leere.
+     *
+     * Dasselbe gilt fuer method und target, und es faellt nicht auf:
+     * ohne ein Feld dieses Namens stimmt alles.
+     */
+    function attribut(formular, name) {
+        return (formular.getAttribute(name) || '').trim();
+    }
+
+    /*
+     * Der Streifen oben.
+     *
+     * Frueher drehte der Browser beim Laden sein Rad - das faellt mit
+     * dem Seitenwechsel weg. "Alle aktualisieren" holt Dateien von
+     * einem anderen Server und dauert; ohne Zeichen sieht der Klick
+     * aus, als waere er ins Leere gegangen, und man klickt noch
+     * einmal.
+     */
+    function beschaeftigt(ja) {
+        document.documentElement.dataset.busy = ja ? '1' : '0';
+    }
+
+    function zieladresse(formular) {
+        return attribut(formular, 'action') || location.href;
+    }
+
     function zustaendig(formular, knopf) {
-        if (formular.hasAttribute('data-no-ajax') || formular.target) {
+        if (formular.hasAttribute('data-no-ajax') || attribut(formular, 'target') !== '') {
             return false;
         }
 
         // Nur POST. Ein GET-Formular ist eine Suche und wechselt die
         // Seite - das ist ein Seitenwechsel und soll einer bleiben.
-        if ((formular.method || 'get').toLowerCase() !== 'post') {
+        if ((attribut(formular, 'method') || 'get').toLowerCase() !== 'post') {
             return false;
         }
 
@@ -228,7 +263,7 @@
             return false;
         }
 
-        var ziel = new URL(formular.action || location.href, location.href);
+        var ziel = new URL(zieladresse(formular), location.href);
 
         return ziel.origin === location.origin;
     }
@@ -246,8 +281,9 @@
         }
 
         laeuft = formular;
+        beschaeftigt(true);
 
-        fetch(formular.action || location.href, {
+        fetch(zieladresse(formular), {
             method: 'POST',
             body: daten,
             credentials: 'same-origin',
@@ -304,6 +340,7 @@
             formular.setAttribute('data-no-ajax', '');
         }).then(function () {
             laeuft = null;
+            beschaeftigt(false);
 
             if (knopf) {
                 knopf.disabled = false;
