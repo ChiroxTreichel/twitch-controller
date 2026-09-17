@@ -597,12 +597,33 @@ Ohne JavaScript passiert nichts davon — dann bleibt das Textfeld, was
 es war: eine Zeile, in die man den Pfad einer Datei schreibt, die schon
 auf dem Server liegt.
 
-> **Offen:** Apache läuft mit `AllowOverride None`, ein `.htaccess` in
-> `uploads/` greift also nicht. Ein `php_admin_flag engine off` für
-> `public/uploads` im vhost wäre der zweite Riegel hinter der
-> Erlaubnisliste. Es steht noch nicht drin, weil eine Änderung unter
-> `docker/` ein Update über die Konsole erzwingt (`update_needs_shell`)
-> — sie gehört in die nächste Fassung, die ohnehin eine braucht.
+#### Der zweite Riegel steht im vhost
+
+`docker/apache/000-default.conf` gibt `public/uploads` einen eigenen
+Block: PHP ist dort abgeschaltet (`php_admin_flag engine off`), und
+`.php`, `.phtml`, `.phar`, `.cgi`, `.pl`, `.py`, `.sh` werden gar nicht
+erst ausgeliefert.
+
+Das ist kein Ersatz für die Erlaubnisliste, sondern der zweite Riegel:
+er gilt für alles, was dort liegt, **egal wer es hineingeschrieben
+hat** — ein Fehler in der ersten Prüfung, ein Plugin, ein Griff auf der
+Konsole. Der Unterschied zwischen „eine Datei liegt herum" und „ein
+fremdes Programm läuft auf dem Server" ist genau diese Stelle.
+
+Zwei Feinheiten, die beide leicht zu übersehen sind:
+
+- `php_admin_flag` steht in `<IfModule php_module>`. Hieße das Modul
+  eines Tages anders, fiele die Zeile lautlos weg und Apache startet
+  trotzdem — vertretbar, weil `FilesMatch` ohne jedes Modul greift.
+- Der Ausdruck beginnt mit `(?i)`. `FilesMatch` unterscheidet sonst
+  Groß und Klein, und `.PHP` käme durch.
+
+Ein `.htaccess` in `uploads/` wäre der naheliegende Weg und greift
+**nicht**: der vhost setzt `AllowOverride None`.
+
+Weil die Datei unter `docker/` liegt, setzt eine Änderung daran
+`update_needs_shell` — sie kommt erst mit `sudo ./install.sh` an, denn
+sie wird ins Image kopiert.
 
 ### Formulare ohne Seitenwechsel
 
