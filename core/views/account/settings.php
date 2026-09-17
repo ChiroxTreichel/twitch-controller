@@ -150,6 +150,15 @@ use TwitchController\Core\Support\Dates;
                 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
                 <input type="hidden" name="action" value="update_check">
                 <button class="btn btn-ghost btn-small" type="submit"><?= $e(translate('settings.system.check')) ?></button>
+                <?php /*
+                    Der Knopf blieb, hat aber eine andere Bedeutung
+                    bekommen: nachgesehen wird ohnehin, hier geht es um
+                    "jetzt". Ohne diesen Satz haelt man den Stand fuer
+                    das Ergebnis des letzten Klicks.
+                */ ?>
+                <p class="hint" style="margin:6px 0 0;">
+                    <?= $e(translate('settings.system.check_auto')) ?>
+                </p>
             </form>
         <?php endif; ?>
     <?php endif; ?>

@@ -210,7 +210,7 @@ final class Updater
 
         $branch = $this->trackedRef();
 
-        [$fetchOk, $fetchOut] = $this->git(['fetch', '--quiet', 'origin', $branch]);
+        [$fetchOk, $fetchOut] = $this->fetch($branch);
         if (!$fetchOk) {
             return [
                 'ok' => false,
@@ -253,6 +253,76 @@ final class Updater
     // -----------------------------------------------------------------
 
     /**
+     * Wie oft der Worker von selbst nachsieht.
+     *
+     * Eine Viertelstunde. Oefter waere Verkehr ohne Zweck - Code
+     * erscheint nicht im Minutentakt -, seltener stuende auf der
+     * Einstellungsseite eine Antwort von vorgestern.
+     */
+    public const CHECK_INTERVAL = 900;
+
+    /**
+     * Nachsehen, aber nur wenn es an der Zeit ist.
+     *
+     * Gedacht fuer den Worker: der laeuft ohnehin im Takt, hat git und
+     * darf im Projektordner schreiben. So steht auf der
+     * Einstellungsseite ein Ergebnis, das hoechstens eine Viertelstunde
+     * alt ist, ohne dass jemand einen Knopf druecken muss.
+     *
+     * NICHT beim Aufbau der Seite: "git fetch" geht ins Netz, und exec()
+     * kennt keine Frist. Ist GitHub langsam, haengt sonst die
+     * Einstellungsseite - und zwar genau dann, wenn man wegen eines
+     * Problems dorthin geht.
+     *
+     * Gezaehlt wird der VERSUCH und nicht der Erfolg: ohne Netz waere
+     * "update_checked_at" sonst nie gesetzt, und der Worker liefe bei
+     * jedem Durchlauf erneut in denselben Zeitablauf.
+     */
+    public function checkIfDue(int $interval = self::CHECK_INTERVAL): bool
+    {
+        // Ein beauftragtes Update spielt der Worker gleich ein. Bis
+        // dahin sagt ein Blick ins Netz nichts Neues.
+        if ($this->isRequested()) {
+            return false;
+        }
+
+        $jetzt = time();
+
+        if (!self::isDue($this->app->settings->int('update_check_attempt_at', 0), $jetzt, $interval)) {
+            return false;
+        }
+
+        $this->app->settings->set('update_check_attempt_at', $jetzt);
+        $this->check();
+
+        return true;
+    }
+
+    /**
+     * Ist es soweit? Die Entscheidung allein, ohne App und ohne Netz.
+     *
+     * Getrennt, weil genau hier die Faelle stecken, die man vergisst:
+     * noch nie nachgesehen, gerade eben nachgesehen - und ein
+     * Zeitpunkt aus der ZUKUNFT. Den gibt es: eine verstellte Uhr, ein
+     * zurueckgespieltes Abbild der Datenbank. Wer nur "jetzt minus
+     * zuletzt" rechnet, bekommt dann eine negative Zahl, die immer
+     * kleiner als jede Frist ist - und es geschaehe nie wieder etwas,
+     * ohne dass irgendwo ein Fehler stuende.
+     */
+    public static function isDue(int $zuletzt, int $jetzt, int $interval): bool
+    {
+        if ($zuletzt <= 0) {
+            return true;
+        }
+
+        if ($zuletzt > $jetzt) {
+            return true;
+        }
+
+        return $jetzt - $zuletzt >= $interval;
+    }
+
+    /**
      * Wird von der Oberflaeche aufgerufen: hinterlegt den Auftrag, den der
      * Worker ausfuehrt.
      */
@@ -284,7 +354,7 @@ final class Updater
         try {
             $branch = $this->trackedRef();
 
-            [$fetchOk, $fetchOut] = $this->git(['fetch', '--quiet', 'origin', $branch]);
+            [$fetchOk, $fetchOut] = $this->fetch($branch);
             if (!$fetchOk) {
                 throw new \RuntimeException(translate('update.github_unreachable_prefix') . $fetchOut);
             }
@@ -346,6 +416,29 @@ final class Updater
         }
 
         return 'main';
+    }
+
+    /**
+     * "git fetch" mit einer Frist.
+     *
+     * exec() kennt keine, und ein fetch gegen einen stockenden Server
+     * wartet sonst, bis irgendwann irgendetwas abbricht - der Knopf
+     * drehte sich, und niemand wusste, worauf. Seit der Worker von
+     * selbst nachsieht, haenge daran ausserdem sein ganzer Takt.
+     *
+     * lowSpeedLimit/lowSpeedTime gibt auf, wenn zehn Sekunden lang
+     * weniger als ein Kilobyte je Sekunde ankommt. Eine langsame
+     * Leitung darf also lange brauchen; eine tote gibt auf.
+     *
+     * @return array{0: bool, 1: string}
+     */
+    private function fetch(string $branch): array
+    {
+        return $this->git([
+            '-c', 'http.lowSpeedLimit=1000',
+            '-c', 'http.lowSpeedTime=10',
+            'fetch', '--quiet', 'origin', $branch,
+        ]);
     }
 
     /**

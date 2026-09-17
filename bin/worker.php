@@ -78,6 +78,21 @@ while ($running) {
             fwrite(STDERR, "[worker] Update fehlgeschlagen, Einzelheiten stehen in den Einstellungen.\n");
         }
 
+        // Und von selbst nachsehen, ob es etwas Neues gibt.
+        //
+        // Vorher passierte das nur auf Knopfdruck. Wer die
+        // Einstellungen aufmachte, sah damit die Antwort von seinem
+        // letzten Besuch - moeglicherweise Wochen alt - und musste
+        // erst einmal fragen.
+        //
+        // Hier und nicht beim Aufbau der Seite: "git fetch" geht ins
+        // Netz, dieser Prozess hat Zeit und eine Seite nicht. Wie oft,
+        // steht in Updater::CHECK_INTERVAL; checkIfDue() entscheidet
+        // selbst, ob gerade etwas zu tun ist.
+        if ($updater->checkIfDue()) {
+            fwrite(STDOUT, "[worker] Nach Updates gesehen.\n");
+        }
+
         // Plugins erst laden, wenn eingerichtet ist. Danach einmal: ein
         // geladenes Plugin laesst sich nicht wieder entladen, und
         // zweimal geladen haengt es seine Hooks zweimal ein.

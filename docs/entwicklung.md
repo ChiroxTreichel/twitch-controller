@@ -1288,6 +1288,36 @@ in `Updater::SHELL_PATHS`.
 `git` läuft mit `-c safe.directory=<root>`, weil der Ordner root gehört
 und git sonst „dubious ownership" meldet.
 
+### Nachsehen macht der Worker
+
+Ob es etwas Neues gibt, prüft der Worker alle `Updater::CHECK_INTERVAL`
+Sekunden (15 Minuten) von selbst — `checkIfDue()` entscheidet, ob gerade
+etwas zu tun ist. Auf der Einstellungsseite steht damit ein Ergebnis, das
+höchstens eine Viertelstunde alt ist, ohne dass jemand einen Knopf
+drücken muss. Der Knopf bleibt und bedeutet jetzt „jetzt sofort".
+
+**Nicht beim Aufbau der Seite.** `git fetch` geht ins Netz, und `exec()`
+kennt keine Frist — ist GitHub langsam, hinge sonst die
+Einstellungsseite, und zwar genau dann, wenn man wegen eines Problems
+dorthin geht. Der Worker hat Zeit, eine Seite nicht.
+
+Der fetch selbst läuft mit `http.lowSpeedLimit=1000` und
+`http.lowSpeedTime=10`: eine langsame Leitung darf lange brauchen, eine
+tote gibt nach zehn Sekunden auf. Ohne das hinge am stockenden GitHub
+der ganze Takt des Workers.
+
+Gezählt wird der **Versuch** (`update_check_attempt_at`), nicht der
+Erfolg. Ohne Netz bliebe `update_checked_at` sonst leer, und der Worker
+liefe bei jedem Durchlauf erneut in denselben Zeitablauf.
+
+Die Entscheidung selbst steht als `Updater::isDue()` für sich, ohne App
+und ohne Netz — dort stecken die Fälle, die man vergisst: noch nie
+nachgesehen, gerade eben nachgesehen, und ein Zeitpunkt aus der
+**Zukunft** (verstellte Uhr, zurückgespieltes Abbild). Wer nur „jetzt
+minus zuletzt" rechnet, bekommt dann eine negative Zahl, die immer
+kleiner als jede Frist ist — und es geschähe nie wieder etwas, ohne dass
+irgendwo ein Fehler stünde.
+
 Nur vorspulen, nie `reset --hard`: liegen im Ordner eigene Änderungen,
 schlägt das Update mit einer Meldung fehl statt sie zu überschreiben.
 

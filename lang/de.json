@@ -486,6 +486,7 @@
     "settings.secrets.title": "Secrets",
     "settings.system.cannot_update": "Diese Installation kann sich nicht selbst aktualisieren – entweder ist sie keine Git-Kopie, oder im Container fehlt %{git}. Einmal %{command} auf dem Server behebt beides.",
     "settings.system.check": "Nach Updates sehen",
+    "settings.system.check_auto": "Der Server sieht alle 15 Minuten von selbst nach. Dieser Knopf fragt sofort.",
     "settings.system.current": "aktuell",
     "settings.system.installed_version": "Installierte Version",
     "settings.system.last_checked": "Zuletzt nachgesehen",
