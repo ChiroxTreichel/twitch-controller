@@ -300,6 +300,9 @@ final class AccountController
             'desired'          => $this->app->twitch->eventSub()->desired(),
             'report'           => null,
             'update'           => $updater->status(),
+            // Damit der Satz neben dem Knopf den EINGESTELLTEN Takt
+            // nennt und nicht eine Zahl, die einmal gestimmt hat.
+            'updateInterval'   => $updater->interval(),
             'timezone'         => $this->app->timezone(),
             'language'         => $this->app->language(),
             'languages'        => Translator::available(

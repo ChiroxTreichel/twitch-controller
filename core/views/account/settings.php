@@ -22,6 +22,7 @@
  * @var array<string, string> $timezones
  * @var array<string, mixed> $update
  * @var bool $updatePossible
+ * @var int $updateInterval   Sekunden zwischen zwei Blicken auf GitHub
  * @var string $updateVersion
  */
 
@@ -157,7 +158,9 @@ use TwitchController\Core\Support\Dates;
                     das Ergebnis des letzten Klicks.
                 */ ?>
                 <p class="hint" style="margin:6px 0 0;">
-                    <?= $e(translate('settings.system.check_auto')) ?>
+                    <?= $e(translate('settings.system.check_auto', [
+                        'seconds' => (string) $updateInterval,
+                    ])) ?>
                 </p>
             </form>
         <?php endif; ?>

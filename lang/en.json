@@ -486,7 +486,7 @@
     "settings.secrets.title": "Secrets",
     "settings.system.cannot_update": "This installation cannot update itself – either it is not a Git checkout, or %{git} is missing in the container. Running %{command} on the server once fixes both.",
     "settings.system.check": "Check for updates",
-    "settings.system.check_auto": "The server checks by itself every 15 minutes. This button asks right now.",
+    "settings.system.check_auto": "The server checks by itself every %{seconds} seconds. This button asks right now.",
     "settings.system.current": "up to date",
     "settings.system.installed_version": "Installed version",
     "settings.system.last_checked": "Last checked",

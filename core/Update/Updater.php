@@ -253,13 +253,34 @@ final class Updater
     // -----------------------------------------------------------------
 
     /**
-     * Wie oft der Worker von selbst nachsieht.
+     * Wie oft der Worker von selbst nachsieht - ohne eigene Angabe.
      *
-     * Eine Viertelstunde. Oefter waere Verkehr ohne Zweck - Code
-     * erscheint nicht im Minutentakt -, seltener stuende auf der
-     * Einstellungsseite eine Antwort von vorgestern.
+     * Fuenf Minuten. Ein "git fetch" auf ein kleines Repository ist
+     * billig, und die Vorgabe soll niemanden warten lassen, der eben
+     * etwas veroeffentlicht hat.
+     *
+     * Wem das zu selten ist - beim Entwickeln zum Beispiel -, der
+     * setzt UPDATE_CHECK_INTERVAL in der .env herunter. Die Untergrenze
+     * sind 15 Sekunden: darunter faengt der Worker an, mehr zu fragen
+     * als zu arbeiten.
      */
-    public const CHECK_INTERVAL = 900;
+    public const CHECK_INTERVAL = 300;
+    public const CHECK_INTERVAL_MIN = 15;
+
+    /**
+     * Der eingestellte Takt.
+     *
+     * Aus der .env und nicht aus den Einstellungen: es ist eine Sache
+     * dieser Installation und nicht des Kanals, und wer am Code
+     * arbeitet, hat die .env ohnehin offen.
+     */
+    public function interval(): int
+    {
+        return max(
+            self::CHECK_INTERVAL_MIN,
+            $this->app->env->int('UPDATE_CHECK_INTERVAL', self::CHECK_INTERVAL)
+        );
+    }
 
     /**
      * Nachsehen, aber nur wenn es an der Zeit ist.
@@ -278,8 +299,10 @@ final class Updater
      * "update_checked_at" sonst nie gesetzt, und der Worker liefe bei
      * jedem Durchlauf erneut in denselben Zeitablauf.
      */
-    public function checkIfDue(int $interval = self::CHECK_INTERVAL): bool
+    public function checkIfDue(?int $interval = null): bool
     {
+        $interval ??= $this->interval();
+
         // Ein beauftragtes Update spielt der Worker gleich ein. Bis
         // dahin sagt ein Blick ins Netz nichts Neues.
         if ($this->isRequested()) {

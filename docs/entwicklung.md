@@ -1290,11 +1290,18 @@ und git sonst „dubious ownership" meldet.
 
 ### Nachsehen macht der Worker
 
-Ob es etwas Neues gibt, prüft der Worker alle `Updater::CHECK_INTERVAL`
-Sekunden (15 Minuten) von selbst — `checkIfDue()` entscheidet, ob gerade
-etwas zu tun ist. Auf der Einstellungsseite steht damit ein Ergebnis, das
-höchstens eine Viertelstunde alt ist, ohne dass jemand einen Knopf
-drücken muss. Der Knopf bleibt und bedeutet jetzt „jetzt sofort".
+Ob es etwas Neues gibt, prüft der Worker von selbst —
+`checkIfDue()` entscheidet, ob gerade etwas zu tun ist. Auf der
+Einstellungsseite steht damit ein frisches Ergebnis, ohne dass jemand
+einen Knopf drücken muss. Der Knopf bleibt und bedeutet jetzt „jetzt
+sofort".
+
+Der Takt kommt aus `UPDATE_CHECK_INTERVAL` in der `.env`, ohne Angabe
+sind es `Updater::CHECK_INTERVAL` = 300 Sekunden; die Untergrenze sind
+15. **Beim Entwickeln setzt man ihn herunter** — nach einem `git push`
+soll die eigene Installation nicht erst in der nächsten Pause davon
+erfahren. Aus der `.env` und nicht aus den Einstellungen: es ist eine
+Sache dieser Installation und nicht des Kanals.
 
 **Nicht beim Aufbau der Seite.** `git fetch` geht ins Netz, und `exec()`
 kennt keine Frist — ist GitHub langsam, hinge sonst die
