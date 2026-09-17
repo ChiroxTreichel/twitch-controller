@@ -191,7 +191,6 @@ data: {\"reload\":true}
             'debug'     => $this->app->settings->bool('overlay_debug'),
             'sourceUrl' => $this->app->url('/overlay'),
             'slots'     => Bus::slots($this->app),
-            'positions' => Bus::positions(),
             'canManage' => $this->app->auth->can('Account.Overlay.Manage'),
             'csrf'      => $this->app->auth->csrfToken(),
             'notice'    => $request->get('notice'),
@@ -227,19 +226,22 @@ data: {\"reload\":true}
 
                     return $this->back(translate('overlay.saved'));
 
-                case 'test':
+                case 'move':
                     $slot = Bus::normalizeSlot($request->input('slot'));
+
                     if ($slot === '' || !isset(Bus::slots($this->app)[$slot])) {
                         return $this->back(null, translate('overlay.no_such_slot'));
                     }
 
-                    (new Bus($this->app))->send($slot, [
-                        'test'    => true,
-                        'message' => translate('overlay.test_message'),
-                        'at'      => date('c'),
-                    ]);
+                    Bus::move($this->app, $slot, $request->input('dir') !== 'down');
 
-                    return $this->back(translate('overlay.test_sent', ['slot' => $slot]));
+                    /*
+                     * Auch wenn nichts getauscht wurde, ist es keine
+                     * Fehlermeldung wert: am Rand gibt es den Pfeil
+                     * gar nicht, und wer ihn doch erwischt, hat nichts
+                     * falsch gemacht.
+                     */
+                    return $this->back(translate('overlay.order_saved'));
             }
         } catch (\Throwable $e) {
             return $this->back(null, $e->getMessage());

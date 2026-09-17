@@ -739,6 +739,19 @@ Seiten, wie beim Aktivitäten-Feed:
 | `/overlay/stream` | die Leitung dorthin (Server-Sent Events) |
 | `/account/overlay` | Größe, Verbindungsanzeige, Liste der Plätze |
 
+**Die Reihenfolge gehört nicht dem Plugin.** Ein `z` im Haken wird
+übergangen; sie steht in der Einstellung `overlay_order` (Liste von
+Platz-Kennungen, vorne zuerst) und wird unter *Konto → Overlay* mit
+Pfeilen getauscht. Ein Plugin weiß nicht, was sonst noch im Overlay
+liegt — es kann also gar nicht entscheiden, ob es vor oder hinter etwas
+gehört. Das weiß nur, wer beides sieht.
+
+`Bus::slots()` rechnet daraus das `z`: der erste Platz bekommt die
+höchste Zahl, in Zehnerschritten. Ein Platz, der noch nicht in der
+Liste steht, kommt nach **vorne** — ein frisch eingerichtetes Plugin
+soll man sehen; läge es hinten, suchte man den Fehler beim Plugin,
+obwohl es nur verdeckt ist.
+
 Das Overlay zeigt **nichts** von sich aus. Es stellt Plätze bereit, in
 die Plugins zeichnen, und die Leitung, über die Nachrichten dorthin
 kommen. Einen Platz namens `system` bringt der Kern mit — darin
@@ -815,7 +828,6 @@ $hooks->on('overlay.slots', static function (array $slots): array {
         'label'    => translate('alerts.name'),
         'position' => 'center',   // siehe Bus::positions()
         'width'    => '900px',    // leer = Vorgabe aus dem CSS
-        'z'        => 20,         // kleiner liegt weiter hinten
     ];
 
     return $slots;

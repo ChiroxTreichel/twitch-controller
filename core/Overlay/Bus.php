@@ -206,31 +206,25 @@ final class Bus
      * Groesse. Was darin passiert, macht das Plugin selbst per
      * JavaScript - das Overlay stellt nur den Kasten.
      *
+     * Die Reihenfolge bestimmt NICHT das Plugin: ein z aus dem Haken
+     * wird uebergangen. Sie steht in den Einstellungen und wird auf
+     * der Overlay-Seite mit Pfeilen getauscht.
+     *
      * @return array<string, array{label: string, position: string, width: string, height: string, z: int, vars: array<string, string>}>
      */
     public static function slots(App $app): array
     {
-        // Ein Platz gehoert dem Kern: darin zeigt "Test senden" seine
-        // Nachricht. Ohne ihn waere die Flaeche erst zu pruefen,
-        // nachdem irgendein Plugin einen Platz angemeldet hat - und
-        // eine Kernfaehigkeit, die man nicht allein ausprobieren kann,
-        // ist beim Suchen eines Fehlers wertlos.
-        $eingebaut = [
-            'system' => [
-                'label'    => translate('overlay.slot.system'),
-                'position' => 'top-center',
-                'z'        => 1,
-            ],
-        ];
+        $slots = $app->hooks->filter('overlay.slots', []);
 
-        $slots = $app->hooks->filter('overlay.slots', $eingebaut);
         if (!is_array($slots)) {
-            $slots = $eingebaut;
+            $slots = [];
         }
 
         $sauber = [];
+
         foreach ($slots as $id => $slot) {
             $id = self::normalizeSlot((string) $id);
+
             if ($id === '' || !is_array($slot)) {
                 continue;
             }
@@ -240,14 +234,122 @@ final class Bus
                 'position' => self::normalizePosition((string) ($slot['position'] ?? 'center')),
                 'width'    => self::normalizeLength((string) ($slot['width'] ?? '')),
                 'height'   => self::normalizeLength((string) ($slot['height'] ?? '')),
-                'z'        => (int) ($slot['z'] ?? 10),
                 'vars'     => self::normalizeVars($slot['vars'] ?? []),
             ];
         }
 
-        uasort($sauber, static fn (array $a, array $b): int => $a['z'] <=> $b['z']);
+        /*
+         * Die Reihenfolge kommt aus den Einstellungen und nicht aus dem
+         * Haken. Ein Plugin weiss nicht, was sonst noch im Overlay
+         * liegt - es kann also gar nicht entscheiden, ob es vor oder
+         * hinter etwas gehoert. Der weiss es, der beides sieht.
+         */
+        $reihenfolge = self::order($app, array_keys($sauber));
+        $anzahl = count($reihenfolge);
 
-        return $sauber;
+        $sortiert = [];
+
+        foreach ($reihenfolge as $stelle => $id) {
+            $sortiert[$id] = $sauber[$id] + [
+                // Oben ist vorne - wie in OBS. Der erste bekommt also
+                // die hoechste Zahl. In Zehnerschritten, damit ein
+                // Stylesheet dazwischen noch Platz haette.
+                'z' => ($anzahl - $stelle) * 10,
+            ];
+        }
+
+        return $sortiert;
+    }
+
+    /** Wo die Reihenfolge liegt. */
+    public const ORDER_SETTING = 'overlay_order';
+
+    /**
+     * Die Reihenfolge der Plaetze, von vorne nach hinten.
+     *
+     * Was gespeichert ist, zaehlt - solange es den Platz noch gibt.
+     * Was neu dazukommt, kommt nach VORNE: ein frisch eingerichtetes
+     * Plugin soll man sehen. Landete es hinten, suchte man den Fehler
+     * beim Plugin, obwohl es nur verdeckt ist - und das faellt
+     * schwerer auf als etwas, das im Weg liegt.
+     *
+     * @param list<string> $vorhanden
+     * @return list<string>
+     */
+    public static function order(App $app, array $vorhanden): array
+    {
+        return self::orderFrom(
+            json_decode($app->settings->string(self::ORDER_SETTING, '[]'), true),
+            $vorhanden
+        );
+    }
+
+    /**
+     * Dasselbe ohne Einstellungen: die gespeicherte Liste und die
+     * vorhandenen Plaetze hinein, die Reihenfolge heraus.
+     *
+     * Eigene Funktion, damit die Regel pruefbar ist, ohne eine
+     * Datenbank dafuer zu brauchen - und sie ist es wert: was neu ist,
+     * was verschwunden ist und was doppelt dasteht, entscheidet sich
+     * genau hier.
+     *
+     * @param list<string> $vorhanden
+     * @return list<string>
+     */
+    public static function orderFrom(mixed $gespeichert, array $vorhanden): array
+    {
+        if (!is_array($gespeichert)) {
+            $gespeichert = [];
+        }
+
+        $bekannt = [];
+
+        foreach ($gespeichert as $id) {
+            $id = self::normalizeSlot((string) $id);
+
+            if ($id !== '' && in_array($id, $vorhanden, true) && !in_array($id, $bekannt, true)) {
+                $bekannt[] = $id;
+            }
+        }
+
+        $neu = array_values(array_diff($vorhanden, $bekannt));
+
+        return array_merge($neu, $bekannt);
+    }
+
+    /**
+     * Einen Platz einen Schritt nach vorne oder nach hinten.
+     *
+     * Getauscht wird mit dem Nachbarn - zwei Pfeile je Zeile, und
+     * fertig. Ein Zahlenfeld je Platz waere die andere Moeglichkeit
+     * gewesen: dann traegt man Zahlen ein und rechnet im Kopf, wer
+     * damit vor wem liegt.
+     *
+     * @return bool ob sich etwas geaendert hat
+     */
+    public static function move(App $app, string $id, bool $nachVorne): bool
+    {
+        $id = self::normalizeSlot($id);
+        $reihenfolge = array_keys(self::slots($app));
+        $stelle = array_search($id, $reihenfolge, true);
+
+        if ($stelle === false) {
+            return false;
+        }
+
+        $ziel = $nachVorne ? $stelle - 1 : $stelle + 1;
+
+        // Am Rand gibt es nichts zu tauschen. Das ist kein Fehler -
+        // der Pfeil steht dort gar nicht erst.
+        if ($ziel < 0 || $ziel >= count($reihenfolge)) {
+            return false;
+        }
+
+        [$reihenfolge[$stelle], $reihenfolge[$ziel]] = [$reihenfolge[$ziel], $reihenfolge[$stelle]];
+
+        $app->settings->set(self::ORDER_SETTING, json_encode(array_values($reihenfolge)));
+
+        return true;
     }
 
     /**

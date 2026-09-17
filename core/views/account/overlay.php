@@ -9,7 +9,6 @@
  * @var bool $debug
  * @var string $sourceUrl
  * @var array<string, array{label: string, position: string, width: string, height: string, z: int}> $slots
- * @var list<string> $positions
  * @var bool $canManage
  * @var string $csrf
  * @var string $notice
@@ -104,14 +103,22 @@
 
     <p class="hint"><?= $e(translate('overlay.slots_hint')) ?></p>
 
+    <?php
+    /*
+     * Von vorne nach hinten. Die erste Zeile liegt oben - wie die
+     * oberste Quelle in einer OBS-Szene, und das ist die Reihenfolge,
+     * die hier jeder schon im Kopf hat.
+     */
+    $letzte = count($slots) - 1;
+    $stelle = 0;
+    ?>
+
     <table>
         <thead>
             <tr>
                 <th><?= $e(translate('overlay.slot')) ?></th>
-                <th><?= $e(translate('overlay.position')) ?></th>
-                <th><?= $e(translate('overlay.size')) ?></th>
                 <?php if ($canManage): ?>
-                    <th></th>
+                    <th><?= $e(translate('overlay.order')) ?></th>
                 <?php endif ?>
             </tr>
         </thead>
@@ -131,27 +138,45 @@
                             $e($sourceUrl . '?view=' . $id)
                         ?></span>
                     </td>
-                    <td class="mono"><?= $e($slot['position']) ?></td>
-                    <td class="mono">
-                        <?php $groesse = trim($slot['width'] . ' × ' . $slot['height'], ' ×'); ?>
-                        <?= $groesse === '' ? '<span class="hint">' . $e(translate('overlay.size_auto')) . '</span>' : $e($groesse) ?>
-                    </td>
                     <?php if ($canManage): ?>
                         <td>
-                            <form method="post" action="<?= $e($url('/account/overlay')) ?>">
-                                <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
-                                <input type="hidden" name="action" value="test">
-                                <input type="hidden" name="slot" value="<?= $e($id) ?>">
-                                <button class="btn btn-ghost btn-small" type="submit">
-                                    <?= $e(translate('overlay.send_test')) ?>
-                                </button>
-                            </form>
+                            <div class="row" style="gap:6px;">
+                                <?php /*
+                                    Am Rand steht der Pfeil gar nicht
+                                    erst: ein Knopf, der nichts tut,
+                                    laesst einen zweimal druecken und
+                                    dann nachsehen, ob man sich geirrt
+                                    hat.
+                                */ ?>
+                                <?php if ($stelle > 0): ?>
+                                    <form method="post" action="<?= $e($url('/account/overlay')) ?>">
+                                        <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
+                                        <input type="hidden" name="action" value="move">
+                                        <input type="hidden" name="slot" value="<?= $e($id) ?>">
+                                        <input type="hidden" name="dir" value="up">
+                                        <button class="btn btn-ghost btn-small" type="submit"
+                                                title="<?= $e(translate('overlay.move_up')) ?>">▲</button>
+                                    </form>
+                                <?php endif ?>
+
+                                <?php if ($stelle < $letzte): ?>
+                                    <form method="post" action="<?= $e($url('/account/overlay')) ?>">
+                                        <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
+                                        <input type="hidden" name="action" value="move">
+                                        <input type="hidden" name="slot" value="<?= $e($id) ?>">
+                                        <input type="hidden" name="dir" value="down">
+                                        <button class="btn btn-ghost btn-small" type="submit"
+                                                title="<?= $e(translate('overlay.move_down')) ?>">▼</button>
+                                    </form>
+                                <?php endif ?>
+                            </div>
                         </td>
                     <?php endif ?>
                 </tr>
+                <?php $stelle++ ?>
             <?php endforeach ?>
         </tbody>
     </table>
 
-    <p class="hint" style="margin-top:12px;"><?= $e(translate('overlay.test_hint')) ?></p>
+    <p class="hint" style="margin-top:12px;"><?= $e(translate('overlay.order_hint')) ?></p>
 </div>
