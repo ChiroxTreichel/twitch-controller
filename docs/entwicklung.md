@@ -556,6 +556,60 @@ Es funktioniert fuer `/assets/…` (aus `public/`) und
 `/plugin/<slug>/assets/…` (aus dem Plugin-Ordner). Fehlt die Datei,
 kommt die Adresse ohne Stempel zurueck - kein Fehler.
 
+### Formulare ohne Seitenwechsel
+
+`public/assets/admin.js` fängt **jedes POST-Formular** im
+Verwaltungsbereich ab: es geht per `fetch()` zum Server, der antwortet
+wie immer mit seiner Weiterleitung, und aus der Seite dahinter werden
+nur `<main>` und das Menü ausgetauscht.
+
+Für ein Plugin heisst das: **nichts tun**. Kein Controller ändert sich,
+kein Formular braucht ein Attribut, es gibt keine zweite Antwortform
+neben HTML. Der Server schickt seine Seite; ob sie eingesetzt oder neu
+geladen wird, ist seine Sache nicht.
+
+Erhalten bleiben dabei Bildlaufhöhe, Schreibkursor und aufgeklappte
+`<details>` — Rückfragen (`details.confirm`) ausgenommen, die sollen
+nach der Antwort zu sein.
+
+Ausgenommen sind:
+
+| | |
+| --- | --- |
+| `data-no-ajax` am `<form>` | nimmt ein einzelnes wieder heraus |
+| `method="get"` | eine Suche wechselt die Seite, und das soll sie |
+| fremder Server | wird nie abgefangen |
+| Weiterleitung auf einen **anderen Pfad** | dann war es ein Seitenwechsel — der Browser geht wirklich dorthin |
+
+Schlägt der Aufruf fehl, schickt das Skript **nicht** von sich aus noch
+einmal ab: ob der Server den ersten Versuch schon verarbeitet hat, ist
+von aussen nicht zu sehen, und ein zweiter legte im Zweifel denselben
+Eintrag ein zweites Mal an. Stattdessen bekommt das Formular
+`data-no-ajax`, und der nächste Klick geht den normalen Weg — die
+Entscheidung trifft der Benutzer.
+
+#### `overlay:swapped`
+
+Nach jedem Tausch löst das Skript auf `document` das Ereignis
+`overlay:swapped` aus. Wer seine Zuhörer an **Elemente** hängt, muss
+sich dort wieder einhängen — seine Elemente sind ausgetauscht:
+
+```js
+document.addEventListener('overlay:swapped', start);
+```
+
+Wer am **Dokument** hängt, darf das **nicht**. Das Dokument bleibt, und
+ein zweiter Zuhörer täte jeden Klick doppelt: ein „Neue Nachricht"
+hinge zwei Zeilen an, nach dem nächsten Speichern drei. Der Fehler ist
+im Browser nicht zu sehen und steht im Code an zwei weit entfernten
+Stellen — darum meldet ihn `audit.py`.
+
+Am einfachsten ist die Frage: *hängt mein `start()` etwas an
+`document`?* Wenn ja, nichts tun. Wenn nein, die Zeile oben.
+
+Der öffentliche Bereich ist nicht dabei: Spendenseite, Login und das
+Dock (`/obs`) haben ihren eigenen Rahmen und laden das Skript nicht.
+
 ### Eigene Vorlagen
 
 ```php

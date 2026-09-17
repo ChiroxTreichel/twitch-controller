@@ -170,30 +170,45 @@ try {
         zu = [];
     }
 
-    var gruppen = document.querySelectorAll('.nav-group');
-
-    gruppen.forEach(function (gruppe) {
-        if (!gruppe.hasAttribute('data-current') && zu.indexOf(gruppe.dataset.group) !== -1) {
-            gruppe.open = false;
-        }
-
-        gruppe.addEventListener('toggle', function () {
-            var name = gruppe.dataset.group;
-            var index = zu.indexOf(name);
-
-            if (gruppe.open && index !== -1) {
-                zu.splice(index, 1);
-            } else if (!gruppe.open && index === -1) {
-                zu.push(name);
-            }
-
-            try {
-                localStorage.setItem(schluessel, JSON.stringify(zu));
-            } catch (e) {
-                // Kein Speicher verfuegbar - dann eben nur fuer diese Sitzung.
+    function anwenden() {
+        document.querySelectorAll('.nav-group').forEach(function (gruppe) {
+            if (!gruppe.hasAttribute('data-current') && zu.indexOf(gruppe.dataset.group) !== -1) {
+                gruppe.open = false;
             }
         });
-    });
+    }
+
+    /*
+     * Ein Zuhoerer am Dokument statt je Gruppe: nach einem Formular
+     * ohne Seitenwechsel ist das Menue neu eingesetzt, und Zuhoerer an
+     * den alten Elementen waeren mit ihnen weg. toggle steigt nicht
+     * auf, darum true als dritter Wert.
+     */
+    document.addEventListener('toggle', function (ereignis) {
+        var gruppe = ereignis.target;
+
+        if (!(gruppe instanceof Element) || !gruppe.matches('.nav-group')) {
+            return;
+        }
+
+        var name = gruppe.dataset.group;
+        var index = zu.indexOf(name);
+
+        if (gruppe.open && index !== -1) {
+            zu.splice(index, 1);
+        } else if (!gruppe.open && index === -1) {
+            zu.push(name);
+        }
+
+        try {
+            localStorage.setItem(schluessel, JSON.stringify(zu));
+        } catch (e) {
+            // Kein Speicher verfuegbar - dann eben nur fuer diese Sitzung.
+        }
+    }, true);
+
+    anwenden();
+    document.addEventListener('overlay:swapped', anwenden);
 }());
 </script>
 <script>
@@ -342,6 +357,13 @@ try {
     });
 }());
 </script>
+
+<?php /*
+    Formulare ohne Seitenwechsel. Vor den Plugin-Skripten, damit die
+    sich auf "overlay:swapped" verlassen koennen - siehe
+    docs/entwicklung.md.
+*/ ?>
+<script src="<?= $e($asset('/assets/admin.js')) ?>"></script>
 
 <?php foreach ($pluginAssets['js'] as $js): ?>
     <script src="<?= $e($js) ?>"></script>
