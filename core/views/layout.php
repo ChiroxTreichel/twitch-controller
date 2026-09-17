@@ -356,12 +356,90 @@ try {
             return;
         }
 
-        // Nur der Name. Den Pfad kennt der Browser nicht, und
-        // hochgeladen wird hier nichts - die Datei muss schon auf dem
-        // Server liegen. Deshalb der Hinweis im Platzhalter.
-        text.value = '/uploads/alerts/' + auswahl.files[0].name;
-        text.dispatchEvent(new Event('input', { bubbles: true }));
+        hochladen(feld, text, auswahl.files[0]);
+
+        // Dieselbe Datei noch einmal waehlen soll wieder etwas tun.
+        // Ohne das bleibt der Wert stehen, und "change" kommt nicht.
+        auswahl.value = '';
     });
+
+    /*
+     * Die Meldung unter dem Feld.
+     *
+     * Vom Skript gebaut und nicht in der Vorlage: das Dateifeld steht
+     * in einem halben Dutzend Plugin-Vorlagen, und keine davon soll
+     * dafuer angefasst werden muessen.
+     */
+    function meldung(feld, text, schlecht) {
+        var zeile = feld.parentNode.querySelector('.file-field-note');
+
+        if (!zeile) {
+            zeile = document.createElement('p');
+            zeile.className = 'hint file-field-note';
+            feld.parentNode.insertBefore(zeile, feld.nextSibling);
+        }
+
+        zeile.textContent = text;
+        zeile.classList.toggle('file-field-error', !!schlecht);
+        zeile.hidden = text === '';
+    }
+
+    /*
+     * Wirklich hochladen.
+     *
+     * Vorher schrieb der Knopf nur "/uploads/alerts/" plus den Namen in
+     * das Textfeld - hochgeladen wurde nichts. Wer das nicht wusste,
+     * trug damit den Pfad zu einer Datei ein, die es auf dem Server nie
+     * gab: der Alert lief, und es war nichts zu sehen und nichts zu
+     * hoeren.
+     *
+     * Kann der Browser kein fetch, bleibt es beim alten Verhalten. Der
+     * Pfad steht dann wieder nur da - aber wer so einen Browser
+     * benutzt, kennt den Weg ueber den Server ohnehin.
+     */
+    function hochladen(feld, text, datei) {
+        if (!window.fetch || !window.FormData) {
+            text.value = '<?= $e(\TwitchController\Core\Upload\Media::URL_PREFIX) ?>' + datei.name;
+            text.dispatchEvent(new Event('input', { bubbles: true }));
+
+            return;
+        }
+
+        var daten = new FormData();
+        daten.append('file', datei);
+        daten.append('csrf', <?= json_encode($app->auth->csrfToken()) ?>);
+
+        meldung(feld, <?= json_encode(translate('upload.busy')) ?>, false);
+        document.documentElement.dataset.busy = '1';
+
+        fetch(<?= json_encode($url('/account/uploads')) ?>, {
+            method: 'POST',
+            body: daten,
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'fetch' }
+        }).then(function (antwort) {
+            return antwort.json().catch(function () {
+                return { ok: false, error: antwort.status + '' };
+            });
+        }).then(function (ergebnis) {
+            if (!ergebnis || !ergebnis.ok) {
+                meldung(feld, (ergebnis && ergebnis.error) || '', true);
+
+                return;
+            }
+
+            // Der Server hat das letzte Wort ueber den Namen: er
+            // bereinigt ihn und haengt eine Nummer an, wenn es ihn
+            // schon gab. Im Feld steht darum, was WIRKLICH da liegt.
+            text.value = ergebnis.path;
+            text.dispatchEvent(new Event('input', { bubbles: true }));
+            meldung(feld, '', false);
+        }).catch(function () {
+            meldung(feld, <?= json_encode(translate('upload.error.server')) ?>, true);
+        }).then(function () {
+            document.documentElement.dataset.busy = '0';
+        });
+    }
 }());
 </script>
 

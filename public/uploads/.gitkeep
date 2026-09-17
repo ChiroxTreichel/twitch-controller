@@ -1,0 +1,7 @@
+Dieser Ordner gehoert dem Streamer: hier landen Alert-Videos und
+Klaenge, die ueber das Dateifeld hochgeladen werden.
+
+Die Datei haelt den Ordner im Repository - sein Inhalt ist in
+.gitignore ausgenommen. Ohne sie fehlt der Ordner nach einem frischen
+Klon, und der erste Upload muesste ihn anlegen (was er auch tut -
+aber nur, wenn public/uploads selbst beschreibbar ist).

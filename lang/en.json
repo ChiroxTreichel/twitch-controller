@@ -598,5 +598,14 @@
     "update.github_unreachable_prefix": "GitHub was unreachable: ",
     "update.no_git_binary": "The container is missing the git program.",
     "update.not_fast_forward": "The folder cannot be fast-forwarded. Local changes? ",
-    "update.not_git": "This installation is not a git checkout. Updates then have to be applied by hand."
+    "update.not_git": "This installation is not a git checkout. Updates then have to be applied by hand.",
+    "permissions.uploads.group": "Files",
+    "permissions.uploads.manage": "Upload videos and sounds",
+    "upload.error.too_big": "The file is too large. The server does not accept more than %{max} MB.",
+    "upload.error.partial": "The file arrived only partly. Please try again.",
+    "upload.error.none": "No file arrived.",
+    "upload.error.server": "The file could not be stored. Details are in the log.",
+    "upload.error.type": "The server does not accept this kind of file. Allowed: %{types}",
+    "upload.error.directory": "The folder for uploaded files is not writable. Details are in the log.",
+    "upload.busy": "Uploading …"
 }

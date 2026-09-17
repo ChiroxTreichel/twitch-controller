@@ -547,6 +547,23 @@ final class Auth
                     'Account.Settings.Manage' => translate('permissions.settings.manage'),
                 ],
             ],
+
+            /*
+             * Hochladen steht ABSICHTLICH nicht unter "Account".
+             *
+             * Die Rolle "Stream-Helfer" bekommt alles ausserhalb von
+             * Account - Alerts, Ziele, Overlay-Inhalte. Wer einen Alert
+             * einrichten darf, muss auch das Video dazu hochladen
+             * koennen; unter Account waere genau das ausgenommen, und
+             * der Helfer stuende vor einem Feld, das er nicht fuellen
+             * kann.
+             */
+            'Uploads' => [
+                'label' => translate('permissions.uploads.group'),
+                'permissions' => [
+                    'Uploads.Media.Manage' => translate('permissions.uploads.manage'),
+                ],
+            ],
         ];
 
         $filtered = $this->app->hooks->filter('permissions.catalog', $catalog);

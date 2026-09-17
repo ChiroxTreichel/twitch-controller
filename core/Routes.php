@@ -117,6 +117,17 @@ final class Routes
         ]);
         $router->post('/account/overlay', [$overlay, 'save'], ['auth' => true]);
 
+        // --- Hochladen --------------------------------------------------
+        // Das Dateifeld im Rahmen schickt seine Datei hierher. Kein
+        // Plugin-Weg: der Baustein gehoert dem Kern, und Alerts,
+        // Tip-Goals und Throne benutzen alle denselben.
+        $router->post('/account/uploads', [
+            new \TwitchController\Core\Upload\UploadController($app), 'store',
+        ], [
+            'auth' => true,
+            'permission' => 'Uploads.Media.Manage',
+        ]);
+
         $router->get('/obs', [$feed, 'show'], [
             'auth' => true,
             'permission' => 'Account.Activity.View',

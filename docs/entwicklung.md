@@ -556,6 +556,54 @@ Es funktioniert fuer `/assets/…` (aus `public/`) und
 `/plugin/<slug>/assets/…` (aus dem Plugin-Ordner). Fehlt die Datei,
 kommt die Adresse ohne Stempel zurueck - kein Fehler.
 
+### Dateien hochladen
+
+Das Dateifeld (`.file-field`) ist ein Baustein des **Kerns** — Alerts,
+Tip-Goals und Throne benutzen alle denselben. Ein Plugin schreibt nur
+das Markup:
+
+```html
+<div class="file-field">
+    <input class="input" type="text" name="video" value="…" placeholder="/uploads/alerts/…">
+    <button class="file-field-button" type="button" data-file-trigger="f-1">↑</button>
+    <input class="file-field-native" id="f-1" type="file" accept="video/*">
+</div>
+```
+
+Den Rest macht `layout.php`: die gewählte Datei geht per `fetch()` an
+`POST /account/uploads`, landet in `public/uploads/alerts/`, und der
+Pfad, der **zurückkommt**, wird ins Textfeld geschrieben. Nicht der
+gewünschte Name — `Media::safeName()` baut ihn neu, und `freeName()`
+hängt eine Nummer an, wenn es ihn schon gab.
+
+Erlaubt ist, was in `Media::VIDEO` und `Media::AUDIO` steht. Eine
+**Erlaubnis**liste, keine Verbotsliste: die Dateien liegen unter
+`public/` und werden vom Webserver direkt ausgeliefert, eine `.php`
+dort wäre kein Download, sondern ein Programm. Eine Verbotsliste
+vergisst immer etwas, und hier hieße „etwas vergessen" fremder Code auf
+dem Server.
+
+Die Größe ist auf `Media::MAX_BYTES` begrenzt — derselbe Wert wie
+`upload_max_filesize` in `docker/php/uploads.ini`. Größer anzunehmen
+wäre eine Lüge: PHP bricht vorher ab, und zwar ohne Datei und ohne
+Fehler, `$_FILES` ist dann einfach leer.
+
+Das Recht heißt `Uploads.Media.Manage` und steht **absichtlich nicht**
+unter `Account.`: die Rolle *Stream-Helfer* bekommt alles außerhalb von
+`Account`, und wer einen Alert einrichten darf, muss auch das Video
+dazu hochladen können.
+
+Ohne JavaScript passiert nichts davon — dann bleibt das Textfeld, was
+es war: eine Zeile, in die man den Pfad einer Datei schreibt, die schon
+auf dem Server liegt.
+
+> **Offen:** Apache läuft mit `AllowOverride None`, ein `.htaccess` in
+> `uploads/` greift also nicht. Ein `php_admin_flag engine off` für
+> `public/uploads` im vhost wäre der zweite Riegel hinter der
+> Erlaubnisliste. Es steht noch nicht drin, weil eine Änderung unter
+> `docker/` ein Update über die Konsole erzwingt (`update_needs_shell`)
+> — sie gehört in die nächste Fassung, die ohnehin eine braucht.
+
 ### Formulare ohne Seitenwechsel
 
 `public/assets/admin.js` fängt **jedes POST-Formular** im

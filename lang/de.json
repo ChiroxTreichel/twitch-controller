@@ -598,5 +598,14 @@
     "update.github_unreachable_prefix": "GitHub war nicht erreichbar: ",
     "update.no_git_binary": "Im Container fehlt das Programm git.",
     "update.not_fast_forward": "Der Ordner lässt sich nicht einfach vorspulen. Eigene Änderungen? ",
-    "update.not_git": "Diese Installation ist keine Git-Kopie. Updates müssen dann von Hand eingespielt werden."
+    "update.not_git": "Diese Installation ist keine Git-Kopie. Updates müssen dann von Hand eingespielt werden.",
+    "permissions.uploads.group": "Dateien",
+    "permissions.uploads.manage": "Videos und Klänge hochladen",
+    "upload.error.too_big": "Die Datei ist zu groß. Mehr als %{max} MB nimmt der Server nicht an.",
+    "upload.error.partial": "Die Datei kam nur halb an. Noch einmal versuchen.",
+    "upload.error.none": "Es kam keine Datei an.",
+    "upload.error.server": "Die Datei ließ sich nicht ablegen. Einzelheiten stehen im Log.",
+    "upload.error.type": "Diese Art von Datei nimmt der Server nicht an. Erlaubt sind: %{types}",
+    "upload.error.directory": "Der Ordner für hochgeladene Dateien ist nicht beschreibbar. Einzelheiten stehen im Log.",
+    "upload.busy": "Wird hochgeladen …"
 }

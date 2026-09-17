@@ -683,6 +683,22 @@ td.actions { text-align: right; white-space: nowrap; }
     border: 0;
 }
 
+/*
+ * Was beim Hochladen zu sagen ist: "wird hochgeladen", oder warum es
+ * nicht ging. Die Zeile baut das Skript im Rahmen und steht unter dem
+ * Feld - so muss keine der Plugin-Vorlagen dafuer angefasst werden.
+ *
+ * Ohne Meldung ist sie hidden und nimmt keinen Platz weg: eine leere
+ * Zeile unter jedem Dateifeld waere ein Abstand ohne Grund.
+ */
+.file-field-note {
+    margin: 6px 0 0;
+}
+
+.file-field-error {
+    color: var(--error);
+}
+
 /* --- Aufklappbarer Fall -------------------------------------------- */
 
 /*
