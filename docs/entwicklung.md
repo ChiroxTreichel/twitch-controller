@@ -622,7 +622,7 @@ Ein `.htaccess` in `uploads/` wäre der naheliegende Weg und greift
 **nicht**: der vhost setzt `AllowOverride None`.
 
 Weil die Datei unter `docker/` liegt, setzt eine Änderung daran
-`update_needs_shell` — sie kommt erst mit `sudo ./install.sh` an, denn
+`update_needs_shell` — sie kommt erst mit `sudo bash install.sh` an, denn
 sie wird ins Image kopiert.
 
 ### Formulare ohne Seitenwechsel
@@ -1351,7 +1351,7 @@ docker/  docker-compose.yaml  docker-compose.npm.yaml  install.sh
 ```
 
 setzt `check()` das Kennzeichen `update_needs_shell`, und die Oberfläche
-verlangt stattdessen `sudo ./install.sh` auf dem Server. Die Liste steht
+verlangt stattdessen `sudo bash install.sh` auf dem Server. Die Liste steht
 in `Updater::SHELL_PATHS`.
 
 `git` läuft mit `-c safe.directory=<root>`, weil der Ordner root gehört

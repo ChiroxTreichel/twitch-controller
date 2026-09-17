@@ -2,14 +2,14 @@
 #
 # Twitch-Controller - Installation
 #
-#   ./install.sh
+#   bash install.sh
 #
 # Stellt ein paar einfache Fragen, erzeugt Schlüssel und Passwörter
 # selbst, baut die Container und startet sie. Ein zweiter Aufruf ist
 # gefahrlos: vorhandene Werte bleiben stehen, insbesondere APP_KEY.
 #
 # Ohne Rückfragen (z.B. für ein Skript):
-#   ./install.sh --domain twitch.example.com --proxy npm --yes
+#   bash install.sh --domain twitch.example.com --proxy npm --yes
 #
 set -euo pipefail
 
@@ -93,7 +93,7 @@ Twitch-Controller - Installation
     curl -fsSL https://raw.githubusercontent.com/ChiroxTreichel/twitch-controller/main/install.sh | sudo bash
 
   Oder im schon geklonten Ordner:
-    sudo ./install.sh [Optionen]
+    sudo bash install.sh [Optionen]
 
 Ohne Optionen führt das Skript durch die Einrichtung. Alle Optionen sind
 nur dafür da, die Fragen vorab zu beantworten:
@@ -525,7 +525,7 @@ else
 
     if ! can_elevate; then
         note_missing "Docker fehlt, und mir fehlen die Rechte zum Installieren.
-      Bitte einmal:  sudo ./install.sh
+      Bitte einmal:  sudo bash install.sh
       Oder von Hand: https://docs.docker.com/engine/install/"
     elif offer_install "Docker jetzt installieren?"; then
         if install_docker && command -v docker >/dev/null 2>&1; then
@@ -632,7 +632,7 @@ if ! docker info >/dev/null 2>&1; then
 
   Dienst starten:  sudo systemctl start docker
   Rechte fehlen?   sudo usermod -aG docker \"\$(id -un)\"   (danach neu anmelden)
-  Oder einfach:    sudo ./install.sh"
+  Oder einfach:    sudo bash install.sh"
         fi
     fi
 else
@@ -794,7 +794,7 @@ ok "https://$DOMAIN"
 #
 # Im Container heisst der Ordner immer /var/www/html - das ist der
 # Einhaengepunkt, nicht der Pfad, den ein Mensch eintippt. Die
-# Oberflaeche zeigte deshalb "cd /var/www/html && sudo ./install.sh",
+# Oberflaeche zeigte deshalb "cd /var/www/html && sudo bash install.sh",
 # und das fuehrt nirgendwohin.
 #
 # Nur dieses Skript kennt den echten Pfad, also schreibt es ihn auf.
@@ -1148,7 +1148,7 @@ printf '  Twitch-Login wird automatisch der Besitzer dieser Installation.\n'
 printf '\n%sWenn etwas nicht geht:%s\n' "$C_BOLD" "$C_RESET"
 printf '    %s logs -f web       zeigt, was der Webserver macht\n' "$DC"
 printf '    %s restart           startet alles neu\n' "$DC"
-printf '    ./install.sh          kann jederzeit erneut laufen\n'
+printf '    bash install.sh    kann jederzeit erneut laufen\n'
 
 printf '\n%sWichtig für Backups: Die Datei .env enthält den Schlüssel, mit dem\n' "$C_DIM"
 printf 'die Twitch-Zugangsdaten verschlüsselt sind. Ohne sie ist ein\n'

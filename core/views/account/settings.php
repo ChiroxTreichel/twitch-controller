@@ -76,7 +76,7 @@ use TwitchController\Core\Support\Dates;
             <?php // Ohne $e: die Platzhalter sind eigenes Markup. ?>
             <?= translate('settings.system.cannot_update', [
                 'git'     => '<span class="mono">git</span>',
-                'command' => '<span class="mono">sudo ./install.sh</span>',
+                'command' => '<span class="mono">sudo bash install.sh</span>',
             ]) ?>
         </p>
     <?php else: ?>
@@ -109,9 +109,9 @@ use TwitchController\Core\Support\Dates;
                     */ ?>
                     <p class="mono" style="background:var(--bg);padding:10px 12px;border-radius:9px;border:1px solid var(--line);margin:8px 0 0;">
                         <?php if ($installPath !== ''): ?>
-                            cd <?= $e($installPath) ?> &amp;&amp; sudo ./install.sh
+                            cd <?= $e($installPath) ?> &amp;&amp; sudo bash install.sh
                         <?php else: ?>
-                            sudo ./install.sh
+                            sudo bash install.sh
                         <?php endif ?>
                     </p>
 

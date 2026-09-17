@@ -199,7 +199,7 @@ etwas ändert, sagt dir die Oberfläche das und zeigt den passenden Befehl
 an. Er sieht so aus:
 
 ```bash
-cd /opt/overlays && sudo ./install.sh
+cd /opt/overlays && sudo bash install.sh
 ```
 
 Denselben Befehl kannst du auch sonst jederzeit benutzen — er holt den

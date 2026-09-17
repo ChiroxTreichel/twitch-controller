@@ -57,7 +57,7 @@ $filterFelder = array_filter([
 
 <?php if (!$canWrite): ?>
     <div class="note note-warn">
-        <?= translate('market.not_writable', ['directory' => '<span class="mono">plugins/</span>', 'command' => '<span class="mono">sudo ./install.sh</span>']) ?>
+        <?= translate('market.not_writable', ['directory' => '<span class="mono">plugins/</span>', 'command' => '<span class="mono">sudo bash install.sh</span>']) ?>
     </div>
 <?php endif; ?>
 

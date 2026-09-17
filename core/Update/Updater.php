@@ -24,7 +24,7 @@ use Throwable;
  * braeuchte der Webserver Zugriff auf den Docker-Socket, und damit haette
  * jeder, der die Oberflaeche uebernimmt, den ganzen Server. Aendert ein
  * Update etwas an docker/ oder der Compose-Datei, sagt die Oberflaeche
- * deshalb, dass einmal "sudo ./install.sh" auf dem Server noetig ist.
+ * deshalb, dass einmal "sudo bash install.sh" auf dem Server noetig ist.
  */
 final class Updater
 {
@@ -203,8 +203,15 @@ final class Updater
         if (!$this->gitAvailable()) {
             return [
                 'ok' => false,
-                'message' => translate('update.no_git_binary')
-                    . 'Einmal "sudo ./install.sh" auf dem Server behebt das.',
+                /*
+                 * Der zweite Satz stand frueher hier im Code, hinter
+                 * dem uebersetzten ersten. Das faellt nicht auf,
+                 * solange man Deutsch liest - auf Englisch stand
+                 * danach ein deutscher Halbsatz.
+                 */
+                'message' => translate('update.no_git_binary', [
+                    'command' => 'sudo bash install.sh',
+                ]),
             ];
         }
 
