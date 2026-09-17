@@ -28,7 +28,6 @@
     'use strict';
 
     var koerper = document.body;
-    var buehne = document.getElementById('stage');
 
     var breite = parseInt(koerper.dataset.overlayWidth, 10) || 1920;
     var hoehe = parseInt(koerper.dataset.overlayHeight, 10) || 1080;
@@ -40,29 +39,25 @@
     var schlangen = {};   // Platz -> { handler, wartend: [], laeuft: bool }
     var verbindung = null;
 
-    // ---------------------------------------------------------------
-    //  Buehne auf das Fenster bringen
-    // ---------------------------------------------------------------
-    // Die Buehne ist immer so gross wie eingestellt (z.B. 1920x1080)
-    // und wird skaliert. So sieht ein Platz gleich aus, egal wie gross
-    // die Quelle in OBS gezogen wurde - Plugins koennen also in
-    // festen Pixeln rechnen.
-    function skalieren() {
-        var faktor = Math.min(
-            window.innerWidth / breite,
-            window.innerHeight / hoehe
-        );
-
-        buehne.style.transform = 'scale(' + faktor + ')';
-
-        // Uebriggebliebenen Rand ausgleichen, damit die Buehne mittig
-        // sitzt und nicht oben links klebt.
-        buehne.style.marginLeft = Math.max(0, (window.innerWidth - breite * faktor) / 2) + 'px';
-        buehne.style.marginTop = Math.max(0, (window.innerHeight - hoehe * faktor) / 2) + 'px';
-    }
-
-    window.addEventListener('resize', skalieren);
-    skalieren();
+    /*
+     * Die Buehne wird NICHT skaliert und nicht zentriert.
+     *
+     * Sie hatte die eingestellte Groesse und wurde auf das Fenster der
+     * Browserquelle gerechnet, mittig, mit Rand aussen herum. Gut
+     * gemeint - eine Quelle in beliebiger Groesse zeigt dasselbe Bild.
+     * Bezahlt hat man es damit, dass keine Zahl aus den Einstellungen
+     * mehr das ist, was in OBS ankommt: 40 Pixel Abstand sind bei
+     * Faktor 0,9 eben 36, und die 60 Pixel Rand oben verschoben alles
+     * noch einmal.
+     *
+     * Jetzt gilt: ein Pixel in den Einstellungen ist ein Pixel in der
+     * Browserquelle, oben links beginnend. Die Quelle stellt man in OBS
+     * auf dieselbe Groesse - und skalieren kann man sie dort in der
+     * Szene, wo es auch hingehoert.
+     *
+     * Die Groesse steht in der Vorlage (source.php) am #stage. Hier
+     * bleibt nichts zu rechnen.
+     */
 
     // ---------------------------------------------------------------
     //  Zustand anzeigen

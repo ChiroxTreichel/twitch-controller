@@ -889,10 +889,20 @@ verschluckt hat.
 
 ### Die Bühne rechnet in festen Pixeln
 
-Die Bühne ist immer so groß wie eingestellt (Vorgabe 1920×1080) und wird
-auf das Fenster skaliert. Ein Platz sieht damit gleich aus, egal wie
-groß die Quelle in OBS gezogen wurde — Plugins können also in festen
-Pixeln rechnen.
+Die Bühne ist so groß wie eingestellt (Vorgabe 1920×1080) — und wird
+**weder skaliert noch zentriert**. Ein Pixel in den Einstellungen ist
+ein Pixel in der Browserquelle, von **oben links** gezählt. Plugins
+rechnen in festen Pixeln, und was sie rechnen, kommt genau so an.
+
+Dafür muss die Browserquelle in OBS dieselbe Größe haben wie die
+eingestellte Bühne. Kleiner heißt: der Rest ist abgeschnitten. Größer
+heißt: unten und rechts bleibt leer. Skalieren lässt sich die Quelle in
+der Szene — dort gehört es auch hin.
+
+Früher wurde auf das Fenster gerechnet und der Rest mittig verteilt.
+Gut gemeint, aber danach war keine Zahl aus den Einstellungen mehr das,
+was in OBS ankam: 40 Pixel Abstand sind bei Faktor 0,9 eben 36, und die
+60 Pixel Rand oben verschoben alles noch einmal.
 
 ### Anmeldung
 

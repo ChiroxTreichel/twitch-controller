@@ -35,15 +35,16 @@
         }
 
         /*
-         * Die Buehne hat die eingestellte Groesse und wird auf das
-         * Fenster skaliert. So sieht ein Platz bei 1920x1080 gleich aus,
-         * egal wie gross die Quelle in OBS gezogen wurde.
+         * Die Buehne hat die eingestellte Groesse - und sonst nichts.
+         * Nicht skaliert, nicht zentriert: ein Pixel hier ist ein Pixel
+         * in der Browserquelle, von oben links gezaehlt. Die Quelle in
+         * OBS bekommt dieselbe Groesse; skalieren laesst sie sich dort
+         * in der Szene.
          */
         #stage {
             position: relative;
             width: <?= (int) $width ?>px;
             height: <?= (int) $height ?>px;
-            transform-origin: top left;
         }
 
         .ov-slot { position: absolute; pointer-events: none; }
