@@ -265,6 +265,43 @@ final class Bus
     public const ORDER_SETTING = 'overlay_order';
 
     /**
+     * Alles, was die Flaeche ueber ihre Kaesten wissen muss.
+     *
+     * Groesse der Buehne, und je Platz Stelle, Groesse, Reihenfolge
+     * und die eigenen CSS-Variablen. Genau das steht sonst beim Laden
+     * im HTML - hier noch einmal, damit es sich auch waehrend des
+     * Streams aendern laesst.
+     *
+     * @return array{width: int, height: int, slots: array<string, array<string, mixed>>}
+     */
+    public static function layout(App $app): array
+    {
+        $slots = [];
+
+        foreach (self::slots($app) as $id => $slot) {
+            $slots[$id] = [
+                'position' => $slot['position'],
+                'width'    => $slot['width'],
+                'height'   => $slot['height'],
+                'z'        => $slot['z'],
+                'vars'     => $slot['vars'],
+            ];
+        }
+
+        return [
+            'width'  => max(320, min(7680, $app->settings->int('overlay_width', 1920))),
+            'height' => max(180, min(4320, $app->settings->int('overlay_height', 1080))),
+            'slots'  => $slots,
+        ];
+    }
+
+    /** Ein kurzer Fingerabdruck des Layouts - zum Vergleichen. */
+    public static function layoutFingerprint(App $app): string
+    {
+        return md5((string) json_encode(self::layout($app)));
+    }
+
+    /**
      * Die Reihenfolge der Plaetze, von vorne nach hinten.
      *
      * Was gespeichert ist, zaehlt - solange es den Platz noch gibt.

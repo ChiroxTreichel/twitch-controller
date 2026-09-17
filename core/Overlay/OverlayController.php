@@ -101,11 +101,21 @@ final class OverlayController
         // fuer eine Zahl, die sich nur beim Schalten aendert.
         $aufbauTakt = 2;
 
+        $app = $this->app;
+
+        /*
+         * Der Stand des Layouts beim Verbinden. Was die Seite gerade
+         * anzeigt, hat sie beim Laden bekommen - geschickt wird erst,
+         * wenn sich etwas davon aendert.
+         */
+        $layoutStand = Bus::layoutFingerprint($app);
+
         return Response::stream(
-            static function () use ($bus, $letzte, $aufbau, $laufzeit, $takt, $herzschlag, $aufbauTakt): void {
+            static function () use ($app, $bus, $letzte, $aufbau, $laufzeit, $takt, $herzschlag, $aufbauTakt, $layoutStand): void {
                 $ende = time() + $laufzeit;
                 $zuletzt = time();
                 $aufbauGeprueft = time();
+                $layoutGeprueft = $aufbauGeprueft;
 
                 // Wie lange der Browser nach einem Abbruch wartet.
                 echo "retry: 2000\n\n";
@@ -160,6 +170,42 @@ data: {\"reload\":true}
                             // Leitung zu einer Seite, die es gleich
                             // nicht mehr gibt, muss nicht offen bleiben.
                             return;
+                        }
+                    }
+
+                    /*
+                     * Hat sich Groesse, Stelle oder Reihenfolge
+                     * geaendert? Dann die neuen Werte schicken statt
+                     * die Seite neu zu laden - ein Alert, der gerade
+                     * laeuft, soll nicht abbrechen.
+                     *
+                     * Im selben Takt wie die Aufbaunummer, und mit
+                     * demselben Zeitstempel: beides ist eine Abfrage
+                     * und beides aendert sich selten.
+                     *
+                     * flush() muss sein: dieser Prozess laeuft eine
+                     * Minute, und die Einstellungen liegen seit dem
+                     * Verbinden im Speicher. Ohne ihn saehe er seine
+                     * eigene Startlage bis zum Schluss.
+                     */
+                    if ($layoutGeprueft !== $aufbauGeprueft) {
+                        $layoutGeprueft = $aufbauGeprueft;
+
+                        $app->settings->flush();
+                        $jetzt = Bus::layoutFingerprint($app);
+
+                        if ($jetzt !== $layoutStand) {
+                            $layoutStand = $jetzt;
+
+                            printf(
+                                "event: __overlay\ndata: %s\n\n",
+                                (string) json_encode(
+                                    ['layout' => Bus::layout($app)],
+                                    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+                                )
+                            );
+
+                            flush();
                         }
                     }
 

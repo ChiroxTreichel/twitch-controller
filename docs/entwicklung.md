@@ -739,6 +739,22 @@ Seiten, wie beim Aktivitäten-Feed:
 | `/overlay/stream` | die Leitung dorthin (Server-Sent Events) |
 | `/account/overlay` | Größe, Verbindungsanzeige, Liste der Plätze |
 
+**Größe, Stelle und Reihenfolge ändern sich ohne Neuladen.** Die
+Leitung prüft alle zwei Sekunden, ob sich das Layout geändert hat
+(`Bus::layoutFingerprint()`), und schickt bei Bedarf `{"layout": …}` auf
+dem Kanal `__overlay`. Die Fläche setzt die Werte an den vorhandenen
+Kästen, statt neu zu laden — ein Alert, der gerade läuft, soll nicht
+abbrechen, und in OBS von Hand zu aktualisieren ist mitten im Stream
+das Letzte, was man tun will.
+
+Ein vorhandener Kasten wird dabei **nie** neu gebaut: Plugins halten
+eine Referenz darauf. Ein neuer Kasten entsteht, sein Inhalt aber
+nicht — dafür fehlen Stylesheet und Skript, die kommen mit dem
+Neuladen, das die Aufbaunummer ohnehin auslöst.
+
+Die Leitung ruft dafür `settings->flush()`: sie läuft knapp eine
+Minute, und ohne das sähe sie bis zum Schluss ihre eigene Startlage.
+
 **Die Reihenfolge gehört nicht dem Plugin.** Ein `z` im Haken wird
 übergangen; sie steht in der Einstellung `overlay_order` (Liste von
 Platz-Kennungen, vorne zuerst) und wird unter *Konto → Overlay* mit

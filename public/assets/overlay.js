@@ -72,6 +72,76 @@
     }
 
     // ---------------------------------------------------------------
+    //  Ein neues Layout
+    // ---------------------------------------------------------------
+    /**
+     * Groesse der Buehne und die Kaesten darauf nachziehen.
+     *
+     * Ein vorhandener Kasten wird NICHT neu gebaut, sondern
+     * umgestellt: Plugins halten eine Referenz auf ihn und haengen
+     * ihren Inhalt hinein. Ein neuer Kasten waere fuer sie ein
+     * Fremdkoerper - ihr Inhalt haenge weiter im alten, den niemand
+     * mehr sieht.
+     */
+    function layoutSetzen(layout) {
+        var buehne = document.getElementById('stage');
+
+        if (!buehne || !layout || !layout.slots) {
+            return;
+        }
+
+        if (layout.width) {
+            buehne.style.width = layout.width + 'px';
+        }
+
+        if (layout.height) {
+            buehne.style.height = layout.height + 'px';
+        }
+
+        Object.keys(layout.slots).forEach(function (name) {
+            var slot = layout.slots[name];
+            var kasten = document.getElementById('ov-slot-' + name);
+
+            if (!kasten) {
+                /*
+                 * Ein Platz, den die Seite noch nicht kennt - ein
+                 * Plugin ist dazugekommen. Der Kasten entsteht hier,
+                 * sein Inhalt aber nicht: dafuer fehlen Stylesheet und
+                 * Skript, und die kommen erst beim naechsten Laden.
+                 * Die Aufbaunummer sorgt dafuer, dass das gleich
+                 * passiert.
+                 */
+                kasten = document.createElement('div');
+                kasten.className = 'ov-slot';
+                kasten.id = 'ov-slot-' + name;
+                kasten.dataset.slot = name;
+                buehne.appendChild(kasten);
+            }
+
+            kasten.dataset.position = slot.position || 'center';
+            kasten.style.zIndex = String(slot.z || 10);
+            kasten.style.width = slot.width || '';
+            kasten.style.height = slot.height || '';
+
+            Object.keys(slot.vars || {}).forEach(function (name2) {
+                kasten.style.setProperty(name2, slot.vars[name2]);
+            });
+        });
+
+        // Und was es nicht mehr gibt, kommt weg - sonst bliebe der
+        // Kasten eines abgeschalteten Plugins als leere Flaeche liegen
+        // und faenge Klicks ab.
+        Array.prototype.forEach.call(
+            buehne.querySelectorAll('.ov-slot'),
+            function (kasten) {
+                if (!Object.prototype.hasOwnProperty.call(layout.slots, kasten.dataset.slot)) {
+                    kasten.remove();
+                }
+            }
+        );
+    }
+
+    // ---------------------------------------------------------------
     //  Nachrichten verteilen
     // ---------------------------------------------------------------
     function verteilen(platz, daten) {
@@ -208,6 +278,19 @@
             try {
                 daten = JSON.parse(ereignis.data);
             } catch (fehler) {
+                return;
+            }
+
+            /*
+             * Groesse, Stelle und Reihenfolge haben sich geaendert.
+             * Wir setzen sie an den Kaesten, statt die Seite neu zu
+             * laden: ein Alert, der gerade laeuft, soll nicht
+             * abbrechen, und in OBS von Hand zu aktualisieren ist
+             * mitten im Stream das Letzte, was man tun will.
+             */
+            if (daten && daten.layout) {
+                layoutSetzen(daten.layout);
+
                 return;
             }
 
