@@ -28,14 +28,21 @@ final class OverlayController
     /**
      * Die Flaeche fuer OBS. Ohne Layout - kein Menue, keine Navigation,
      * nur ein durchsichtiger Kasten in Streamgroesse.
+     *
+     * ?view=goals zeigt NUR diesen Platz. Aus dem alten System
+     * uebernommen, dort hiess es ebenso (und "only" als Zweitname).
+     * Der Sinn ist eine eigene Quelle in OBS je Platz: die Ziele
+     * sollen unten links liegen und in jeder Szene sichtbar sein, die
+     * Alerts oben und nur in einer - mit einer Flaeche, die alles
+     * bringt, geht das nicht.
      */
-    public function show(): Response
+    public function show(Request $request): Response
     {
         return Response::html(
             $this->app->view->render('overlay/source', [
                 'width'   => $this->width(),
                 'height'  => $this->height(),
-                'slots'   => Bus::slots($this->app),
+                'slots'   => $this->gewaehlteSlots($request),
                 'assets'  => Bus::assets($this->app),
                 'stream'  => $this->app->url('/overlay/stream'),
                 'debug'   => $this->app->settings->bool('overlay_debug'),
@@ -239,6 +246,85 @@ data: {\"reload\":true}
         }
 
         return $this->back(null, translate('common.error.unknown_action'));
+    }
+
+    /**
+     * Welche Plaetze diese Flaeche zeigt.
+     *
+     * Ohne Angabe alle - eine Quelle, die alles bringt, ist der
+     * einfache Fall und bleibt der Normalfall.
+     *
+     * "view" nimmt auch mehrere, durch Komma getrennt. Das alte System
+     * kannte nur "goals" und "alerts" und dazu die Einzahl; hier sind
+     * es die Namen der Plaetze, die Plugins anmelden, und die Einzahl
+     * gilt weiter mit - wer "alert" tippt, meint "alerts".
+     *
+     * Ein Name, den es nicht gibt, wird uebergangen. Eine Angabe, von
+     * der GAR nichts uebrig bleibt, gilt als Irrtum und zeigt wieder
+     * alles: eine leere Flaeche in OBS sieht aus wie ein Ausfall, und
+     * man suchte den Fehler an der falschen Stelle.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function gewaehlteSlots(Request $request): array
+    {
+        $wunsch = trim($request->get('view'));
+        if ($wunsch === '') {
+            $wunsch = trim($request->get('only'));
+        }
+
+        return self::selectSlots(Bus::slots($this->app), $wunsch);
+    }
+
+    /**
+     * Die Auswahl selbst - ohne App, ohne Request.
+     *
+     * Getrennt, weil genau hier die Entscheidungen stecken: Mehrzahl,
+     * unbekannte Namen, leere Auswahl. Mit App und Request daran haenge
+     * waere davon nichts zu pruefen, ohne den halben Server zu bauen.
+     *
+     * @param array<string, array<string, mixed>> $alle
+     * @return array<string, array<string, mixed>>
+     */
+    public static function selectSlots(array $alle, string $wunsch): array
+    {
+        $wunsch = trim($wunsch);
+
+        if ($wunsch === '' || strtolower($wunsch) === 'all') {
+            return $alle;
+        }
+
+        $namen = [];
+        foreach (preg_split('/[,\s]+/', strtolower($wunsch)) ?: [] as $name) {
+            $name = Bus::normalizeSlot($name);
+            if ($name !== '') {
+                $namen[] = $name;
+            }
+        }
+
+        /*
+         * Aussen die Plaetze und innen die Wuensche, nicht umgekehrt:
+         * so kommen sie in der Reihenfolge heraus, in der sie
+         * angemeldet sind, und nicht in der, in der sie jemand in die
+         * Adresse getippt hat. Nebenbei kann kein Platz zweimal
+         * hineingeraten.
+         */
+        $gewaehlt = [];
+
+        foreach ($alle as $id => $slot) {
+            foreach ($namen as $name) {
+                // Die Einzahl gilt mit: "alert" trifft "alerts".
+                if ($id === $name || $id === $name . 's') {
+                    $gewaehlt[$id] = $slot;
+                    break;
+                }
+            }
+        }
+
+        // Nichts getroffen? Dann war es ein Vertipper. Lieber alles
+        // zeigen als eine leere Flaeche - die sieht in OBS aus wie ein
+        // Ausfall, und man sucht den Fehler an der falschen Stelle.
+        return $gewaehlt === [] ? $alle : $gewaehlt;
     }
 
     private function width(): int

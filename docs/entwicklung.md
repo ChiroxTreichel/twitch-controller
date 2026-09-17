@@ -676,6 +676,33 @@ kommen. Einen Platz namens `system` bringt der Kern mit — darin
 erscheint *Test senden*, damit die Fläche auch ohne ein einziges Plugin
 prüfbar ist.
 
+### Eine Quelle je Platz: `?view=`
+
+`/overlay?view=goals` zeigt **nur** diesen Platz. Aus dem alten System
+übernommen, dort hiess der Parameter ebenso (`only` gilt als Zweitname
+mit). Der Sinn ist eine eigene Browserquelle je Platz: die Ziele sollen
+unten links liegen und in jeder Szene sichtbar sein, die Alerts oben und
+nur in einer — mit einer Fläche, die alles bringt, geht das nicht.
+
+Mehrere durch Komma: `?view=goals,alerts`. Die Einzahl gilt mit
+(`?view=alert`), weil sie im alten System galt. Ohne Angabe oder mit
+`?view=all` kommt alles.
+
+Die nicht gewählten Plätze werden **gar nicht erst gerendert**, nicht nur
+versteckt. Das alte System hat sie mit `is-hidden` weggeblendet — ein
+`<video>` in einem unsichtbaren Kasten spielt seinen Ton aber weiter, und
+bei zwei Quellen hörte man den Alert doppelt.
+
+Die Leitung wird dabei **nicht** gefiltert: jede Quelle bekommt alle
+Nachrichten, und `Overlay.slot()` gibt für einen Platz, den es auf dieser
+Seite nicht gibt, `null` zurück. Jedes Overlay-Skript prüft das ohnehin,
+bevor es zeichnet — eine zweite Filterung auf dem Server wäre eine
+zweite Wahrheit, die mit der ersten auseinanderlaufen kann.
+
+Ein Name, den es nicht gibt, wird übergangen. Bleibt am Ende **gar
+nichts** übrig, kommt wieder alles: eine leere Fläche sieht in OBS aus
+wie ein Ausfall, und man sucht den Fehler an der falschen Stelle.
+
 ### Warum SSE und nicht WebSocket
 
 Server-Sent Events sind gewöhnliches HTTP. Damit laufen sie durch jeden

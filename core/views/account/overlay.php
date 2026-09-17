@@ -38,6 +38,16 @@
         <?= $e(translate('overlay.login_needed_hint')) ?>
     </div>
 
+    <?php /*
+        Eine Quelle je Platz ist der eigentliche Grund fuer "?view=":
+        die Ziele sollen unten links liegen und in jeder Szene
+        sichtbar sein, die Alerts oben und nur in einer. Mit einer
+        Flaeche, die alles bringt, geht das nicht.
+    */ ?>
+    <p class="hint"><?= translate('overlay.view_hint', [
+        'param' => '<span class="mono">?view=' . $e(array_key_first($slots) ?? 'alerts') . '</span>',
+    ]) ?></p>
+
     <div class="row">
         <a class="btn btn-ghost btn-small" href="<?= $e($sourceUrl) ?>" target="_blank" rel="noopener">
             <?= $e(translate('overlay.open_source')) ?>
@@ -110,7 +120,16 @@
                 <tr>
                     <td>
                         <?= $e($slot['label']) ?><br>
-                        <span class="hint mono"><?= $e($id) ?></span>
+                        <span class="hint mono"><?= $e($id) ?></span><br>
+                        <?php /*
+                            Die Adresse fuer eine eigene Quelle - zum
+                            Herauskopieren. Sie steht hier und nicht
+                            nur in einem Hinweis oben: wer sie tippen
+                            muss, vertippt sich beim Namen des Platzes.
+                        */ ?>
+                        <span class="hint mono" style="word-break:break-all;"><?=
+                            $e($sourceUrl . '?view=' . $id)
+                        ?></span>
                     </td>
                     <td class="mono"><?= $e($slot['position']) ?></td>
                     <td class="mono">
