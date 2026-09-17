@@ -107,11 +107,16 @@ final class OverlayController
          * Der Stand des Layouts beim Verbinden. Was die Seite gerade
          * anzeigt, hat sie beim Laden bekommen - geschickt wird erst,
          * wenn sich etwas davon aendert.
+         *
+         * Dazu der Zeitstempel der Einstellungen: solange der steht,
+         * kann sich am Layout nichts geaendert haben, und dann muss es
+         * auch niemand zusammenbauen.
          */
         $layoutStand = Bus::layoutFingerprint($app);
+        $stempel = $app->settings->stamp();
 
         return Response::stream(
-            static function () use ($app, $bus, $letzte, $aufbau, $laufzeit, $takt, $herzschlag, $aufbauTakt, $layoutStand): void {
+            static function () use ($app, $bus, $letzte, $aufbau, $laufzeit, $takt, $herzschlag, $aufbauTakt, $layoutStand, $stempel): void {
                 $ende = time() + $laufzeit;
                 $zuletzt = time();
                 $aufbauGeprueft = time();
@@ -192,7 +197,28 @@ data: {\"reload\":true}
                         $layoutGeprueft = $aufbauGeprueft;
 
                         $app->settings->flush();
-                        $jetzt = Bus::layoutFingerprint($app);
+
+                        /*
+                         * Erst die billige Frage: hat ueberhaupt
+                         * jemand eine Einstellung geschrieben? Das ist
+                         * EINE Abfrage. Das Layout zusammenzubauen
+                         * waeren vier - Kern, Alerts, Ziele, Musik -,
+                         * und die Antwort lautet fast immer "nichts
+                         * Neues".
+                         *
+                         * Ein leerer Stempel heisst "keine Auskunft":
+                         * dann wird gebaut wie zuvor.
+                         */
+                        $jetztStempel = $app->settings->stamp();
+
+                        if ($jetztStempel !== '' && $jetztStempel === $stempel) {
+                            $stempelGleich = true;
+                        } else {
+                            $stempel = $jetztStempel;
+                            $stempelGleich = false;
+                        }
+
+                        $jetzt = $stempelGleich ? $layoutStand : Bus::layoutFingerprint($app);
 
                         if ($jetzt !== $layoutStand) {
                             $layoutStand = $jetzt;

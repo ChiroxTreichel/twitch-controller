@@ -71,6 +71,28 @@ final class Settings
         return array_key_exists($key, $this->all($scope));
     }
 
+    /**
+     * Wann zuletzt IRGENDEINE Einstellung geschrieben wurde.
+     *
+     * Eine Abfrage, die die Frage "hat sich etwas geaendert?"
+     * beantwortet, ohne alles zu lesen, was sich geaendert haben
+     * koennte. Dafuer gibt es die Spalte updated_at, und set()
+     * schreibt sie bei jedem Mal.
+     *
+     * Gebraucht wird das von langlaufenden Anfragen - der Leitung ins
+     * Overlay -, die sonst im Takt alles nachsehen muessten, was sie
+     * anzeigen. Leer heisst "keine Auskunft"; dann prueft der
+     * Aufrufer wie zuvor.
+     */
+    public function stamp(): string
+    {
+        try {
+            return (string) $this->db->value('SELECT max(updated_at) FROM settings');
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
     public function set(string $key, mixed $value, string $scope = self::CORE): void
     {
         $this->db->run(

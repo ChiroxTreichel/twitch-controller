@@ -755,6 +755,16 @@ Neuladen, das die Aufbaunummer ohnehin auslöst.
 Die Leitung ruft dafür `settings->flush()`: sie läuft knapp eine
 Minute, und ohne das sähe sie bis zum Schluss ihre eigene Startlage.
 
+Gefragt wird zuerst `Settings::stamp()` — `max(updated_at)` über die
+Einstellungen, **eine** Abfrage. Solange die steht, kann sich am Layout
+nichts geändert haben. Das Layout selbst zusammenzubauen wären vier
+(Kern, Alerts, Ziele, Musik), alle zwei Sekunden und je offener
+Browserquelle, für eine Antwort, die fast immer „nichts Neues" lautet.
+
+Ein Vergleich zur Einordnung: die Leitung fragt die Nachrichtentabelle
+ohnehin **viermal pro Sekunde** ab. Der Layout-Blick kostet daneben
+eine halbe Abfrage pro Sekunde.
+
 **Die Reihenfolge gehört nicht dem Plugin.** Ein `z` im Haken wird
 übergangen; sie steht in der Einstellung `overlay_order` (Liste von
 Platz-Kennungen, vorne zuerst) und wird unter *Konto → Overlay* mit
