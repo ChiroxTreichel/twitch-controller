@@ -89,6 +89,57 @@ nav {
     gap: 4px;
     margin: 0 -6px;
     padding: 0 6px;
+
+    /*
+     * Der Balken, wenn die Leiste in sich scrollt.
+     *
+     * Mit zwanzig Plugins passt sie auf 1080 Zeilen nicht mehr, und
+     * dann stand der Balken des Betriebssystems da: breit, hell, mit
+     * Pfeilen - mitten in einer dunklen Leiste, in der sonst nichts
+     * laut ist.
+     *
+     * Weg kann er nicht: dann waere nicht zu sehen, dass da noch etwas
+     * ist. Also schmal und in der Farbe der Trennlinien, und erst beim
+     * Zeigen deutlicher. Wer die Maus in der Leiste hat, will
+     * scrollen; wer nur hinsieht, soll das Menue sehen.
+     */
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+}
+
+/*
+ * Dasselbe noch einmal fuer Browser, die nur diesen Weg kennen.
+ *
+ * Wo BEIDES geht, gewinnt scrollbar-width - die Regeln hier werden
+ * dann vollstaendig uebergangen. Das ist kein Versehen und auch kein
+ * toter Code: ohne sie bekommt ein aelteres Safari wieder den breiten
+ * Balken des Betriebssystems.
+ */
+nav::-webkit-scrollbar {
+    width: 8px;
+}
+
+nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+nav::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 999px;
+
+    /* Der Rand ist durchsichtig und gehoert zum Griff: so sieht er
+       schmaler aus, als die Flaeche ist, die man treffen muss. */
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+nav:hover {
+    scrollbar-color: var(--muted) transparent;
+}
+
+nav:hover::-webkit-scrollbar-thumb {
+    background: var(--muted);
+    background-clip: content-box;
 }
 
 /* --- Einklappbare Gruppen -------------------------------------------- */
