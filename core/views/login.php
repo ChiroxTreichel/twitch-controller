@@ -5,6 +5,7 @@
  * @var callable $url
  * @var callable $asset
  * @var string $invite
+ * @var string $next
  * @var string $error
  */
 
@@ -41,8 +42,17 @@ $channel = $app->settings->string('twitch_broadcaster_name')
             </div>
         <?php endif; ?>
 
+        <?php /*
+            Das Ziel wandert mit an den Knopf: von hier geht es zu
+            Twitch, und von dort zurueck - ohne diesen Anhang wuesste
+            niemand mehr, wo der Weg angefangen hat.
+        */ ?>
         <a class="btn" style="width:100%;justify-content:center;"
-           href="<?= $e($url('/login/start' . ($invite !== '' ? '?invite=' . rawurlencode($invite) : ''))) ?>">
+           href="<?= $e($url(\TwitchController\Core\Auth\ReturnTo::appendTo(
+               '/login/start',
+               $next,
+               ['invite' => $invite]
+           ))) ?>">
             <?= $e(translate('common.sign_in_twitch')) ?>
         </a>
 

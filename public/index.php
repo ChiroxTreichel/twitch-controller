@@ -12,6 +12,7 @@ declare(strict_types=1);
  */
 
 use TwitchController\Core\App;
+use TwitchController\Core\Auth\ReturnTo;
 use TwitchController\Core\Http\Request;
 use TwitchController\Core\Http\Response;
 use TwitchController\Core\Routes;
@@ -42,7 +43,15 @@ $app->applyLanguage();
 // Rechtepruefung fuer alle Routen, die es verlangen.
 $app->router->setGuard(static function (array $options, Request $request) use ($app): ?Response {
     if (!empty($options['auth']) && !$app->auth->isLoggedIn()) {
-        return Response::redirect($app->url('/login'));
+        /*
+         * Mit dem Ziel im Gepaeck: wer /overlay aufruft, will nach der
+         * Anmeldung /overlay sehen und nicht die Startseite. Geprueft
+         * wird es in ReturnTo - es kommt aus der Adresszeile.
+         */
+        return Response::redirect($app->url(ReturnTo::appendTo(
+            '/login',
+            ReturnTo::fromRequest($request)
+        )));
     }
 
     $permission = (string) ($options['permission'] ?? '');

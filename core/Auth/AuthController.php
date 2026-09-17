@@ -6,6 +6,7 @@ namespace TwitchController\Core\Auth;
 
 use TwitchController\Core\Admin\Nav;
 use TwitchController\Core\App;
+use TwitchController\Core\Auth\ReturnTo;
 use TwitchController\Core\Http\Request;
 use TwitchController\Core\Http\Response;
 use TwitchController\Core\Setup\SetupController;
@@ -28,13 +29,16 @@ final class AuthController
 
     public function showLogin(Request $request): Response
     {
+        $ziel = ReturnTo::sanitize($request->get(ReturnTo::PARAM));
+
         if ($this->app->auth->isLoggedIn()) {
-            return Response::redirect($this->app->url((new Nav($this->app))->firstAllowedHref()));
+            return Response::redirect($this->app->url($ziel !== '' ? $ziel : (new Nav($this->app))->firstAllowedHref()));
         }
 
         return Response::html($this->app->view->render('login', [
             'title'  => translate('login.title'),
             'invite' => $request->get('invite'),
+            'next'   => $ziel,
             'error'  => $request->get('error'),
         ], null));
     }
@@ -42,13 +46,24 @@ final class AuthController
     public function startLogin(Request $request): Response
     {
         $invite = trim($request->get('invite'));
+        $ziel = ReturnTo::sanitize($request->get(ReturnTo::PARAM));
 
-        return Response::redirect($this->app->twitch->oauth()->authorizeUrl(
-            'login',
-            [],
-            false,
-            $invite === '' ? [] : ['invite' => $invite]
-        ));
+        /*
+         * Das Ziel reist im signierten Zustandswert mit und nicht in
+         * der Rueckkehradresse: die muss bei Twitch Zeichen fuer
+         * Zeichen hinterlegt sein, und eine mit Anhang ist eine andere.
+         */
+        $extra = [];
+
+        if ($invite !== '') {
+            $extra['invite'] = $invite;
+        }
+
+        if ($ziel !== '') {
+            $extra[ReturnTo::PARAM] = $ziel;
+        }
+
+        return Response::redirect($this->app->twitch->oauth()->authorizeUrl('login', [], false, $extra));
     }
 
     public function callback(Request $request): Response
@@ -86,7 +101,17 @@ final class AuthController
             if ($purpose === 'login') {
                 $this->app->auth->completeLogin($twitchUser, (string) ($extra['invite'] ?? ''));
 
-                return Response::redirect($this->app->url((new Nav($this->app))->firstAllowedHref()));
+                /*
+                 * Noch einmal pruefen, obwohl der Zustandswert signiert
+                 * ist: signiert heisst "von uns ausgestellt", nicht
+                 * "in Ordnung" - hineingeschrieben wurde, was in der
+                 * Adresszeile stand.
+                 */
+                $ziel = ReturnTo::sanitize((string) ($extra[ReturnTo::PARAM] ?? ''));
+
+                return Response::redirect($this->app->url(
+                    $ziel !== '' ? $ziel : (new Nav($this->app))->firstAllowedHref()
+                ));
             }
 
             // Plugins und spaetere Kern-Flows (Bot verbinden, Kanal neu

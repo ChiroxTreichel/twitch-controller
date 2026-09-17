@@ -1307,6 +1307,34 @@ Zweck des Logins steckt im HMAC-signierten `state`-Parameter, das Nonce in
 einem kurzlebigen Cookie. Plugins hängen eigene Login-Flows an
 `core.oauth.callback` und brauchen keine zweite URI.
 
+### Zurück, wo man hinwollte
+
+Wer `/overlay` oder `/obs` ohne Anmeldung aufruft, landet danach wieder
+dort und nicht auf der Startseite. Das Ziel reist als `?next=` an der
+Anmeldeseite mit und von dort im `state` — **nicht** in der Redirect-URI,
+die muss bei Twitch Zeichen für Zeichen hinterlegt sein.
+
+Geprüft wird es in `core/Auth/ReturnTo.php`, und zwar **zweimal**: beim
+Entgegennehmen und beim Benutzen. Signiert heißt „von uns ausgestellt",
+nicht „in Ordnung" — hineingeschrieben wurde, was in der Adresszeile
+stand.
+
+Durch geht nur ein Pfad dieses Systems: Schrägstrich am Anfang, kein
+zweiter daneben (`//host` ist für den Browser eine fremde Adresse), kein
+Rückstrich, kein Doppelpunkt im Pfad, keine Steuerzeichen, höchstens 512
+Zeichen. `/login`, `/login/start`, `/auth/callback`, `/logout` und `/`
+fallen ebenfalls heraus — die ersten vier wären eine Schleife, die
+Startseite passiert ohnehin.
+
+Alles andere wird zu einer leeren Zeichenkette, und leer heißt überall
+„nimm die Startseite". Es gibt keinen Fehlerfall: wer eine unsinnige
+Adresse mitschickt, bekommt die normale Anmeldung.
+
+Nur GET-Anfragen merken sich ihr Ziel. Ein abgewiesenes Formular lässt
+sich nach der Anmeldung nicht wiederholen, und den Browser danach mit GET
+auf eine Adresse zu schicken, die nur POST kennt, wäre ein Fehler statt
+einer Seite.
+
 EventSub-Events kommen auf `https://<domain>/hooks/twitch` an und werden per
 HMAC gegen das Webhook-Secret geprüft, dazu gegen ihr Alter (Replay-Schutz).
 Anschließend werden sie normalisiert in `events` geschrieben;

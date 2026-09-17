@@ -10,6 +10,7 @@ use TwitchController\Core\Admin\Nav;
 use TwitchController\Core\Admin\PluginsController;
 use TwitchController\Core\Obs\FeedController;
 use TwitchController\Core\Auth\AuthController;
+use TwitchController\Core\Auth\ReturnTo;
 use TwitchController\Core\Http\Request;
 use TwitchController\Core\Http\Response;
 use TwitchController\Core\Setup\SetupController;
@@ -42,7 +43,10 @@ final class Routes
             }
 
             if (!$app->auth->isLoggedIn()) {
-                return Response::redirect($app->url('/login'));
+                return Response::redirect($app->url(ReturnTo::appendTo(
+                    '/login',
+                    ReturnTo::fromRequest($request)
+                )));
             }
 
             return Response::redirect($app->url((new Nav($app))->firstAllowedHref()));
