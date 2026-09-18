@@ -225,12 +225,39 @@ try {
 (function () {
     'use strict';
 
+    /**
+     * Alle Rueckfragen schliessen - ausser einer und ihren Rahmen.
+     *
+     * Der Rahmen ist der Grund fuer das contains(): eine Rueckfrage
+     * kann in einem groesseren Kasten liegen, etwa im Dialog einer
+     * Kanalpunkt-Belohnung. Ohne die Ausnahme schliesst der Klick auf
+     * "Entfernen" den Dialog, in dem der Knopf steht - und damit die
+     * Rueckfrage selbst.
+     */
     function alleZu(ausser) {
         document.querySelectorAll('details.confirm[open]').forEach(function (kasten) {
-            if (kasten !== ausser) {
+            if (kasten !== ausser && !(ausser && kasten.contains(ausser))) {
                 kasten.open = false;
             }
         });
+    }
+
+    /**
+     * Der innerste offene Kasten.
+     *
+     * Offen ist immer nur eine Kette - dafuer sorgt alleZu(). Der
+     * innerste ist also der, der keinen anderen offenen enthaelt.
+     */
+    function innerster() {
+        var tiefster = null;
+
+        document.querySelectorAll('details.confirm[open]').forEach(function (kasten) {
+            if (tiefster === null || tiefster.contains(kasten)) {
+                tiefster = kasten;
+            }
+        });
+
+        return tiefster;
     }
 
     document.addEventListener('click', function (ereignis) {
@@ -249,7 +276,16 @@ try {
 
     document.addEventListener('keydown', function (ereignis) {
         if (ereignis.key === 'Escape') {
-            alleZu(null);
+            /*
+             * Nur den innersten: wer eine Rueckfrage wegdrueckt, will
+             * nicht nebenbei das Formular verlieren, in dem er gerade
+             * zehn Felder ausgefuellt hat.
+             */
+            var kasten = innerster();
+
+            if (kasten !== null) {
+                kasten.open = false;
+            }
         }
     });
 
