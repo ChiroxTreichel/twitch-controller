@@ -11,6 +11,8 @@
  * @var callable $url
  * @var string $tab
  * @var bool $canManage
+ * @var bool $autoUpdate
+ * @var int $autoUpdateAt
  * @var string $csrf
  * @var string $notice
  * @var string $error
@@ -130,6 +132,62 @@ use TwitchController\Core\Support\Dates;
                 <?php endif; ?>
             </div>
         <?php endif; ?>
+
+        <?php /* ---------- Plugins automatisch aktualisieren ---------- */ ?>
+        <?php /*
+            Aus ist die Vorgabe. Ein System, das sich von selbst
+            veraendert, ohne dass jemand danach gefragt hat, ist eine
+            Zumutung - und bei einem Stream-Werkzeug faellt es im
+            schlimmsten Fall mitten in der Sendung auf.
+
+            Der Schalter steht am Ende der Systemkarte, weil er
+            dasselbe betrifft wie alles darueber: was sich hier von
+            allein aendern darf.
+        */ ?>
+        <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line);">
+            <?php if ($canManage): ?>
+                <form method="post" action="<?= $e($url('/account/settings')) ?>">
+                    <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
+                    <input type="hidden" name="action" value="plugins_auto_update">
+
+                    <?php /*
+                        Der Schalter schickt beim Umlegen selbst ab -
+                        ein Schalter, neben dem noch "Speichern"
+                        steht, ist kein Schalter, sondern ein
+                        Kontrollkaestchen mit Verkleidung.
+                    */ ?>
+                    <label class="switch-field">
+                        <input type="checkbox" name="enabled" value="1"
+                               onchange="this.form.submit()"
+                               <?= $autoUpdate ? 'checked' : '' ?>>
+                        <span class="switch-track"><span class="switch-knob"></span></span>
+                        <span><?= $e(translate('settings.system.auto_update')) ?></span>
+                    </label>
+
+                    <noscript>
+                        <button class="btn btn-small" type="submit" style="margin-top:8px;">
+                            <?= $e(translate('common.save')) ?>
+                        </button>
+                    </noscript>
+                </form>
+            <?php else: ?>
+                <span class="badge <?= $autoUpdate ? 'badge-ok' : 'badge-off' ?>">
+                    <?= $e(translate('settings.system.auto_update')) ?>
+                </span>
+            <?php endif ?>
+
+            <p class="hint" style="margin:8px 0 0;">
+                <?= $e(translate('settings.system.auto_update_hint')) ?>
+            </p>
+
+            <?php if ($autoUpdate && $autoUpdateAt > 0): ?>
+                <p class="hint" style="margin:4px 0 0;">
+                    <?= $e(translate('settings.system.auto_update_last', [
+                        'time' => date('d.m.Y H:i', $autoUpdateAt),
+                    ])) ?>
+                </p>
+            <?php endif ?>
+        </div>
 
         <?php if ($update['last_result'] !== []): ?>
             <?php $letztes = $update['last_result']; ?>

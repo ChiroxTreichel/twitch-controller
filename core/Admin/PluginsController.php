@@ -11,6 +11,7 @@ use TwitchController\Core\Plugin\Manifest;
 use TwitchController\Core\Registry\Client;
 use TwitchController\Core\Registry\Dependencies;
 use TwitchController\Core\Registry\Installer;
+use TwitchController\Core\Registry\Updates;
 use RuntimeException;
 use Throwable;
 
@@ -429,92 +430,18 @@ final class PluginsController
     // -----------------------------------------------------------------
 
     /**
-     * Alle Plugins auf den neuesten Stand bringen.
+     * Alles aktualisieren, was neuer im Katalog steht.
      *
-     * Zwei Arten von Update, und beide gehoeren hierher:
-     *
-     *   Katalog   im Katalog liegt eine neuere Fassung - Dateien holen
-     *             und danach install.php nachziehen.
-     *   Dateien   die Dateien sind schon neuer als der Stand in der
-     *             Datenbank, etwa nach einem Update von Hand. Dann
-     *             fehlt nur noch install.php.
-     *
-     * Ein gescheitertes Plugin haelt die uebrigen nicht auf: sonst
-     * bliebe nach dem ersten Fehler alles andere alt, und man muesste
-     * herausfinden, welches der Uebeltaeter war.
+     * Die Arbeit macht Registry\Updates - dieselbe Klasse, die auch
+     * die Automatik im Takt benutzt. Hier bleibt nur, aus dem
+     * Ergebnis eine Antwort zu bauen.
      */
     private function updateAll(): Response
     {
-        $registry = new Client($this->app);
+        $ergebnis = (new Updates($this->app))->runAll();
 
-        try {
-            $registry->all();
-        } catch (Throwable $e) {
-            return $this->back('/account/plugins', null, $e->getMessage());
-        }
-
-        $gemacht = [];
-        $gescheitert = [];
-
-        // Voraussetzung zuerst. Alphabetisch stimmt das zufaellig fuer
-        // "alerts" vor "twitch-alerts", allgemein nicht - und ein
-        // Plugin, dessen Voraussetzung noch alt ist, kann bei seinem
-        // install.php ueber eine fehlende Klasse fallen.
-        $vorhanden = $this->app->plugins->discover(true);
-        $reihenfolge = $this->app->plugins->resolveOrder(array_keys($vorhanden));
-
-        foreach ($reihenfolge as $slug) {
-            $manifest = $vorhanden[$slug] ?? null;
-            if ($manifest === null) {
-                continue;
-            }
-
-            $installiert = $this->app->plugins->installedVersion($slug);
-
-            if ($installiert === null) {
-                continue;
-            }
-
-            $eintrag = $registry->cachedEntry($slug);
-            $imKatalog = $eintrag === null ? null : (string) $eintrag['version'];
-
-            $neueDateien = $imKatalog !== null
-                && version_compare($manifest->version, $imKatalog, '<');
-            $nurSchema = version_compare($installiert, $manifest->version, '<');
-
-            if (!$neueDateien && !$nurSchema) {
-                continue;
-            }
-
-            try {
-                if ($neueDateien) {
-                    $eintrag = $registry->find($slug);
-                    if ($eintrag === null) {
-                        throw new RuntimeException(translate('market.not_in_catalog'));
-                    }
-
-                    (new Installer($this->app))->fetch($eintrag);
-                    $this->app->plugins->discover(true);
-
-                    $frisch = $this->app->plugins->manifest($slug);
-                    if ($frisch === null) {
-                        throw new RuntimeException(translate('market.manifest_broken'));
-                    }
-
-                    $this->app->plugins->upgradeIfNeeded($frisch);
-                    $gemacht[] = $frisch->name . ' ' . $frisch->version;
-
-                    continue;
-                }
-
-                $this->app->plugins->upgradeIfNeeded($manifest);
-                $gemacht[] = $manifest->name . ' ' . $manifest->version;
-            } catch (Throwable $e) {
-                // Weitermachen. Ein kaputtes Plugin darf die anderen
-                // nicht alt lassen.
-                $gescheitert[] = $manifest->name . ': ' . $e->getMessage();
-            }
-        }
+        $gemacht = $ergebnis['done'];
+        $gescheitert = $ergebnis['failed'];
 
         if ($gemacht === [] && $gescheitert === []) {
             return $this->back('/account/plugins', translate('account.plugins.all_current'));

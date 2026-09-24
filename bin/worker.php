@@ -17,6 +17,7 @@ declare(strict_types=1);
  */
 
 use TwitchController\Core\App;
+use TwitchController\Core\Registry\Updates;
 use TwitchController\Core\Support\Autoloader;
 
 $root = dirname(__DIR__);
@@ -131,6 +132,46 @@ while ($running) {
         }
 
         $app->hooks->dispatch('cron.tick');
+
+        /*
+         * Plugins automatisch aktualisieren - wenn der Schalter unter
+         * Einstellungen > System das sagt.
+         *
+         * HIER und nicht im Webserver: eine Aktualisierung laedt
+         * Pakete, packt sie aus und laesst install.php laufen. Das
+         * dauert laenger als eine Seite, und niemand soll dafuer vor
+         * einem drehenden Rad sitzen.
+         *
+         * Aendert sich dabei etwas, merkt es die Pruefung oben im
+         * naechsten Durchlauf und startet diesen Prozess neu - genau
+         * wie nach einer Aktualisierung von Hand.
+         */
+        if (Updates::enabled($app)) {
+            $updates = new Updates($app);
+            $jetzt = time();
+
+            if ($updates->due($jetzt)) {
+                /*
+                 * Der Stempel VORHER. Bleibt die Aktualisierung
+                 * haengen, versucht es der naechste Durchlauf sonst
+                 * sofort wieder - und das im Sekundentakt, solange
+                 * der Fehler besteht.
+                 */
+                $updates->markRun($jetzt);
+
+                $ergebnis = $updates->runAll();
+
+                foreach ($ergebnis['done'] as $eines) {
+                    $app->log('Automatische Aktualisierung: ' . $eines);
+                    fwrite(STDOUT, '[worker] aktualisiert: ' . $eines . "\n");
+                }
+
+                foreach ($ergebnis['failed'] as $grund) {
+                    $app->log('Automatische Aktualisierung fehlgeschlagen: ' . $grund);
+                    fwrite(STDERR, '[worker] Aktualisierung fehlgeschlagen: ' . $grund . "\n");
+                }
+            }
+        }
     } catch (Throwable $e) {
         fwrite(STDERR, '[worker] Fehler: ' . $e->getMessage() . "\n");
     }

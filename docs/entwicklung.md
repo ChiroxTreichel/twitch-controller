@@ -1418,6 +1418,31 @@ Der Ablauf ist absichtlich zweistufig:
 Grund für die Zweistufigkeit: Apache antwortet als `www-data` und darf im
 Projektordner (gehört root) nicht schreiben. Der Worker läuft als root.
 
+### Plugins automatisch aktualisieren
+
+`core/Registry/Updates.php`, Schalter unter *Konto → Einstellungen →
+System*. **Aus ist die Vorgabe** — ein System, das sich von selbst
+verändert, ohne dass jemand danach gefragt hat, ist eine Zumutung.
+
+Ist er an, sieht der Worker einmal pro Stunde (`Updates::EVERY`) nach
+und spielt ein, was im Katalog neuer steht. Danach merkt die
+Fingerabdruck-Prüfung im Worker die Änderung und beendet den Prozess —
+Docker startet ihn neu, damit er die neuen Dateien lädt. Genau wie nach
+einer Aktualisierung von Hand.
+
+Zwei Dinge sind dabei wichtig:
+
+* **`Updates::runAll()` ist die einzige Fassung der Schleife.** Der
+  Knopf *Alle aktualisieren* in der Plugin-Liste ruft dieselbe Methode
+  auf. Zwei Fassungen liefen mit der Zeit auseinander, und dann täte
+  die Automatik etwas anderes als der Knopf.
+* **Der Zeitstempel wird vor der Arbeit gesetzt.** Bleibt eine
+  Aktualisierung hängen, versucht es der nächste Durchlauf sonst sofort
+  wieder — im Sekundentakt, solange der Fehler besteht.
+
+Automatisch heißt nicht ungeprüft: Prüfsumme, Signatur und Herkunft
+prüft weiterhin `Installer::fetch()`, für beide Wege gleich.
+
 Der Webcontainer bekommt **keinen** Zugriff auf den Docker-Socket. Damit
 kann er weder Images bauen noch Container neu starten — das ist Absicht,
 denn sonst wäre ein übernommener Admin-Zugang gleichbedeutend mit dem

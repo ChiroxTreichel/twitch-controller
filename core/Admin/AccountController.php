@@ -10,6 +10,7 @@ use TwitchController\Core\Http\Request;
 use TwitchController\Core\Http\Response;
 use TwitchController\Core\I18n\Translator;
 use TwitchController\Core\Twitch\TokenStore;
+use TwitchController\Core\Registry\Updates;
 use TwitchController\Core\Update\Updater;
 use Throwable;
 
@@ -282,6 +283,8 @@ final class AccountController
         return [
             'active'        => 'account/settings',
             'canManage'     => $this->app->auth->can('Account.Settings.Manage'),
+            'autoUpdate'    => Updates::enabled($this->app),
+            'autoUpdateAt'  => $this->app->settings->int(Updates::LAST_RUN, 0),
             'csrf'          => $this->app->auth->csrfToken(),
             'notice'        => $request->get('notice'),
             'error'         => $request->get('error'),
@@ -428,6 +431,23 @@ final class AccountController
                         '/account/settings',
                         translate('account.settings.language_saved', ['language' => Translator::label($language)])
                     );
+
+                case 'plugins_auto_update':
+                    /*
+                     * Der Schalter allein - er wird nicht mit anderen
+                     * Einstellungen zusammen gespeichert, weil er an
+                     * einer eigenen Karte haengt und sofort wirken
+                     * soll.
+                     */
+                    $an = $request->input('enabled') !== '';
+                    Updates::setEnabled($this->app, $an);
+
+                    // Literale Schluessel: ein translate($an ? 'a' : 'b')
+                    // findet bin/lang.php nicht, und dann faellt ein
+                    // fehlender Text erst dem Benutzer auf.
+                    return $this->back('/account/settings', $an
+                        ? translate('settings.system.auto_update_on')
+                        : translate('settings.system.auto_update_off'));
 
                 case 'update_check':
                     $check = (new Updater($this->app))->check();
