@@ -223,6 +223,7 @@ Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
 | `core.landing` | filter | Startseite übernehmen |
 | `cron.tick` | dispatch | wiederkehrende Aufgaben |
 | `tips.donation` | dispatch | eine Spende ist eingegangen (PayPal, StreamElements, StreamLabs) |
+| `tips.providers` | filter | Zahlungsanbieter bei Tip-Goals anmelden (siehe dessen README) |
 | `plugin.installed` / `.activated` / `.deactivated` / `.upgraded` / `.uninstalled` | dispatch | Lebenszyklus |
 | `plugins.booted` | dispatch | alle Plugins geladen |
 | `user.login` / `.created` / `.removed` / `.permissions_changed` | dispatch | Benutzerverwaltung |
