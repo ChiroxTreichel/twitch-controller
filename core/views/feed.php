@@ -29,7 +29,15 @@
  * @var bool $compact
  * @var array<string, array{label: string, bg: string, text: string}> $badges
  * @var array<string, mixed> $query
+ * @var string $csrf
  */
+
+/*
+ * Das Play-Dreieck. Inline und nicht als Datei: der Feed laeuft als Dock
+ * in OBS, und ein Icon, das erst nachgeladen wird, fehlt genau dann,
+ * wenn die Leitung ohnehin klemmt.
+ */
+$playIcon = '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M4 2.5v11l9-5.5z"/></svg>';
 
 /** Adresse mit geänderten Parametern, alles andere bleibt stehen. */
 $link = static function (array $changes) use ($url, $query): string {
@@ -327,10 +335,71 @@ $link = static function (array $changes) use ($url, $query): string {
 
         .event-top {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
+            /* Die dritte Spalte ist der Wiederholen-Knopf. Sie bleibt
+               leer, wo es ihn nicht gibt - "auto" kostet dann nichts. */
+            grid-template-columns: minmax(0, 1fr) auto auto;
             gap: 10px;
             align-items: center;
             margin-bottom: 10px;
+        }
+
+        /*
+         * Wiederholen: schickt denselben Alert noch einmal ins Overlay.
+         *
+         * Zurueckhaltend, solange die Maus nicht darauf liegt - im Dock
+         * neben dem Stream soll die Liste ruhig bleiben und nicht aus
+         * lauter Knoepfen bestehen.
+         */
+        .event-replay {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            opacity: 0.55;
+            transition: opacity 120ms ease-out, color 120ms ease-out, border-color 120ms ease-out;
+        }
+
+        .event-replay:hover,
+        .event-replay:focus-visible {
+            opacity: 1;
+            color: var(--text);
+            border-color: var(--text);
+        }
+
+        .event-replay svg {
+            width: 14px;
+            height: 14px;
+            /* Das Dreieck steht optisch links von der Mitte, weil seine
+               Spitze rechts ist. Ein Haar nach rechts, dann sitzt es. */
+            margin-left: 2px;
+            fill: currentColor;
+        }
+
+        /* Waehrend der Anfrage laeuft: kein zweiter Klick. */
+        .event-replay[disabled] {
+            cursor: default;
+            opacity: 0.3;
+        }
+
+        /* Kurze Rueckmeldung am Knopf selbst - eine Meldung ueber der
+           Liste waere im Dock immer im Weg. */
+        .event-replay.is-done {
+            opacity: 1;
+            color: #4ad67b;
+            border-color: #4ad67b;
+        }
+
+        .event-replay.is-failed {
+            opacity: 1;
+            color: #ff6f60;
+            border-color: #ff6f60;
         }
 
         .event-main {
@@ -471,6 +540,8 @@ $link = static function (array $changes) use ($url, $query): string {
             .feed-empty, .feed-error, .event-card { padding: 10px 12px; }
 
             .event-top { gap: 8px; margin-bottom: 6px; }
+            .event-replay { width: 28px; height: 28px; }
+            .event-replay svg { width: 12px; height: 12px; }
             .event-main { gap: 8px; }
 
             .event-badge { padding: 4px 8px; font-size: 16px; }
@@ -575,6 +646,11 @@ $link = static function (array $changes) use ($url, $query): string {
                 <div class="event-top">
                     <div class="event-badge badge-<?= $e($event['style']) ?>"><?= $e($event['badge']) ?></div>
                     <div class="event-time"><?= $e($event['time']) ?></div>
+                    <?php if ($event['replay']): ?>
+                        <button type="button" class="event-replay" data-replay="<?= (int) $event['id'] ?>"
+                                title="<?= $e(translate('feed.replay.hint')) ?>"
+                                aria-label="<?= $e(translate('feed.replay.hint')) ?>"><?= $playIcon ?></button>
+                    <?php endif ?>
                 </div>
                 <div class="event-main">
                     <div class="event-title"><?= $e($event['title']) ?></div>
@@ -608,8 +684,13 @@ $link = static function (array $changes) use ($url, $query): string {
         weiter:  <?= json_encode(translate('feed.ui.resume')) ?>,
         laedt:   <?= json_encode(translate('feed.ui.loading')) ?>,
         ende:    <?= json_encode(translate('feed.ui.end')) ?>,
-        gestoert: <?= json_encode(translate('feed.connection_lost')) ?>
+        gestoert: <?= json_encode(translate('feed.connection_lost')) ?>,
+        wiederholen: <?= json_encode(translate('feed.replay.hint')) ?>
     };
+
+    var wiederholenZiel = <?= json_encode($url('/obs/replay')) ?>;
+    var csrf = <?= json_encode($csrf) ?>;
+    var playIcon = <?= json_encode($playIcon) ?>;
 
     // =============================================================
     //  Der Filter: eine Ebene zur Zeit
@@ -812,6 +893,10 @@ $link = static function (array $changes) use ($url, $query): string {
         oben.appendChild(abzeichen);
         oben.appendChild(zeit);
 
+        if (event.replay) {
+            oben.appendChild(wiederholenKnopf(event.id));
+        }
+
         var mitte = document.createElement('div');
         mitte.className = 'event-main';
 
@@ -833,6 +918,78 @@ $link = static function (array $changes) use ($url, $query): string {
         artikel.appendChild(unten);
 
         return artikel;
+    }
+
+    /**
+     * Der Wiederholen-Knopf einer Karte.
+     *
+     * Dieselbe Form wie im Markup der Seite - sonst saehe eine
+     * nachgeladene Karte anders aus als eine, die beim Laden da war.
+     */
+    function wiederholenKnopf(id) {
+        var knopf = document.createElement('button');
+        knopf.type = 'button';
+        knopf.className = 'event-replay';
+        knopf.setAttribute('data-replay', String(id));
+        knopf.title = texte.wiederholen;
+        knopf.setAttribute('aria-label', texte.wiederholen);
+        knopf.innerHTML = playIcon;
+
+        return knopf;
+    }
+
+    /**
+     * Ein Ereignis noch einmal ins Overlay schicken.
+     *
+     * Ein Zuhoerer fuer die ganze Liste statt einer je Karte: es kommen
+     * laufend neue dazu, und nachgeladene Karten haetten sonst keinen.
+     *
+     * Der Knopf meldet sich selbst zurueck - gruen oder rot, dann
+     * wieder normal. Eine Meldung ueber der Liste waere im Dock
+     * staendig im Weg, und um welche Zeile es ging, sagte sie auch
+     * nicht.
+     */
+    document.addEventListener('click', function (ereignis) {
+        var knopf = ereignis.target.closest ? ereignis.target.closest('.event-replay') : null;
+
+        if (!knopf || knopf.disabled) {
+            return;
+        }
+
+        var daten = new FormData();
+        daten.append('id', knopf.getAttribute('data-replay') || '');
+        daten.append('csrf', csrf);
+
+        knopf.disabled = true;
+        knopf.classList.remove('is-done', 'is-failed');
+
+        fetch(wiederholenZiel, {
+            method: 'POST',
+            body: daten,
+            credentials: 'same-origin'
+        }).then(function (antwort) {
+            return antwort.json().catch(function () { return { ok: false }; });
+        }).then(function (ergebnis) {
+            melde(knopf, ergebnis && ergebnis.ok, ergebnis && ergebnis.error);
+        }).catch(function () {
+            melde(knopf, false, texte.gestoert);
+        });
+    });
+
+    function melde(knopf, geklappt, fehler) {
+        knopf.classList.add(geklappt ? 'is-done' : 'is-failed');
+
+        // Der Grund gehoert an den Knopf, nicht in die Konsole: wer im
+        // Dock sitzt, hat keine offen.
+        if (!geklappt && fehler) {
+            knopf.title = fehler;
+        }
+
+        window.setTimeout(function () {
+            knopf.classList.remove('is-done', 'is-failed');
+            knopf.title = texte.wiederholen;
+            knopf.disabled = false;
+        }, 1600);
     }
 
     var liste = document.getElementById('event-list');

@@ -148,6 +148,15 @@ final class Routes
             'permission' => 'Account.Activity.View',
         ]);
 
+        // Ein Ereignis noch einmal ins Overlay. Legt nichts an - siehe
+        // FeedController::replay(). Das Recht, einen Alert auszuloesen,
+        // prueft das Plugin, dem der Ereignistyp gehoert; hier steht
+        // nur die Huerde, die fuer den ganzen Feed gilt.
+        $router->post('/obs/replay', [$feed, 'replay'], [
+            'auth' => true,
+            'permission' => 'Account.Activity.View',
+        ]);
+
         // Plugins: zwei Reiter, eigene Detailseiten
         $router->get('/account/plugins', [$plugins, 'installed'], [
             'auth' => true,

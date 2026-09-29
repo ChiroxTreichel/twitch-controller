@@ -27,6 +27,23 @@ use TwitchController\Core\App;
  *
  * Gibt der Hook null zurueck, erscheint das Ereignis nicht im Feed -
  * so lassen sich Zwischenmeldungen ausblenden.
+ *
+ * -------------------------------------------------------------------
+ *  Wiederholen
+ * -------------------------------------------------------------------
+ *
+ * Ob zu einer Zeile ein Wiederholen-Knopf gehoert, weiss der Kern
+ * nicht: er kennt weder Alerts noch die Rechte daran. Also fragt er
+ * ueber 'core.obs.replayable' nach, und wer sich zustaendig fuehlt,
+ * sagt ja:
+ *
+ *   $hooks->on('core.obs.replayable', function (bool $kann, array $row) use ($app) {
+ *       return $kann || (… mein Ereignistyp … && permission('…Test'));
+ *   });
+ *
+ * Gefragt wird beim Aufbereiten jeder Zeile - der Haken muss also
+ * billig sein und darf nichts schicken. Das Schicken selbst laeuft
+ * ueber 'core.obs.replay', siehe FeedController::replay().
  */
 final class Presenter
 {
@@ -36,7 +53,7 @@ final class Presenter
 
     /**
      * @param array<string, mixed> $row
-     * @return array{id: int, time: string, badge: string, style: string, title: string, message: string, filter: string}|null
+     * @return array{id: int, time: string, badge: string, style: string, title: string, message: string, filter: string, replay: bool}|null
      */
     public function present(array $row): ?array
     {
@@ -62,6 +79,9 @@ final class Presenter
             'title'   => trim((string) ($filtered['title'] ?? self::actor($row, $payload))),
             'message' => self::message($row, $payload),
             'filter'  => (string) ($filtered['filter'] ?? 'system'),
+            // Kann dieses Ereignis noch einmal ins Overlay? Fragt die
+            // Plugins - siehe Klassenkommentar.
+            'replay'  => (bool) $this->app->hooks->filter('core.obs.replayable', false, $row, $payload),
         ];
     }
 

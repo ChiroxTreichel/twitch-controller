@@ -20,6 +20,8 @@ use TwitchController\Core\Http\Response;
  * Nachladen laeuft ueber /obs/updates?since_id=…
  * Die Seite fragt in einem festen Takt nach und haengt Neues oben an,
  * ohne neu zu laden.
+ *
+ * Wiederholen laeuft ueber POST /obs/replay - siehe replay().
  */
 final class FeedController
 {
@@ -62,6 +64,9 @@ final class FeedController
             'compact'    => $request->get('compact') !== '',
             'badges'     => $badges->resolved(),
             'query'      => $request->query,
+            // Fuer den Wiederholen-Knopf: er schickt einen POST, und
+            // der braucht das Zeichen.
+            'csrf'       => $this->app->auth->csrfToken(),
         ], null));
     }
 
@@ -112,6 +117,63 @@ final class FeedController
             'events' => $result['events'],
             'done'   => count($result['events']) < $limit,
         ]);
+    }
+
+    /**
+     * Ein Ereignis noch einmal ins Overlay schicken.
+     *
+     * Gedacht fuer den Fall, der jedem Streamer passiert: der Alert
+     * lief, waehrend OBS noch auf der falschen Szene stand, oder die
+     * Browserquelle hing. Bisher blieb nur der Test-Alert aus den
+     * Einstellungen - der zeigt aber Testdaten und nicht den Namen,
+     * um den es ging.
+     *
+     * Hier wird NICHTS gespeichert: kein neues Ereignis, keine zweite
+     * Zeile im Feed, keine doppelte Buchung auf ein Ziel. Es geht
+     * allein die Nachricht ans Overlay noch einmal hinaus, gebaut aus
+     * der Zeile, die ohnehin schon in der Datenbank steht.
+     *
+     * Wer sie bauen darf, entscheidet nicht der Kern: er kennt weder
+     * Alerts noch die Rechte daran. Das Plugin, dem der Ereignistyp
+     * gehoert, haengt sich an 'core.obs.replay', prueft sein eigenes
+     * Recht und schickt - genau wie es das beim ersten Mal getan hat.
+     */
+    public function replay(Request $request): Response
+    {
+        if (!$this->app->auth->checkCsrf($request->input('csrf'))) {
+            return Response::json([
+                'ok'    => false,
+                // 403 und nicht 419: Apache kennt 419 nicht und macht
+                // daraus eine 500 - im Log staende dann ein Serverfehler,
+                // wo nur ein Formular abgelaufen ist.
+                'error' => translate('common.error.form_expired'),
+            ], 403);
+        }
+
+        $id = max(0, (int) $request->input('id'));
+        $row = $id > 0 ? $this->app->events->find($id) : null;
+
+        if ($row === null) {
+            return Response::json([
+                'ok'    => false,
+                'error' => translate('feed.replay.gone'),
+            ], 404);
+        }
+
+        $geschickt = (bool) $this->app->hooks->filter('core.obs.replay', false, $row);
+
+        // Kein Zuhoerer hat sich zustaendig gefuehlt - oder der
+        // zustaendige hat abgelehnt, weil der Alert inzwischen aus ist
+        // oder das Recht fehlt. Fuer den Benutzer ist das dasselbe:
+        // es kam nichts.
+        if (!$geschickt) {
+            return Response::json([
+                'ok'    => false,
+                'error' => translate('feed.replay.failed'),
+            ], 409);
+        }
+
+        return Response::json(['ok' => true, 'error' => '']);
     }
 
     /**
