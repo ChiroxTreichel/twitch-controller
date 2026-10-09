@@ -273,11 +273,22 @@ final class AccountController
             $missingScopes = [];
         }
 
-        // Die Bereiche in ihrer aktuellen Reihenfolge - fuer die
-        // Auf-und-ab-Knoepfe.
+        // Die Bereiche und ihre Punkte in der aktuellen Reihenfolge -
+        // fuer die Auf-und-ab-Knoepfe. Ohne Konto: das steht fest unten.
         $navGroups = [];
         foreach ((new Nav($this->app))->build() as $key => $group) {
-            $navGroups[] = ['key' => (string) $key, 'label' => (string) $group['label']];
+            if ((string) $key === Nav::ACCOUNT) {
+                continue;
+            }
+
+            $navGroups[] = [
+                'key'   => (string) $key,
+                'label' => (string) $group['label'],
+                'items' => array_map(
+                    static fn (array $item): array => ['key' => $item['key'], 'label' => $item['label']],
+                    $group['items']
+                ),
+            ];
         }
 
         return [
@@ -421,6 +432,17 @@ final class AccountController
                     return $verschoben
                         ? $this->back('/account/settings', translate('settings.nav_order.saved'))
                         : $this->back('/account/settings', null, translate('settings.nav_order.failed'));
+
+                case 'nav_item_order':
+                    $verschoben = (new Nav($this->app))->moveItem(
+                        $request->input('group'),
+                        $request->input('item'),
+                        $request->input('direction')
+                    );
+
+                    return $verschoben
+                        ? $this->back('/account/settings', translate('settings.nav_order.saved'))
+                        : $this->back('/account/settings', null, translate('settings.nav_order.item_failed'));
 
                 case 'language':
                     $language = Translator::normalize($request->input('language'));

@@ -728,6 +728,48 @@ Ein Bereich, der nicht in der Liste steht, sortiert sich nach seinem
 `order` aus dem Plugin und landet hinten. Ein neues Plugin stört die
 eingestellte Reihenfolge damit nicht.
 
+**Konto steht immer ganz unten** (`Nav::ACCOUNT`), und seine Punkte
+haben die feste Reihenfolge des Kerns. Es taucht in der Karte gar nicht
+erst auf: dort liegt die Verwaltung des Systems selbst, und die soll man
+immer an derselben Stelle finden — auch nach dem zehnten Plugin. Ein
+`konto` in `nav_order` oder ein `order` aus einem Plugin ändert daran
+nichts. Weil die Startseite nach dem Login der erste Punkt des ersten
+Bereichs ist, landet man dort ohne Plugins in *Konto*, mit Plugins im
+ersten Bereich darüber.
+
+#### Die Punkte in einem Bereich
+
+Sie stehen in derselben Karte, eingerückt unter ihrem Bereich — aber
+nur, wo es mindestens zwei gibt. Gespeichert wird in `nav_item_order`,
+je Bereich eine Liste von Punkt-Schlüsseln (`key` am Menüpunkt, sonst
+der Pfad ohne Schrägstriche: `stream/info`).
+
+Ohne diese Liste entschiede die **Ladereihenfolge**, und die geht nach
+dem Slug. Ein neues Plugin `mod-chat` stünde in *Stream* über
+`streaminfo`, nur weil m vor s kommt — der Punkt, für den man den
+Bereich aufklappt, rutschte nach unten, ohne dass jemand etwas getan
+hat.
+
+Deshalb merkt sich `Nav::build()` jeden Punkt, wenn er **zum ersten
+Mal** auftaucht, und hängt ihn hinten an seinen Bereich. Ein neues
+Plugin landet also unten, und was schon da war, bleibt, wo es war —
+ohne dass jemand etwas einstellen muss. Geschrieben wird nur, wenn ein
+neuer Punkt dazukommt, nicht bei jedem Aufruf.
+
+Zwei Einzelheiten, die man leicht falsch macht:
+
+- Gemerkt wird am **ungefilterten** Menü, vor dem Ausblenden nach
+  Rechten. Sonst legte der Erste, der einen Punkt nicht sehen darf,
+  ohne ihn dessen Platz fest.
+- Verschoben wird mit dem nächsten **sichtbaren** Nachbarn. Punkte,
+  die gerade fehlen, behalten ihre Stelle in der Liste — sonst wandert
+  der Punkt an ihnen vorbei, und scheinbar passiert nichts.
+
+**Ein Plugin bekommt kein Feld für seinen Platz**, auch kein `order`
+am Menüpunkt. Es weiß nicht, was sonst noch im Bereich steht, und wenn
+jedes nach oben will, steht keines oben. Dieselbe Überlegung wie bei
+der Reihenfolge im Overlay.
+
 ---
 
 ## Overlay

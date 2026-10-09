@@ -429,6 +429,10 @@ th { font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.06em; colo
 tbody tr:last-child td { border-bottom: none; }
 td.actions { text-align: right; white-space: nowrap; }
 
+/* Reihenfolge im Menue: die Punkte eingerueckt unter ihrem Bereich. */
+.nav-order-item td { padding-top: 6px; padding-bottom: 6px; }
+.nav-order-item td:first-child { padding-left: 32px; }
+
 .empty { padding: 28px; text-align: center; color: var(--muted); }
 
 /* --- Rechte-Auswahl ------------------------------------------------ */
