@@ -1487,6 +1487,24 @@ allem, was Plugins über `core.eventsub.subscriptions` melden. *Konto →
 Einstellungen → Abos abgleichen* legt Fehlendes an und entfernt, was auf
 unsere Callback-URL zeigt, aber nicht mehr gebraucht wird.
 
+### Aufrufe ohne Rumpf
+
+`api()->post()` und `api()->patch()` schicken nur dann einen Rumpf, wenn
+einer übergeben wird — ein leeres Array zählt als keiner. Viele Endpunkte
+erwarten ihre Angaben allein in der Query (`chat/shoutouts`, `raids`) und
+lehnen ein JSON-`[]` mit „Request body was not parsable" ab. Bis 2.15.0
+ging genau das raus, sobald man den Rumpf wegließ.
+
+```php
+$app->twitch->api()->as(TokenStore::BROADCASTER)->post('raids', [
+    'from_broadcaster_id' => $eigene,
+    'to_broadcaster_id'   => $ziel,
+]);
+```
+
+Ein leeres JSON-Objekt `{}` lässt sich über `api()` nicht schicken; bisher
+verlangt das kein Endpunkt.
+
 ---
 
 ## Updates

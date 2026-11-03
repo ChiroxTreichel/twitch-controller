@@ -51,18 +51,18 @@ final class Api
 
     /**
      * @param array<string, string|int> $query
-     * @param array<string, mixed>      $body
+     * @param array<string, mixed>|null $body ohne Angabe geht kein Rumpf mit
      */
-    public function post(string $endpoint, array $query = [], array $body = []): HttpResult
+    public function post(string $endpoint, array $query = [], ?array $body = null): HttpResult
     {
         return $this->request('POST', $endpoint, $query, $body);
     }
 
     /**
      * @param array<string, string|int> $query
-     * @param array<string, mixed>      $body
+     * @param array<string, mixed>|null $body ohne Angabe geht kein Rumpf mit
      */
-    public function patch(string $endpoint, array $query = [], array $body = []): HttpResult
+    public function patch(string $endpoint, array $query = [], ?array $body = null): HttpResult
     {
         return $this->request('PATCH', $endpoint, $query, $body);
     }
@@ -158,7 +158,12 @@ final class Api
             'Authorization' => 'Bearer ' . $this->token(),
         ];
 
-        if ($body === null) {
+        // Ein leerer Rumpf ist kein Rumpf. Als JSON ginge [] raus, und
+        // Endpunkte, die alles in der Query erwarten (chat/shoutouts,
+        // raids), lehnen das ab: "Request body was not parsable". Ein
+        // Endpunkt, der ein leeres Objekt verlangt, braeuchte "{}" -
+        // das kann ein PHP-Array nicht ausdruecken; bisher gibt es keinen.
+        if ($body === null || $body === []) {
             return Http::request($method, $url, $headers);
         }
 
