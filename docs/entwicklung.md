@@ -1432,6 +1432,51 @@ HMAC gegen das Webhook-Secret geprüft, dazu gegen ihr Alter (Replay-Schutz).
 Anschließend werden sie normalisiert in `events` geschrieben;
 `UNIQUE(source, external_id)` macht Doppelzustellungen harmlos.
 
+### Ein Abo, zwei Meldungen
+
+Läuft ein Abo aus und wird neu abgeschlossen — bei **Prime jeden
+Monat**, weil es sich nicht selbst verlängert —, ist das für Twitch ein
+neues Abo: `channel.subscribe`. Teilt der Zuschauer dabei seine
+Verlängerung im Chat, kommt in derselben Sekunde
+`channel.subscription.message` dazu. Bis 2.14 waren das bei uns zwei
+Abos: zwei Alerts, zwei Zeilen im Feed, und der Subathon buchte die
+Zeit zweimal.
+
+`core/Events/Subscriptions.php` behandelt beide als **dasselbe Abo**,
+wenn sie vom selben Zuschauer innerhalb von fünf Minuten kommen. Eines
+davon wird als Doppel markiert (`events.suppressed_at`): gespeichert
+bleibt es, an die Plugins (`core.event.stored`) geht es nie, und der
+Feed blendet es aus.
+
+Gewinnen soll die **Nachricht** — sie kennt die Monate. Darum wartet
+ein neues, nicht geschenktes Abo fünf Sekunden (`events.held_until`),
+bevor es an die Plugins geht:
+
+| Reihenfolge | Ergebnis |
+| --- | --- |
+| Abo, Nachricht in der Wartezeit | Nachricht geht hinaus, Abo ist Doppel |
+| Abo allein | Abo geht nach der Wartezeit hinaus |
+| Abo hinaus, Nachricht später (≤ 5 min) | Nachricht ist Doppel |
+| Nachricht zuerst, dann Abo | Abo ist Doppel |
+| geschenktes Abo | wie bisher sofort, ohne Wartezeit |
+
+Freigegeben wird bei **jedem** eingehenden Webhook — im Stream kommen
+sie im Sekundentakt, Chat eingeschlossen — und im Takt des Workers
+(`EventStore::releaseHeld()`). Ob ein wartendes Abo noch abgefangen
+werden kann oder schon hinausgeht, entscheidet **eine** Anweisung
+(`UPDATE … WHERE held_until IS NOT NULL`); Freigabe und Abfangen
+schließen sich damit aus, auch wenn Worker und Webhook im selben
+Augenblick zugreifen.
+
+Der Feed zeigt ein wartendes Abo sofort an — er merkt sich die höchste
+Nummer, auch von Zeilen, die er ausblendet, und ein verstecktes Abo
+käme nach der Freigabe nie mehr im laufenden Feed an. Ausgeblendet wird
+nur das Doppel.
+
+Die Paare aus der Zeit davor markiert die Migration nach 2.15.0
+nachträglich (das Abo wird zum Doppel). Was damals schon als Alert lief
+oder gebucht wurde, lässt sich nicht zurückholen.
+
 Follows bekommen einen berechneten Schlüssel `follow:<user>:<zeit>` statt
 der zufälligen Nachrichten-ID. So kann ein Plugin, das von Twitch
 unterdrückte Follows über die Follower-Liste nachträgt, denselben

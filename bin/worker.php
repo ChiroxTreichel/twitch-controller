@@ -131,6 +131,11 @@ while ($running) {
             exit(0);
         }
 
+        // Wartende Abos, deren Zeit um ist, an die Plugins - falls
+        // gerade kein Webhook kam, der es erledigt haette. Vor
+        // cron.tick, damit Plugins im selben Takt den neuen Stand sehen.
+        $app->events->releaseHeld();
+
         $app->hooks->dispatch('cron.tick');
 
         /*

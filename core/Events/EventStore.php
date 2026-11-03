@@ -42,11 +42,14 @@ final class EventStore
             'INSERT INTO events (
                  source, event_type, external_id, occurred_at,
                  actor_name, actor_external_id, message, amount, currency,
-                 payload, raw_payload
+                 payload, raw_payload, held_until
              ) VALUES (
                  :source, :event_type, :external_id, :occurred_at,
                  :actor_name, :actor_external_id, :message, :amount, :currency,
-                 CAST(:payload AS JSONB), :raw_payload
+                 CAST(:payload AS JSONB), :raw_payload,
+                 CASE WHEN CAST(:hold AS INTEGER) > 0
+                      THEN now() + make_interval(secs => CAST(:hold AS INTEGER))
+                 END
              )
              ON CONFLICT (source, external_id) DO NOTHING
              RETURNING id',
@@ -62,6 +65,9 @@ final class EventStore
                 'currency'          => $normalized['currency'] ?? null,
                 'payload'           => (string) json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 'raw_payload'       => $rawPayload,
+                // Ein neues Abo wartet kurz auf seine
+                // Verlaengerungsnachricht - siehe Subscriptions.
+                'hold'              => (string) Subscriptions::holdFor($source, $eventType, $payload),
             ]
         );
 
@@ -70,11 +76,36 @@ final class EventStore
         }
 
         $row = $this->find((int) $id);
-        if ($row !== null) {
+        if ($row !== null && (new Subscriptions($this->app))->shouldDispatch($row)) {
             $this->app->hooks->dispatch('core.event.stored', $row);
         }
 
         return (int) $id;
+    }
+
+    /**
+     * Wartende Ereignisse freigeben, deren Zeit um ist, und erst jetzt
+     * an die Plugins geben.
+     *
+     * Gerufen bei jedem eingehenden Webhook und im Takt des Workers.
+     * Darf beliebig oft laufen: jedes Ereignis geht genau einmal
+     * hinaus, siehe Subscriptions::releaseDue().
+     *
+     * @return int wie viele hinausgingen
+     */
+    public function releaseHeld(): int
+    {
+        $frei = (new Subscriptions($this->app))->releaseDue();
+
+        foreach ($frei as $id) {
+            $row = $this->find($id);
+
+            if ($row !== null) {
+                $this->app->hooks->dispatch('core.event.stored', $row);
+            }
+        }
+
+        return count($frei);
     }
 
     /**

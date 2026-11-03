@@ -73,6 +73,19 @@ final class WebhookController
             return Response::text('Error', 500);
         }
 
+        // Wartende Abos freigeben, deren Zeit um ist (Subscriptions).
+        // Bei JEDEM Webhook, Chat eingeschlossen: im Stream kommen sie
+        // im Sekundentakt, und so geht ein Abo kurz nach seiner
+        // Wartezeit hinaus statt erst im naechsten Takt des Workers.
+        //
+        // Eigener Fang: das Ereignis ist gespeichert. Ein Fehler hier
+        // darf Twitch nicht zu einer zweiten Zustellung bringen.
+        try {
+            $this->app->events->releaseHeld();
+        } catch (Throwable $e) {
+            $this->app->log('EventSub: Freigabe wartender Ereignisse fehlgeschlagen: ' . $e->getMessage());
+        }
+
         return Response::noContent();
     }
 

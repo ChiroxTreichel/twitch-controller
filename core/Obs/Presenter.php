@@ -57,6 +57,13 @@ final class Presenter
      */
     public function present(array $row): ?array
     {
+        // Ein Doppel - dasselbe Abo, zweimal gemeldet (siehe
+        // Events\Subscriptions). Gespeichert bleibt es, im Feed
+        // erscheint es nicht.
+        if (($row['suppressed_at'] ?? null) !== null) {
+            return null;
+        }
+
         $payload = is_array($row['payload'] ?? null) ? $row['payload'] : [];
         $eventType = trim((string) ($row['event_type'] ?? ''));
 

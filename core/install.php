@@ -194,6 +194,39 @@ $db->run('CREATE INDEX IF NOT EXISTS events_received_at_idx ON events (received_
 $db->run('CREATE INDEX IF NOT EXISTS events_source_type_idx ON events (source, event_type)');
 $db->run('CREATE INDEX IF NOT EXISTS events_actor_idx       ON events (source, actor_external_id)');
 
+// Ein Abo, zwei Meldungen (2.15.0) - siehe core/Events/Subscriptions.php.
+//
+//   held_until     ein neues Abo wartet bis dahin auf seine
+//                  Verlaengerungsnachricht, bevor es an die Plugins geht
+//   suppressed_at  ein Doppel: gespeichert, aber nie an die Plugins und
+//                  nicht im Feed
+$db->run('ALTER TABLE events ADD COLUMN IF NOT EXISTS held_until    TIMESTAMPTZ');
+$db->run('ALTER TABLE events ADD COLUMN IF NOT EXISTS suppressed_at TIMESTAMPTZ');
+$db->run('CREATE INDEX IF NOT EXISTS events_held_idx ON events (held_until) WHERE held_until IS NOT NULL');
+
+// Die Paare von frueher nachtraeglich als Doppel markieren - sonst
+// stuenden sie im Feed weiter zweimal da. Das Abo wird zum Doppel, die
+// Nachricht bleibt: sie kennt die Monate. Was damals schon als Alert
+// lief oder als Subathon-Zeit gebucht wurde, laesst sich nicht
+// zurueckholen.
+if ($fromVersion !== null && version_compare($fromVersion, '2.15.0', '<')) {
+    $db->run("
+        UPDATE events s SET suppressed_at = now()
+         WHERE s.source = 'twitch'
+           AND s.event_type = 'twitch.channel.subscribe'
+           AND s.suppressed_at IS NULL
+           AND COALESCE(s.payload->>'is_gift', 'false') <> 'true'
+           AND EXISTS (
+               SELECT 1 FROM events m
+                WHERE m.source = 'twitch'
+                  AND m.event_type = 'twitch.channel.subscription.message'
+                  AND m.actor_external_id = s.actor_external_id
+                  AND m.suppressed_at IS NULL
+                  AND abs(EXTRACT(EPOCH FROM (m.received_at - s.received_at))) <= 300
+           )
+    ");
+}
+
 // --- Overlay -----------------------------------------------------------
 // Die Leitung zum Overlay in OBS. Ein Twitch-Event kommt in einem
 // Webhook-Request an, die Browserquelle haengt an einem anderen - und
