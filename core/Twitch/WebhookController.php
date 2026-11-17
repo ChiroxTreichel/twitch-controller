@@ -133,6 +133,27 @@ final class WebhookController
             $event,
             $request->rawBody,
         );
+
+        // Kategorie mitfuehren (2.16.0). ERST nach dem Speichern: der Weg
+        // ueber events und 'core.event.stored' bleibt, wie er ist - das
+        // Timer-Plugin liest channel.update von dort.
+        //
+        // Eigener Fang: das Ereignis ist gespeichert. Ein Fehler hier
+        // darf Twitch nicht zu einer zweiten Zustellung bringen.
+        try {
+            if ($eventType === 'twitch.channel.update') {
+                $this->app->twitch->category()->remember(
+                    (string) ($event['category_id'] ?? ''),
+                    (string) ($event['category_name'] ?? ''),
+                    (string) ($event['title'] ?? ''),
+                );
+            } elseif ($eventType === 'twitch.stream.online') {
+                // stream.online kennt die Kategorie nicht - also fragen.
+                $this->app->twitch->category()->refresh();
+            }
+        } catch (Throwable $e) {
+            $this->app->log('EventSub: Kategorie nicht gemerkt: ' . $e->getMessage());
+        }
     }
 
     /**

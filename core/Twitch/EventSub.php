@@ -111,6 +111,12 @@ final class EventSub
             ['type' => 'stream.online',  'version' => '1', 'condition' => $channel],
             ['type' => 'stream.offline', 'version' => '1', 'condition' => $channel],
 
+            // Titel und Kategorie (2.16.0). Daraus fuehrt der Kern die
+            // aktuelle Kategorie mit, siehe Category. Braucht keinen
+            // Scope. Das Timer-Plugin meldet dasselbe Abo an - die
+            // Zusammenfassung unten macht daraus eines.
+            ['type' => 'channel.update', 'version' => '2', 'condition' => $channel],
+
             // Kanalpunkte. Braucht channel:read:redemptions - ohne die
             // Freigabe scheitert das Abo, und sync() meldet es unter
             // "failed", statt alles andere mitzureissen.

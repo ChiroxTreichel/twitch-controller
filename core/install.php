@@ -282,3 +282,20 @@ $db->run('
 ');
 $db->run('CREATE INDEX IF NOT EXISTS chat_messages_received_at_idx ON chat_messages (received_at)');
 $db->run('CREATE INDEX IF NOT EXISTS chat_messages_chatter_idx     ON chat_messages (chatter_id)');
+
+// --- Abo-Abgleich nach dem Update (2.16.0) -----------------------------
+// Der Kern abonniert jetzt channel.update (Kategorie mitfuehren). Eine
+// bestehende Installation bekommt das Abo erst beim naechsten Abgleich,
+// und den macht sonst nur jemand per Knopf. Der Merker sagt dem Worker,
+// dass er einmal abgleichen soll - siehe bin/worker.php.
+//
+// Hier steht nur $db zur Verfuegung, nicht $app - also direkt in
+// settings, im selben Format wie Settings::set() (JSON-Wert, Scope core).
+if ($fromVersion !== null && version_compare($fromVersion, '2.16.0', '<')) {
+    $db->run("
+        INSERT INTO settings (scope, key, value, updated_at)
+        VALUES ('core', 'eventsub_sync_pending', 'true'::jsonb, now())
+        ON CONFLICT (scope, key) DO UPDATE
+           SET value = EXCLUDED.value, updated_at = now()
+    ");
+}

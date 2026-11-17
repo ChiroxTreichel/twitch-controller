@@ -136,6 +136,35 @@ while ($running) {
         // cron.tick, damit Plugins im selben Takt den neuen Stand sehen.
         $app->events->releaseHeld();
 
+        // Abo-Abgleich nach einem Kern-Update (2.16.0). Ein neues Abo des
+        // Kerns kommt bei Twitch erst mit dem naechsten Abgleich an - und
+        // den macht sonst nur jemand per Knopf. install.php setzt dafuer
+        // den Merker; geloescht wird er erst, wenn nichts scheiterte.
+        //
+        // Eigener Fang: ein Netzfehler hier soll cron.tick nicht
+        // verhindern.
+        if ($app->settings->bool('eventsub_sync_pending') && $app->twitch->hasChannel()) {
+            try {
+                $abgleich = $app->twitch->eventSub()->sync();
+                if ($abgleich['failed'] === []) {
+                    $app->settings->forget('eventsub_sync_pending');
+                    fwrite(STDOUT, '[worker] Abos abgeglichen, neu: '
+                        . (implode(', ', $abgleich['created']) ?: 'keine') . "\n");
+                } else {
+                    // Merker bleibt: der naechste Takt versucht es erneut.
+                    $app->log('Abo-Abgleich nach Update unvollstaendig: '
+                        . json_encode($abgleich['failed'], JSON_UNESCAPED_UNICODE));
+                }
+            } catch (Throwable $e) {
+                $app->log('Abo-Abgleich nach Update fehlgeschlagen: ' . $e->getMessage());
+            }
+        }
+
+        // Kategorie als Absicherung stuendlich nachfragen, falls ein
+        // channel.update-Webhook verloren ging. Vor cron.tick, damit
+        // Plugins im selben Takt den neuen Stand sehen.
+        $app->twitch->category()->refreshIfDue();
+
         $app->hooks->dispatch('cron.tick');
 
         /*

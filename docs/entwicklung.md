@@ -217,6 +217,7 @@ Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
 | `core.twitch.scope_labels` | filter | Klartext für eigene Twitch-Berechtigungen |
 | `core.eventsub.subscriptions` | filter | zusätzliche Twitch-Abos anfordern |
 | `core.eventsub.revoked` | dispatch | Twitch hat ein Abo entzogen |
+| `core.category.changed` | dispatch | die Twitch-Kategorie hat gewechselt (id, name, vorherige id) |
 | `core.twitch.broadcaster_scopes` | filter | zusätzliche Twitch-Rechte anfordern |
 | `core.twitch.bot_scopes` | filter | Twitch-Rechte für den Chat-Account |
 | `core.oauth.callback` | filter | eigenen Login-Flow abschließen |
@@ -1486,6 +1487,36 @@ Welche Abos gebraucht werden, ergibt sich aus der Basisliste des Kerns plus
 allem, was Plugins über `core.eventsub.subscriptions` melden. *Konto →
 Einstellungen → Abos abgleichen* legt Fehlendes an und entfernt, was auf
 unsere Callback-URL zeigt, aber nicht mehr gebraucht wird.
+
+### Die aktuelle Kategorie
+
+Seit 2.16.0 weiß der Kern, in welcher Kategorie der Kanal gerade steht:
+
+```php
+$kategorie = $app->twitch->category()->current();
+// ['id' => '24241', 'name' => 'FINAL FANTASY XIV ONLINE', 'title' => '…', 'updated_at' => 1794925338]
+
+$hooks->on('core.category.changed', static function (string $id, string $name, string $previousId) use ($app): void {
+    // umschalten, Overlay neu schicken, …
+});
+```
+
+Der Stand liegt in den Kern-Einstellungen (`twitch_category_id`,
+`twitch_category_name`, `twitch_title`, `twitch_category_at`). Jeder
+Prozess sieht ihn also, ohne Twitch zu fragen. Gefüttert wird er aus dem
+Kern-Abo `channel.update` (nach `events->store()`, `core.event.stored`
+läuft wie bisher), bei `stream.online` per Nachfrage über Helix `channels`
+und im Worker stündlich als Absicherung (`refreshIfDue()`). Weiß der Kern
+noch nichts, fragt `current()` selbst einmal nach.
+
+`core.category.changed` feuert nur, wenn sich die **ID** ändert, also nicht
+bei einem reinen Titelwechsel und nicht bei einem doppelt zugestellten
+Webhook. Offline steht die Kategorie bei Twitch weiter auf der letzten;
+eine leere ID heißt „keine Kategorie gesetzt“.
+
+Nach dem Update auf 2.16.0 setzt `core/install.php` den Merker
+`eventsub_sync_pending`. Der Worker gleicht daraufhin die Abos einmal ab,
+damit `channel.update` auch ohne Knopfdruck bei Twitch ankommt.
 
 ### Aufrufe ohne Rumpf
 

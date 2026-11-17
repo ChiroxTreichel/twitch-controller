@@ -19,6 +19,7 @@ final class Twitch
     private ?OAuth $oauth = null;
     private ?TokenStore $tokens = null;
     private ?EventSub $eventSub = null;
+    private ?Category $category = null;
 
     public function __construct(private readonly App $app)
     {
@@ -84,6 +85,14 @@ final class Twitch
     public function eventSub(): EventSub
     {
         return $this->eventSub ??= new EventSub($this->app);
+    }
+
+    /**
+     * Aktuelle Kategorie des Kanals - siehe Category.
+     */
+    public function category(): Category
+    {
+        return $this->category ??= new Category($this->app);
     }
 
     /**
