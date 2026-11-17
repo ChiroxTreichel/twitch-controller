@@ -210,7 +210,11 @@ final class Bus
      * wird uebergangen. Sie steht in den Einstellungen und wird auf
      * der Overlay-Seite mit Pfeilen getauscht.
      *
-     * @return array<string, array{label: string, position: string, width: string, height: string, z: int, vars: array<string, string>}>
+     * Die Ebene (Main oder Background) schlaegt das Plugin mit 'layer'
+     * vor; was unter Konto > Overlay gewaehlt ist, gewinnt. Siehe
+     * layerFrom().
+     *
+     * @return array<string, array{label: string, position: string, width: string, height: string, layer: string, z: int, vars: array<string, string>}>
      */
     public static function slots(App $app): array
     {
@@ -219,6 +223,8 @@ final class Bus
         if (!is_array($slots)) {
             $slots = [];
         }
+
+        $gewaehlt = json_decode($app->settings->string(self::LAYER_SETTING, '{}'), true);
 
         $sauber = [];
 
@@ -235,6 +241,7 @@ final class Bus
                 'width'    => self::normalizeLength((string) ($slot['width'] ?? '')),
                 'height'   => self::normalizeLength((string) ($slot['height'] ?? '')),
                 'vars'     => self::normalizeVars($slot['vars'] ?? []),
+                'layer'    => self::layerFrom($gewaehlt, $id, (string) ($slot['layer'] ?? '')),
             ];
         }
 
@@ -265,6 +272,66 @@ final class Bus
     public const ORDER_SETTING = 'overlay_order';
 
     /**
+     * Die zwei Flaechen. Main ist /overlay und liegt in OBS ueber dem
+     * Avatar, Background ist /overlay/background und liegt darunter -
+     * fuer alles, was die Person vor der Kamera nicht verdecken soll.
+     *
+     * Zwei feste und nicht beliebig viele: mehr als vorne und hinten
+     * braucht eine Szene nicht, und jede weitere waere eine Quelle mehr,
+     * die man in OBS einrichten und anmelden muss.
+     */
+    public const LAYERS = ['main', 'background'];
+
+    /** Wo steht, welcher Platz auf welcher Flaeche liegt (Platz => Ebene). */
+    public const LAYER_SETTING = 'overlay_layers';
+
+    /**
+     * Die Ebene eines Platzes - ohne App, damit sie sich pruefen laesst.
+     *
+     * Gewaehlt vor Vorschlag des Plugins vor Main. Main ist der Rueckfall,
+     * weil dort bis 2.16 alles lag: eine bestehende Quelle soll nach dem
+     * Update zeigen, was sie vorher gezeigt hat.
+     */
+    public static function layerFrom(mixed $gewaehlt, string $id, string $vorschlag): string
+    {
+        if (is_array($gewaehlt) && in_array($gewaehlt[$id] ?? null, self::LAYERS, true)) {
+            return $gewaehlt[$id];
+        }
+
+        $vorschlag = strtolower(trim($vorschlag));
+
+        return in_array($vorschlag, self::LAYERS, true) ? $vorschlag : 'main';
+    }
+
+    /**
+     * Einen Platz auf die andere Flaeche legen.
+     *
+     * Danach laden beide Quellen neu (invalidate): der Kasten muss auf
+     * der einen Seite entstehen und auf der anderen verschwinden, samt
+     * Stylesheet und Skript - das laesst sich nicht nachschieben.
+     *
+     * @return bool ob sich etwas geaendert hat
+     */
+    public static function setLayer(App $app, string $id, string $layer): bool
+    {
+        $id = self::normalizeSlot($id);
+        $slots = self::slots($app);
+
+        if (!isset($slots[$id]) || !in_array($layer, self::LAYERS, true) || $slots[$id]['layer'] === $layer) {
+            return false;
+        }
+
+        $gewaehlt = json_decode($app->settings->string(self::LAYER_SETTING, '{}'), true);
+        $gewaehlt = is_array($gewaehlt) ? $gewaehlt : [];
+        $gewaehlt[$id] = $layer;
+
+        $app->settings->set(self::LAYER_SETTING, json_encode($gewaehlt));
+        (new self($app))->invalidate();
+
+        return true;
+    }
+
+    /**
      * Alles, was die Flaeche ueber ihre Kaesten wissen muss.
      *
      * Groesse der Buehne, und je Platz Stelle, Groesse, Reihenfolge
@@ -283,6 +350,7 @@ final class Bus
                 'position' => $slot['position'],
                 'width'    => $slot['width'],
                 'height'   => $slot['height'],
+                'layer'    => $slot['layer'],
                 'z'        => $slot['z'],
                 'vars'     => $slot['vars'],
             ];
@@ -367,14 +435,27 @@ final class Bus
     public static function move(App $app, string $id, bool $nachVorne): bool
     {
         $id = self::normalizeSlot($id);
-        $reihenfolge = array_keys(self::slots($app));
+        $slots = self::slots($app);
+        $reihenfolge = array_keys($slots);
         $stelle = array_search($id, $reihenfolge, true);
 
         if ($stelle === false) {
             return false;
         }
 
-        $ziel = $nachVorne ? $stelle - 1 : $stelle + 1;
+        /*
+         * Getauscht wird mit dem naechsten Nachbarn auf DERSELBEN
+         * Flaeche. Die Liste ist eine fuer beide; ein Tausch mit einem
+         * Platz der anderen Flaeche aenderte auf keiner etwas, und der
+         * Pfeil saehe kaputt aus.
+         */
+        $ebene = $slots[$id]['layer'];
+        $schritt = $nachVorne ? -1 : 1;
+        $ziel = $stelle + $schritt;
+
+        while ($ziel >= 0 && $ziel < count($reihenfolge) && $slots[$reihenfolge[$ziel]]['layer'] !== $ebene) {
+            $ziel += $schritt;
+        }
 
         // Am Rand gibt es nichts zu tauschen. Das ist kein Fehler -
         // der Pfeil steht dort gar nicht erst.

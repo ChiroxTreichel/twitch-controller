@@ -38,13 +38,41 @@ final class OverlayController
      */
     public function show(Request $request): Response
     {
+        return $this->render($request, 'main');
+    }
+
+    /**
+     * Die zweite Flaeche: was in OBS UNTER dem Avatar liegt. Dieselbe
+     * Seite, nur mit den Plaetzen der Ebene Background - siehe
+     * Bus::LAYERS.
+     */
+    public function showBackground(Request $request): Response
+    {
+        return $this->render($request, 'background');
+    }
+
+    private function render(Request $request, string $ebene): Response
+    {
+        $wunsch = $this->wunsch($request);
+
+        /*
+         * Die Leitung muss wissen, welche Plaetze diese Seite zeigt:
+         * sie schickt beim Umstellen das Layout, und die Seite legt fuer
+         * jeden Platz darin einen Kasten an. Bekaeme sie alle, stuende
+         * ein Background-Platz ploetzlich auch in Main.
+         */
+        $leitung = $this->app->url('/overlay/stream') . '?' . http_build_query(array_filter([
+            'layer' => $ebene,
+            'view'  => $wunsch,
+        ], static fn (string $w): bool => $w !== ''));
+
         return Response::html(
             $this->app->view->render('overlay/source', [
                 'width'   => $this->width(),
                 'height'  => $this->height(),
-                'slots'   => $this->gewaehlteSlots($request),
+                'slots'   => self::pageSlots(Bus::slots($this->app), $ebene, $wunsch),
                 'assets'  => Bus::assets($this->app),
-                'stream'  => $this->app->url('/overlay/stream'),
+                'stream'  => $leitung,
                 'debug'   => $this->app->settings->bool('overlay_debug'),
                 // Von hier an weiterlesen. Ohne das spielte eine gerade
                 // verbundene Quelle alles nach, was in den letzten
@@ -112,11 +140,14 @@ final class OverlayController
          * kann sich am Layout nichts geaendert haben, und dann muss es
          * auch niemand zusammenbauen.
          */
-        $layoutStand = Bus::layoutFingerprint($app);
+        $ebene = in_array($request->get('layer'), Bus::LAYERS, true) ? $request->get('layer') : 'main';
+        $wunsch = $this->wunsch($request);
+
+        $layoutStand = md5((string) json_encode(self::pageLayout($app, $ebene, $wunsch)));
         $stempel = $app->settings->stamp();
 
         return Response::stream(
-            static function () use ($app, $bus, $letzte, $aufbau, $laufzeit, $takt, $herzschlag, $aufbauTakt, $layoutStand, $stempel): void {
+            static function () use ($app, $bus, $letzte, $aufbau, $laufzeit, $takt, $herzschlag, $aufbauTakt, $layoutStand, $stempel, $ebene, $wunsch): void {
                 $ende = time() + $laufzeit;
                 $zuletzt = time();
                 $aufbauGeprueft = time();
@@ -218,7 +249,9 @@ data: {\"reload\":true}
                             $stempelGleich = false;
                         }
 
-                        $jetzt = $stempelGleich ? $layoutStand : Bus::layoutFingerprint($app);
+                        $jetzt = $stempelGleich
+                            ? $layoutStand
+                            : md5((string) json_encode(self::pageLayout($app, $ebene, $wunsch)));
 
                         if ($jetzt !== $layoutStand) {
                             $layoutStand = $jetzt;
@@ -226,7 +259,7 @@ data: {\"reload\":true}
                             printf(
                                 "event: __overlay\ndata: %s\n\n",
                                 (string) json_encode(
-                                    ['layout' => Bus::layout($app)],
+                                    ['layout' => self::pageLayout($app, $ebene, $wunsch)],
                                     JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
                                 )
                             );
@@ -262,6 +295,10 @@ data: {\"reload\":true}
             'height'    => $this->height(),
             'debug'     => $this->app->settings->bool('overlay_debug'),
             'sourceUrl' => $this->app->url('/overlay'),
+            'sourceUrls' => [
+                'main'       => $this->app->url('/overlay'),
+                'background' => $this->app->url('/overlay/background'),
+            ],
             'slots'     => Bus::slots($this->app),
             'canManage' => $this->app->auth->can('Account.Overlay.Manage'),
             'csrf'      => $this->app->auth->csrfToken(),
@@ -297,6 +334,21 @@ data: {\"reload\":true}
                     ]);
 
                     return $this->back(translate('overlay.saved'));
+
+                case 'layer':
+                    $slot = Bus::normalizeSlot($request->input('slot'));
+
+                    if ($slot === '' || !isset(Bus::slots($this->app)[$slot])) {
+                        return $this->back(null, translate('overlay.no_such_slot'));
+                    }
+
+                    if (!in_array($request->input('layer'), Bus::LAYERS, true)) {
+                        return $this->back(null, translate('common.error.unknown_action'));
+                    }
+
+                    Bus::setLayer($this->app, $slot, $request->input('layer'));
+
+                    return $this->back(translate('overlay.layer_saved'));
 
                 case 'move':
                     $slot = Bus::normalizeSlot($request->input('slot'));
@@ -340,14 +392,48 @@ data: {\"reload\":true}
      *
      * @return array<string, array<string, mixed>>
      */
-    private function gewaehlteSlots(Request $request): array
+    private function wunsch(Request $request): string
     {
         $wunsch = trim($request->get('view'));
         if ($wunsch === '') {
             $wunsch = trim($request->get('only'));
         }
 
-        return self::selectSlots(Bus::slots($this->app), $wunsch);
+        return $wunsch;
+    }
+
+    /**
+     * Die Plaetze einer Seite: mit ?view= die gewuenschten - ueber BEIDE
+     * Ebenen, so wie vor 2.17, damit eingetragene Quellen weiter zeigen,
+     * was sie zeigten. Ohne ?view= alle Plaetze der Ebene.
+     *
+     * Eine leere Background-Seite ist dabei kein Irrtum, sondern der
+     * Normalfall, solange dort nichts liegt - durchsichtig wie gewollt.
+     *
+     * @param array<string, array<string, mixed>> $alle
+     * @return array<string, array<string, mixed>>
+     */
+    public static function pageSlots(array $alle, string $ebene, string $wunsch): array
+    {
+        if (trim($wunsch) !== '') {
+            return self::selectSlots($alle, $wunsch);
+        }
+
+        return array_filter($alle, static fn (array $slot): bool => ($slot['layer'] ?? 'main') === $ebene);
+    }
+
+    /**
+     * Das Layout, wie es die Leitung einer Seite schickt: nur deren
+     * Plaetze. Siehe render().
+     *
+     * @return array{width: int, height: int, slots: array<string, array<string, mixed>>}
+     */
+    public static function pageLayout(App $app, string $ebene, string $wunsch): array
+    {
+        $layout = Bus::layout($app);
+        $layout['slots'] = self::pageSlots($layout['slots'], $ebene, $wunsch);
+
+        return $layout;
     }
 
     /**

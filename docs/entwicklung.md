@@ -211,7 +211,7 @@ Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
 | `core.chat.deleted` | dispatch | eine Chatnachricht wurde entfernt |
 | `core.chat.cleared` | dispatch | der Chat wurde geleert |
 | `core.chat.keep_hours` | filter | Aufbewahrungsfrist des Chatverlaufs |
-| `overlay.slots` | filter | eigenen Platz in der Overlay-Flaeche anmelden |
+| `overlay.slots` | filter | eigenen Platz in der Overlay-Flaeche anmelden (`layer` schlägt Main oder Background vor) |
 | `admin.assets` | filter | eigenes CSS und JavaScript in die Verwaltungsseiten |
 | `overlay.assets` | filter | eigenes CSS und JavaScript in die Overlay-Flaeche |
 | `core.twitch.scope_labels` | filter | Klartext für eigene Twitch-Berechtigungen |
@@ -828,6 +828,43 @@ die Plugins zeichnen, und die Leitung, über die Nachrichten dorthin
 kommen. Einen Platz namens `system` bringt der Kern mit — darin
 erscheint *Test senden*, damit die Fläche auch ohne ein einziges Plugin
 prüfbar ist.
+
+### Zwei Flächen: Main und Background
+
+Seit 2.17 gibt es zwei Flächen mit denselben Fähigkeiten:
+
+| Adresse | Ebene | in OBS |
+| --- | --- | --- |
+| `/overlay` | `main` | über dem Avatar |
+| `/overlay/background` | `background` | unter dem Avatar |
+
+Ein Plugin schlägt die Ebene seines Platzes vor:
+
+```php
+$slots['blur-chats'] = [
+    'label'    => translate('blur_chats.name'),
+    'position' => 'fill',
+    'layer'    => 'background',   // ohne Angabe: main
+];
+```
+
+Das letzte Wort hat, wer beide Flächen sieht: unter *Konto → Overlay* lässt
+sich jeder Platz umlegen (Einstellung `overlay_layers`, Platz → Ebene).
+`Bus::slots()` liefert die Ebene als `layer`. Die Reihenfolge bleibt die eine
+Liste `overlay_order`; die Pfeile tauschen nur mit dem Nachbarn derselben
+Ebene.
+
+Ein Umlegen ruft `Bus::invalidate()` auf, denn der Kasten muss auf der einen
+Seite entstehen und auf der anderen verschwinden, samt Stylesheet und
+Skript. Damit laden beide Quellen neu.
+
+Die Leitung bekommt `?layer=` und `?view=` der Seite mit und schickt beim
+Umstellen nur das Layout **dieser** Plätze (`OverlayController::pageLayout()`).
+Vor 2.17 bekam jede Seite das ganze Layout und legte für jeden fremden Platz
+einen leeren Kasten an, auch eine `?view=`-Quelle.
+
+`?view=` wählt weiterhin über **beide** Ebenen. Eingetragene Quellen zeigen
+also nach dem Update dasselbe wie vorher.
 
 ### Eine Quelle je Platz: `?view=`
 

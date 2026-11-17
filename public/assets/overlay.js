@@ -240,7 +240,10 @@
             frage.push('build=' + encodeURIComponent(aufbau));
         }
 
-        var adresse = quelle + (frage.length > 0 ? '?' + frage.join('&') : '');
+        // Die Adresse bringt schon Ebene und Auswahl mit (?layer=…) -
+        // dann wird angehaengt, nicht ein zweites Fragezeichen gesetzt.
+        var trenner = quelle.indexOf('?') === -1 ? '?' : '&';
+        var adresse = quelle + (frage.length > 0 ? trenner + frage.join('&') : '');
         verbindung = new EventSource(adresse);
 
         verbindung.onopen = function () {

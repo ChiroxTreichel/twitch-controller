@@ -111,6 +111,11 @@ final class Routes
             'auth' => true,
             'permission' => 'Account.Overlay.View',
         ]);
+        // Die zweite Flaeche, fuer OBS unter dem Avatar - siehe Bus::LAYERS.
+        $router->get('/overlay/background', [$overlay, 'showBackground'], [
+            'auth' => true,
+            'permission' => 'Account.Overlay.View',
+        ]);
         $router->get('/overlay/stream', [$overlay, 'stream'], [
             'auth' => true,
             'permission' => 'Account.Overlay.View',
