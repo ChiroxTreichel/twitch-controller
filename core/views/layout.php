@@ -438,42 +438,60 @@ try {
      * rechts sitzt - in der Plugin-Liste steht "Entfernen" ganz aussen,
      * und die Frage war nicht mehr zu lesen.
      *
-     * Die Vorlage darf das weiterhin selbst festlegen (confirm-right).
-     * Gemessen wird nur, wenn sie es NICHT getan hat: eine ausdrueckliche
-     * Angabe ist eine Entscheidung, und die soll nicht von einer
-     * Fensterbreite ueberstimmt werden.
+     * Die Vorlage darf die Richtung weiterhin selbst festlegen
+     * (confirm-right) - dann wird nicht gekippt. Ins Fenster geschoben
+     * wird trotzdem, siehe unten.
      *
      * Gemessen wird beim Oeffnen und nicht einmal am Anfang: der Kasten
      * hat zugeklappt keine Groesse, und die Seite kann sich bis dahin
      * verschoben haben.
      */
     function ausrichten(kasten) {
-        if (kasten.classList.contains('confirm-right')) {
-            return;
-        }
-
         var feld = kasten.querySelector('.confirm-panel');
         if (!feld) {
             return;
         }
 
+        var rand = 8;
+        var breite = window.innerWidth;
+
         // Erst zuruecksetzen: beim zweiten Oeffnen koennte die
         // Entscheidung von vorhin noch stehen, und das Fenster ist
         // vielleicht ein anderes.
         kasten.classList.remove('confirm-flip');
+        feld.style.transform = '';
 
-        var platz = feld.getBoundingClientRect();
-        if (platz.right <= window.innerWidth - 8) {
-            return;
+        // Die Richtung waehlen - nur wenn die Vorlage sie nicht
+        // festgelegt hat (siehe oben).
+        if (!kasten.classList.contains('confirm-right')
+            && feld.getBoundingClientRect().right > breite - rand) {
+            kasten.classList.add('confirm-flip');
+
+            // Passt es nach links auch nicht, war die erste Lage die
+            // bessere - ein Kasten, der links heraussteht, ist nicht
+            // besser als einer, der rechts heraussteht.
+            if (feld.getBoundingClientRect().left < rand) {
+                kasten.classList.remove('confirm-flip');
+            }
         }
 
-        kasten.classList.add('confirm-flip');
+        /*
+         * Was dann noch heraussteht, ins Fenster schieben.
+         *
+         * Das gilt AUCH fuer eine festgelegte Richtung. Die Vorlage
+         * weiss, wo ihr Knopf am Desktop steht - auf dem Handy rutscht
+         * er womoeglich in eine eigene Zeile nach links, und ein
+         * rechtsbuendiger Kasten stand dann links aus dem Fenster
+         * ("Alle aktualisieren" in der Plugin-Liste). Eine Entscheidung
+         * der Vorlage ist eine Vorgabe, kein Grund, den Kasten
+         * unlesbar zu machen.
+         */
+        var platz = feld.getBoundingClientRect();
 
-        // Passt es nach links auch nicht, war die erste Lage die
-        // bessere - ein Kasten, der links heraussteht, ist nicht besser
-        // als einer, der rechts heraussteht.
-        if (feld.getBoundingClientRect().left < 8) {
-            kasten.classList.remove('confirm-flip');
+        if (platz.left < rand) {
+            feld.style.transform = 'translateX(' + Math.ceil(rand - platz.left) + 'px)';
+        } else if (platz.right > breite - rand) {
+            feld.style.transform = 'translateX(' + Math.floor(breite - rand - platz.right) + 'px)';
         }
     }
 
