@@ -31,3 +31,7 @@
 /.idea/
 /.vscode/
 claude.sh
+
+# Absturzabbilder (core.<pid>). Landen im Arbeitsverzeichnis des
+# abgestuerzten Prozesses - im Webcontainer ist das dieses Repo.
+core.[0-9]*
