@@ -21,6 +21,7 @@ final class Twitch
     private ?EventSub $eventSub = null;
     private ?Category $category = null;
     private ?Followers $followers = null;
+    private ?Subscribers $subscribers = null;
 
     public function __construct(private readonly App $app)
     {
@@ -103,6 +104,12 @@ final class Twitch
     public function followers(): Followers
     {
         return $this->followers ??= new Followers($this->app);
+    }
+
+    /** Abo-Liste. Eine Instanz je Prozess, wie followers(). */
+    public function subscribers(): Subscribers
+    {
+        return $this->subscribers ??= new Subscribers($this->app);
     }
 
     /**

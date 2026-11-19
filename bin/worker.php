@@ -211,7 +211,8 @@ while ($running) {
     }
 
     /*
-     * Warten - und dabei alle zehn Sekunden nach Unfollows sehen.
+     * Warten - und dabei alle zehn Sekunden nach Unfollows sehen und
+     * die Abo-Liste auffrischen.
      *
      * Eigener Takt statt des Worker-Takts: der steht auf 15 Sekunden
      * und laesst sich je Installation verstellen. Ein Unfollow soll
@@ -224,6 +225,7 @@ while ($running) {
     while ($running && time() < $weiterUm) {
         if ($booted) {
             $app->twitch->followers()->checkIfDue();
+            $app->twitch->subscribers()->checkIfDue();
         }
 
         sleep(1);

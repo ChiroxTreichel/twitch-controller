@@ -52,6 +52,8 @@ use TwitchController\Core\App;
  */
 final class Followers
 {
+    use HelixList;
+
     /** So oft wird nachgesehen. */
     public const CHECK_EVERY = 10;
 
@@ -59,11 +61,6 @@ final class Followers
     public const FULL_EVERY = 3600;
 
     public const EVENT = 'twitch.channel.unfollow';
-
-    /** Laeuft im Worker - und der hat noch anderes zu tun. */
-    private const MAX_SECONDS = 60;
-
-    private const MAX_PAGES = 2000;
 
     /**
      * Zuletzt nachgesehen. Im Speicher des Workers und nicht in den
@@ -138,10 +135,10 @@ final class Followers
     public function check(): int
     {
         $kanal = $this->app->twitch->broadcasterId();
-        $erste = $this->page($kanal, '');
+        $erste = $this->helixPage('channels/followers', $kanal, '');
 
-        $gesamt = (int) ($erste['total'] ?? 0);
-        $kopf = self::head($erste['data']);
+        $gesamt = $erste['total'];
+        $kopf = self::helixHead($erste['data'], ['user_id', 'followed_at']);
 
         $angelegt = $this->app->settings->int('followers_full_at', 0) > 0;
         $faellig = time() - $this->app->settings->int('followers_full_at', 0) >= self::FULL_EVERY;
@@ -152,16 +149,14 @@ final class Followers
             return 0;
         }
 
-        $alle = $this->fetchAll($kanal, $erste);
+        // Ohne Zeitpunkt des Follows ist eine Zeile nicht zu gebrauchen.
+        $alle = array_filter(
+            $this->helixAll('channels/followers', $kanal, $erste),
+            static fn (array $zeile): bool => (string) ($zeile['followed_at'] ?? '') !== ''
+        );
 
-        /*
-         * Passt die Liste zur Gesamtzahl? Waehrend des Blaetterns kann
-         * jemand folgen oder gehen - ein, zwei Abweichungen sind
-         * normal. Mehr heisst: es fehlt eine Seite, und dann waeren die
-         * Fehlenden keine Unfollows.
-         */
-        $toleranz = max(3, (int) ceil($gesamt * 0.01));
-        if (abs(count($alle) - $gesamt) > $toleranz) {
+        // Fehlt eine Seite, waeren die Fehlenden keine Unfollows.
+        if (!self::helixComplete(count($alle), $gesamt)) {
             throw new RuntimeException(sprintf(
                 'Liste unvollstaendig (%d von %d) - diesmal kein Vergleich.',
                 count($alle),
@@ -272,79 +267,5 @@ final class Followers
             $nutzlast,
             (string) json_encode($nutzlast, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         );
-    }
-
-    /**
-     * Woran sich die erste Seite wiedererkennen laesst.
-     *
-     * @param list<array<string, mixed>> $zeilen
-     */
-    private static function head(array $zeilen): string
-    {
-        $teile = [];
-        foreach ($zeilen as $zeile) {
-            $teile[] = ($zeile['user_id'] ?? '') . '@' . ($zeile['followed_at'] ?? '');
-        }
-
-        return md5(implode(',', $teile));
-    }
-
-    /**
-     * @param array{data: list<array<string, mixed>>, total: int, cursor: string} $erste
-     * @return array<string, array<string, mixed>> nach user_id
-     */
-    private function fetchAll(string $kanal, array $erste): array
-    {
-        $alle = [];
-        $seite = $erste;
-        $start = time();
-
-        for ($i = 0; $i < self::MAX_PAGES; $i++) {
-            foreach ($seite['data'] as $zeile) {
-                $id = (string) ($zeile['user_id'] ?? '');
-                if ($id !== '' && (string) ($zeile['followed_at'] ?? '') !== '') {
-                    $alle[$id] = $zeile;
-                }
-            }
-
-            if ($seite['cursor'] === '' || $seite['data'] === []) {
-                return $alle;
-            }
-
-            if (time() - $start > self::MAX_SECONDS) {
-                throw new RuntimeException('Abruf dauerte zu lange - diesmal kein Vergleich.');
-            }
-
-            $seite = $this->page($kanal, $seite['cursor']);
-        }
-
-        throw new RuntimeException('Zu viele Seiten - diesmal kein Vergleich.');
-    }
-
-    /**
-     * Eine Seite. Mit dem Token des Kanalinhabers: der Endpunkt will
-     * moderator:read:followers von einem Moderator des Kanals.
-     *
-     * @return array{data: list<array<string, mixed>>, total: int, cursor: string}
-     */
-    private function page(string $kanal, string $cursor): array
-    {
-        $abfrage = ['broadcaster_id' => $kanal, 'first' => 100];
-        if ($cursor !== '') {
-            $abfrage['after'] = $cursor;
-        }
-
-        $antwort = $this->app->twitch->api()->as(TokenStore::BROADCASTER)->get('channels/followers', $abfrage);
-        if (!$antwort->ok()) {
-            throw new RuntimeException('channels/followers: ' . $antwort->error());
-        }
-
-        $daten = $antwort->json['data'] ?? [];
-
-        return [
-            'data'   => array_values(array_filter(is_array($daten) ? $daten : [], 'is_array')),
-            'total'  => (int) ($antwort->json['total'] ?? 0),
-            'cursor' => (string) ($antwort->json['pagination']['cursor'] ?? ''),
-        ];
     }
 }

@@ -299,6 +299,23 @@ $db->run('
 $db->run('CREATE INDEX IF NOT EXISTS twitch_followers_since_idx ON twitch_followers (followed_at DESC)');
 $db->run('CREATE INDEX IF NOT EXISTS twitch_followers_login_idx ON twitch_followers (lower(login))');
 
+// --- Abonnenten (2.19.0) ----------------------------------------------
+// Wer ein Abo hat, wie Twitch es zuletzt geliefert hat - damit nicht
+// jedes Plugin selbst fragt. Ereignisse entstehen daraus keine; die
+// meldet Twitch selbst. Siehe core/Twitch/Subscribers.php.
+$db->run('
+    CREATE TABLE IF NOT EXISTS twitch_subscribers (
+        user_id     VARCHAR(32)  PRIMARY KEY,
+        login       VARCHAR(64)  NOT NULL,
+        name        VARCHAR(255) NOT NULL,
+        tier        VARCHAR(8)   NOT NULL DEFAULT \'1000\',
+        is_gift     BOOLEAN      NOT NULL DEFAULT false,
+        gifter_name VARCHAR(255) NOT NULL DEFAULT \'\',
+        seen_at     TIMESTAMPTZ  NOT NULL DEFAULT now()
+    )
+');
+$db->run('CREATE INDEX IF NOT EXISTS twitch_subscribers_login_idx ON twitch_subscribers (lower(login))');
+
 // --- Abo-Abgleich nach dem Update (2.16.0) -----------------------------
 // Der Kern abonniert jetzt channel.update (Kategorie mitfuehren). Eine
 // bestehende Installation bekommt das Abo erst beim naechsten Abgleich,

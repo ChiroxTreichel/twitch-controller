@@ -218,6 +218,7 @@ Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
 | `core.eventsub.subscriptions` | filter | zusätzliche Twitch-Abos anfordern |
 | `core.eventsub.revoked` | dispatch | Twitch hat ein Abo entzogen |
 | `core.followers.changed` | dispatch | die Follower-Liste hat sich geändert (Gesamtzahl) – siehe „Follower und Unfollows“ |
+| `core.subscribers.changed` | dispatch | die Abo-Liste hat sich geändert (Gesamtzahl, Punkte) – siehe „Abonnenten“ |
 | `core.category.changed` | dispatch | die Twitch-Kategorie hat gewechselt (id, name, vorherige id) |
 | `core.twitch.broadcaster_scopes` | filter | zusätzliche Twitch-Rechte anfordern |
 | `core.twitch.bot_scopes` | filter | Twitch-Rechte für den Chat-Account |
@@ -1480,6 +1481,29 @@ $hooks->on('core.followers.changed', function (int $gesamt) { … });
 
 Wer Follower zählen oder auflisten will, nimmt diese Tabelle und
 fragt nicht selbst bei Twitch.
+
+### Abonnenten
+
+Dasselbe für Abos, in `twitch_subscribers` (`user_id`, `login`,
+`name`, `tier`, `is_gift`, `gifter_name`), im selben Takt und mit
+demselben Trick (erste Seite und Gesamtzahl, ganze Liste nur bei
+Änderung). Siehe `core/Twitch/Subscribers.php`.
+
+Mit einem Unterschied: **es entstehen keine Ereignisse.** Neues Abo,
+Verlängerung, Geschenk und Ende meldet Twitch selbst; ein zweites
+„Abo beendet“ aus dem Vergleich wäre dasselbe Abo, zweimal gemeldet.
+
+Der Kanalinhaber steht mit in der Liste – Twitch führt ihn als
+Abonnenten seines eigenen Kanals –, aber **nicht** in Gesamtzahl und
+Punkten. Die Liste hat also eine Zeile mehr. Wer echte Abonnenten
+auflistet, lässt `broadcasterId()` weg.
+
+```php
+$app->twitch->subscribers()->total();    // ?int, ohne Kanalinhaber
+$app->twitch->subscribers()->points();   // ?int, Abo-Punkte
+
+$hooks->on('core.subscribers.changed', function (int $gesamt, int $punkte) { … });
+```
 
 ### Zurück, wo man hinwollte
 
