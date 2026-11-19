@@ -40,6 +40,12 @@ try {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= $e($title !== '' ? $title . ' · ' . \TwitchController\Core\App::NAME : \TwitchController\Core\App::NAME) ?></title>
+    <?php /*
+        So frueh wie moeglich: das Burger-Menue klappt die Navigation
+        nur zu, wenn auch ein Skript da ist, das sie wieder aufmacht.
+        Ohne JavaScript steht das Menue wie bisher oben auf der Seite.
+    */ ?>
+    <script>document.documentElement.classList.add('js');</script>
     <link rel="stylesheet" href="<?= $e($asset('/assets/admin.css')) ?>">
     <?php $pluginAssets = $view->adminAssets(); ?>
     <?php foreach ($pluginAssets['css'] as $css): ?>
@@ -56,16 +62,30 @@ try {
 
 <div class="shell">
     <aside class="sidebar">
-        <div class="brand">
-            <span class="brand-dot"></span>
-            <div>
-                <strong><?= $e(\TwitchController\Core\App::NAME) ?></strong>
-                <?php if ($channel !== ''): ?>
-                    <small><?= $e($channel) ?></small>
-                <?php endif; ?>
+        <div class="sidebar-head">
+            <div class="brand">
+                <span class="brand-dot"></span>
+                <div>
+                    <strong><?= $e(\TwitchController\Core\App::NAME) ?></strong>
+                    <?php if ($channel !== ''): ?>
+                        <small><?= $e($channel) ?></small>
+                    <?php endif; ?>
+                </div>
             </div>
+
+            <?php /*
+                Nur auf schmalen Bildschirmen zu sehen. Dort liegt die
+                Navigation sonst als langer Block ueber dem Inhalt, und
+                man scrollt erst an zwanzig Plugins vorbei.
+            */ ?>
+            <button class="nav-toggle" type="button"
+                    aria-controls="sidebar-body" aria-expanded="false"
+                    aria-label="<?= $e(translate('nav.menu')) ?>">
+                <span class="nav-toggle-bars"></span>
+            </button>
         </div>
 
+        <div class="sidebar-body" id="sidebar-body">
         <nav>
             <?php foreach ($nav as $key => $group): ?>
                 <?php
@@ -125,6 +145,7 @@ try {
                 <button class="btn btn-ghost" type="submit"><?= $e(translate('nav.sign_out')) ?></button>
             </form>
         <?php endif; ?>
+        </div>
     </aside>
 
     <main class="content">
@@ -162,6 +183,76 @@ try {
     </main>
 </div>
 
+<script>
+// Burger-Menue auf schmalen Bildschirmen. Ob es ueberhaupt zu sehen
+// ist, entscheidet allein das CSS - hier wird nur auf- und zugemacht.
+(function () {
+    'use strict';
+
+    var wurzel = document.documentElement;
+    var schmal = window.matchMedia('(max-width: 820px)');
+
+    function knopf() {
+        return document.querySelector('.nav-toggle');
+    }
+
+    function setzen(offen) {
+        wurzel.classList.toggle('nav-open', offen);
+
+        var k = knopf();
+        if (k) {
+            k.setAttribute('aria-expanded', offen ? 'true' : 'false');
+        }
+    }
+
+    document.addEventListener('click', function (ereignis) {
+        if (ereignis.target.closest('.nav-toggle')) {
+            setzen(!wurzel.classList.contains('nav-open'));
+
+            return;
+        }
+
+        // Ein Menuepunkt fuehrt auf eine andere Seite. Zu machen, damit
+        // es nach "Zurueck" (Seite aus dem Zwischenspeicher) nicht
+        // noch offen dasteht.
+        if (ereignis.target.closest('.sidebar-body a[href]')) {
+            setzen(false);
+        }
+    });
+
+    document.addEventListener('keydown', function (ereignis) {
+        // Eine offene Rueckfrage hat Vorrang - die schliesst ihr
+        // eigener Zuhoerer.
+        if (ereignis.key === 'Escape'
+            && wurzel.classList.contains('nav-open')
+            && !document.querySelector('details.confirm[open]')) {
+            setzen(false);
+            var k = knopf();
+            if (k) {
+                k.focus();
+            }
+        }
+    });
+
+    // Wird das Fenster breit, gibt es keinen Knopf mehr, der das Menue
+    // schliessen koennte - und die Seite bliebe gesperrt.
+    function breiteGeaendert() {
+        if (!schmal.matches) {
+            setzen(false);
+        }
+    }
+
+    if (schmal.addEventListener) {
+        schmal.addEventListener('change', breiteGeaendert);
+    } else if (schmal.addListener) {
+        schmal.addListener(breiteGeaendert);
+    }
+
+    window.addEventListener('pageshow', function () {
+        setzen(false);
+    });
+}());
+</script>
 <script>
 // Zugeklappte Gruppen merken. Die Gruppe der aktuellen Seite bleibt
 // offen, damit man nach dem Navigieren nicht ins Leere schaut.

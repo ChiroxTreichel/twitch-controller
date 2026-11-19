@@ -13,6 +13,7 @@
     --warn: #f5a623;
     --error: #ef4d4d;
     --radius: 12px;
+    --bar-height: 56px;
 }
 
 * { box-sizing: border-box; }
@@ -51,6 +52,77 @@ a { color: inherit; }
     border-right: 1px solid var(--line);
     overflow: hidden;
 }
+
+/* Kopf und Rumpf der Leiste. Auf breiten Bildschirmen unsichtbare
+   Huellen; auf schmalen wird der Kopf zur Leiste oben und der Rumpf
+   zum aufklappbaren Menue - siehe ganz unten. */
+.sidebar-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.sidebar-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* Der Burger-Knopf. Nur auf schmalen Bildschirmen - und nur mit
+   JavaScript, ohne das koennte er nichts. */
+.nav-toggle {
+    display: none;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel-2);
+    color: var(--ink);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-toggle:hover { border-color: var(--muted); }
+
+.nav-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+/* Drei Striche aus einem Element: der mittlere ist das Element, die
+   beiden aeusseren sind davor und danach. Offen werden sie zum X. */
+.nav-toggle-bars,
+.nav-toggle-bars::before,
+.nav-toggle-bars::after {
+    display: block;
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform 0.18s ease, background-color 0.18s ease;
+}
+
+.nav-toggle-bars { position: relative; }
+
+.nav-toggle-bars::before,
+.nav-toggle-bars::after {
+    content: "";
+    position: absolute;
+    left: 0;
+}
+
+.nav-toggle-bars::before { top: -6px; }
+.nav-toggle-bars::after { top: 6px; }
+
+.nav-open .nav-toggle-bars { background-color: transparent; }
+.nav-open .nav-toggle-bars::before { transform: translateY(6px) rotate(45deg); }
+.nav-open .nav-toggle-bars::after { transform: translateY(-6px) rotate(-45deg); }
 
 .brand {
     display: flex;
@@ -528,6 +600,54 @@ td.actions { text-align: right; white-space: nowrap; }
     nav { overflow: visible; }
     .sidebar-foot { margin-top: 16px; }
     .content { padding: 22px 18px 48px; }
+
+    /*
+     * Mit JavaScript: oben nur eine schmale Leiste mit Name und
+     * Burger-Knopf, die beim Scrollen stehen bleibt. Das Menue klappt
+     * darunter auf, nimmt den Rest des Bildschirms und scrollt in
+     * sich - die Seite dahinter steht so lange still.
+     */
+    .js .sidebar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        gap: 0;
+        padding: 0 16px;
+    }
+
+    .js .sidebar-head { height: var(--bar-height); }
+    .js .nav-toggle { display: inline-flex; }
+
+    .js .sidebar-body {
+        display: none;
+        position: fixed;
+        top: calc(var(--bar-height) + 1px);
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 50;
+        padding: 12px 16px calc(24px + env(safe-area-inset-bottom));
+        background: var(--panel);
+        overflow-y: auto;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .js.nav-open .sidebar-body { display: flex; }
+
+    /* Volle Hoehe statt des Rests: gescrollt wird hier der ganze
+       Rumpf, nicht das Menue allein. Sonst schrumpft es auf die
+       Fensterhoehe und der Fuss liegt darueber. */
+    .js .sidebar-body > nav,
+    .js .sidebar-foot { flex: none; }
+
+    /* Die Seite dahinter scrollt nicht mit. */
+    .js.nav-open body { overflow: hidden; }
+
+    /* Groessere Flaechen fuer Finger. */
+    .js .nav-item { padding: 11px 12px; }
+    .js summary.nav-label { padding: 10px 10px 8px; }
 }
 
 /* Menuepunkt mit Schnellschalter daneben. */
