@@ -283,6 +283,22 @@ $db->run('
 $db->run('CREATE INDEX IF NOT EXISTS chat_messages_received_at_idx ON chat_messages (received_at)');
 $db->run('CREATE INDEX IF NOT EXISTS chat_messages_chatter_idx     ON chat_messages (chatter_id)');
 
+// --- Follower (2.18.0) -------------------------------------------------
+// Die Liste aller Follower, wie Twitch sie zuletzt geliefert hat. Ein
+// Unfollow meldet Twitch nicht - er faellt nur auf, wenn jemand hier
+// steht und bei Twitch nicht mehr. Siehe core/Twitch/Followers.php.
+$db->run('
+    CREATE TABLE IF NOT EXISTS twitch_followers (
+        user_id     VARCHAR(32)  PRIMARY KEY,
+        login       VARCHAR(64)  NOT NULL,
+        name        VARCHAR(255) NOT NULL,
+        followed_at TIMESTAMPTZ  NOT NULL,
+        seen_at     TIMESTAMPTZ  NOT NULL DEFAULT now()
+    )
+');
+$db->run('CREATE INDEX IF NOT EXISTS twitch_followers_since_idx ON twitch_followers (followed_at DESC)');
+$db->run('CREATE INDEX IF NOT EXISTS twitch_followers_login_idx ON twitch_followers (lower(login))');
+
 // --- Abo-Abgleich nach dem Update (2.16.0) -----------------------------
 // Der Kern abonniert jetzt channel.update (Kategorie mitfuehren). Eine
 // bestehende Installation bekommt das Abo erst beim naechsten Abgleich,

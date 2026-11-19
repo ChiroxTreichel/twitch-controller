@@ -20,6 +20,7 @@ final class Twitch
     private ?TokenStore $tokens = null;
     private ?EventSub $eventSub = null;
     private ?Category $category = null;
+    private ?Followers $followers = null;
 
     public function __construct(private readonly App $app)
     {
@@ -93,6 +94,15 @@ final class Twitch
     public function category(): Category
     {
         return $this->category ??= new Category($this->app);
+    }
+
+    /**
+     * Follower-Liste und Unfollows. Eine Instanz je Prozess: sie merkt
+     * sich, wann sie zuletzt nachgesehen hat.
+     */
+    public function followers(): Followers
+    {
+        return $this->followers ??= new Followers($this->app);
     }
 
     /**

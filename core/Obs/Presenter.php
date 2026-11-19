@@ -110,6 +110,9 @@ final class Presenter
             case 'twitch.channel.follow':
                 return ['badge' => translate('badge.follow'), 'style' => 'follow', 'title' => self::name($actor), 'filter' => 'follows.new'];
 
+            case 'twitch.channel.unfollow':
+                return ['badge' => translate('badge.unfollow'), 'style' => 'unfollow', 'title' => self::name($actor), 'filter' => 'follows.unfollow'];
+
             case 'twitch.channel.cheer':
                 $anonymous = Payload::bool($payload, ['is_anonymous', 'anonymous']);
 

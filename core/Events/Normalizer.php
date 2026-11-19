@@ -79,6 +79,7 @@ final class Normalizer
 
         switch ($type) {
             case 'channel.follow':
+            case 'channel.unfollow':
             case 'channel.subscribe':
             case 'channel.subscription.end':
                 return self::of($event['user_name'] ?? null, $event['user_id'] ?? null);

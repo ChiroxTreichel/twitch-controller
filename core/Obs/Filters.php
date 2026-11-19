@@ -90,6 +90,7 @@ final class Filters
         $nodes = [
             ['key' => 'follows',           'label' => 'Follows',   'order' => 10],
             ['key' => 'follows.new',       'label' => 'Follow',    'parent' => 'follows', 'order' => 10],
+            ['key' => 'follows.unfollow',  'label' => translate('feed.filter.unfollow'), 'parent' => 'follows', 'order' => 20],
 
             ['key' => 'bits',              'label' => 'Bits',      'order' => 20],
 

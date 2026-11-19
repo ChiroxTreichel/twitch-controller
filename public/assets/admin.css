@@ -293,7 +293,14 @@ summary.nav-label::before {
  * Begrenzt wird stattdessen der Fliesstext - siehe .lead und .prose.
  * Dort zaehlt Lesbarkeit, bei einem Raster nicht.
  */
-.content { padding: 32px 36px 64px; }
+.content {
+    padding: 32px 36px 64px;
+
+    /* Im Grid ist die Mindestbreite sonst die des breitesten Kindes -
+       eine lange Tabelle machte die ganze Seite breiter als das
+       Fenster, statt in sich zu scrollen. */
+    min-width: 0;
+}
 
 /* --- Textbausteine ------------------------------------------------- */
 
@@ -490,6 +497,23 @@ label { display: block; font-size: 0.86rem; color: var(--muted); margin-bottom: 
 
 table { width: 100%; border-collapse: collapse; }
 
+/*
+ * Breite Tabellen scrollen in sich statt die Seite breiter zu machen.
+ * Die Huelle setzt das Skript im Layout um jede Tabelle im Inhalt -
+ * auch um die der Plugins, ohne dass deren Vorlagen sie kennen muessen.
+ */
+.table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Lange Zeichenketten ohne Leerzeichen (Fehlermeldungen, Adressen,
+   Schluessel) brechen um, statt ueber den Rand zu laufen. */
+.content code {
+    overflow-wrap: anywhere;
+}
+
 th, td {
     text-align: left;
     padding: 10px 12px;
@@ -583,7 +607,13 @@ td.actions { text-align: right; white-space: nowrap; }
 .step.is-current { background: var(--accent); }
 
 @media (max-width: 820px) {
-    .shell { grid-template-columns: 1fr; }
+    /* Kopfleiste so hoch wie noetig, der Rest gehoert dem Inhalt. Ohne
+       die Zeilenangabe verteilt das Grid bei kurzen Seiten den freien
+       Platz der Mindesthoehe auf beide - und die Kopfleiste wuchs. */
+    .shell {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto 1fr;
+    }
 
     /* Auf schmalen Geraeten liegt die Leiste oben - dort waere eine
        feste Bildschirmhoehe die ganze Seite. */
@@ -599,6 +629,9 @@ td.actions { text-align: right; white-space: nowrap; }
 
     nav { overflow: visible; }
     .sidebar-foot { margin-top: 16px; }
+
+    /* Titel und Knoepfe passen nicht mehr nebeneinander. */
+    .card-head { flex-wrap: wrap; }
     .content { padding: 22px 18px 48px; }
 
     /*
@@ -1162,6 +1195,55 @@ td.actions { text-align: right; white-space: nowrap; }
 }
 
 .plugin-row .row { flex: 0 0 auto; }
+
+/*
+ * Auf dem Handy: oben der Name, darunter in einer Reihe links
+ * "Einstellungen" und rechts Schalten und Entfernen.
+ *
+ * Steht hier und nicht im grossen Block weiter oben: die Regel direkt
+ * darueber kaeme sonst spaeter und gewaenne.
+ */
+@media (max-width: 820px) {
+    .plugin-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 10px 12px;
+    }
+
+    .plugin-row .plugin-actions,
+    .card-head .plugin-actions {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+
+    .plugin-actions .plugin-switches {
+        flex: 0 1 auto;
+        margin-left: auto;
+        justify-content: flex-end;
+    }
+
+    /* Drei Knoepfe in einer Reihe passen auf 390 px nur knapp - mit
+       etwas weniger Luft passen sie. */
+    .plugin-actions,
+    .plugin-actions .plugin-switches { gap: 8px; }
+    .plugin-actions .btn { padding-left: 11px; padding-right: 11px; }
+
+    /* Reiter in einer Zeile, die sich seitlich wischen laesst, statt
+       einer Pille, die in zwei Zeilen zerfaellt. */
+    .tabs {
+        display: flex;
+        width: fit-content;
+        max-width: 100%;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { flex: none; white-space: nowrap; }
+}
 
 /* Der Umschalter sitzt rechts ueber der Liste. */
 .view-switch {

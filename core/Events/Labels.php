@@ -22,6 +22,9 @@ final class Labels
     {
         $labels = [
             'channel.follow'                => translate('events.follow'),
+            // Kein Twitch-Ereignis - der Kern merkt es selbst, siehe
+            // Twitch\Followers.
+            'channel.unfollow'              => translate('events.unfollow'),
             'channel.subscribe'             => translate('events.new_sub'),
             'channel.subscription.message'  => translate('events.sub_renewed'),
             'channel.subscription.gift'     => translate('events.sub_gifted'),

@@ -254,6 +254,57 @@ try {
 }());
 </script>
 <script>
+// Tabellen und Reiter im Inhalt fuer schmale Bildschirme.
+//
+// Tabellen in eine scrollbare Huelle setzen (siehe
+// .table-scroll). Hier und nicht in den Vorlagen: Tabellen stehen in
+// Dutzenden Ansichten, viele davon in Plugins.
+(function () {
+    'use strict';
+
+    function einpacken() {
+        document.querySelectorAll('main.content table').forEach(function (tabelle) {
+            var eltern = tabelle.parentElement;
+
+            // Schon eingepackt, oder eine Tabelle in einer Tabelle.
+            if (!eltern || eltern.classList.contains('table-scroll') || eltern.closest('table')) {
+                return;
+            }
+
+            var huelle = document.createElement('div');
+            huelle.className = 'table-scroll';
+            eltern.insertBefore(huelle, tabelle);
+            huelle.appendChild(tabelle);
+        });
+    }
+
+    /*
+     * Reiter, die auf dem Handy seitlich scrollen: der aktive soll zu
+     * sehen sein. Sonst steht man auf "Aussehen" und sieht nur die
+     * Reiter davor.
+     */
+    function reiterZeigen() {
+        document.querySelectorAll('main.content .tabs').forEach(function (leiste) {
+            var aktiv = leiste.querySelector('.is-active');
+
+            if (!aktiv || leiste.scrollWidth <= leiste.clientWidth) {
+                return;
+            }
+
+            leiste.scrollLeft = aktiv.offsetLeft - (leiste.clientWidth - aktiv.offsetWidth) / 2;
+        });
+    }
+
+    function alles() {
+        einpacken();
+        reiterZeigen();
+    }
+
+    alles();
+    document.addEventListener('overlay:swapped', alles);
+}());
+</script>
+<script>
 // Zugeklappte Gruppen merken. Die Gruppe der aktuellen Seite bleibt
 // offen, damit man nach dem Navigieren nicht ins Leere schaut.
 (function () {

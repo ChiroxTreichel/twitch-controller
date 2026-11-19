@@ -210,7 +210,24 @@ while ($running) {
         fwrite(STDERR, '[worker] Fehler: ' . $e->getMessage() . "\n");
     }
 
-    sleep($interval);
+    /*
+     * Warten - und dabei alle zehn Sekunden nach Unfollows sehen.
+     *
+     * Eigener Takt statt des Worker-Takts: der steht auf 15 Sekunden
+     * und laesst sich je Installation verstellen. Ein Unfollow soll
+     * nicht davon abhaengen, was in der .env steht.
+     *
+     * Erst wenn die Plugins geladen sind: ein Unfollow geht ueber
+     * core.event.stored an sie, und vorher hoerte niemand zu.
+     */
+    $weiterUm = time() + $interval;
+    while ($running && time() < $weiterUm) {
+        if ($booted) {
+            $app->twitch->followers()->checkIfDue();
+        }
+
+        sleep(1);
+    }
 }
 
 fwrite(STDOUT, "[worker] Beendet.\n");

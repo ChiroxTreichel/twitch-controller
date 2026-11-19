@@ -217,6 +217,7 @@ Zuhörer und gibt das Ergebnis zurück. Kleinere Priorität läuft früher.
 | `core.twitch.scope_labels` | filter | Klartext für eigene Twitch-Berechtigungen |
 | `core.eventsub.subscriptions` | filter | zusätzliche Twitch-Abos anfordern |
 | `core.eventsub.revoked` | dispatch | Twitch hat ein Abo entzogen |
+| `core.followers.changed` | dispatch | die Follower-Liste hat sich geändert (Gesamtzahl) – siehe „Follower und Unfollows“ |
 | `core.category.changed` | dispatch | die Twitch-Kategorie hat gewechselt (id, name, vorherige id) |
 | `core.twitch.broadcaster_scopes` | filter | zusätzliche Twitch-Rechte anfordern |
 | `core.twitch.bot_scopes` | filter | Twitch-Rechte für den Chat-Account |
@@ -1428,6 +1429,12 @@ $hooks->on('plugin.settings', function (array $pages) use ($plugin) {
 });
 ```
 
+Der Knopf heißt in der Liste bei jedem Plugin gleich („Einstellungen“),
+`label` wird dort nicht angezeigt. Meldet ein Plugin mehrere Seiten an
+(`$pages[$plugin->slug . ':appearance']`), führt der Knopf zur ersten –
+die weiteren verlinkt das Plugin selbst, am besten als Reiter (`.tabs`)
+über seinen Einstellungsseiten.
+
 ---
 
 ## Twitch
@@ -1436,6 +1443,43 @@ Es gibt genau **eine** Redirect-URI: `https://<domain>/auth/callback`. Der
 Zweck des Logins steckt im HMAC-signierten `state`-Parameter, das Nonce in
 einem kurzlebigen Cookie. Plugins hängen eigene Login-Flows an
 `core.oauth.callback` und brauchen keine zweite URI.
+
+### Follower und Unfollows
+
+Twitch meldet einen Follow (`channel.follow`), aber keinen Unfollow.
+Der Kern führt darum die Liste aller Follower selbst, in
+`twitch_followers` (`user_id`, `login`, `name`, `followed_at`), und
+vergleicht sie alle **zehn Sekunden** mit Twitch – im Worker, in eigenem
+Takt unabhängig von `WORKER_INTERVAL`. Siehe `core/Twitch/Followers.php`.
+
+Wer fehlt, hat entfolgt. Das wird als Ereignis gespeichert:
+
+| Feld | Wert |
+| --- | --- |
+| `event_type` | `twitch.channel.unfollow` |
+| `external_id` | `unfollow:<user_id>:<followed_at>` – derselbe Unfollow nie zweimal |
+| `payload` | `user_id`, `user_login`, `user_name`, `followed_at` (seit wann er folgte) |
+
+Es läuft wie jedes andere Ereignis: Aktivitäten, OBS-Feed (Abzeichen
+und Filter „Unfollow“ unter Follows), `core.event.stored`.
+
+Damit das nicht alle zehn Sekunden die ganze Liste kostet, wird zuerst
+nur die erste Seite geholt – Twitch liefert sie neueste zuerst, mit der
+Gesamtzahl. Erst wenn sich eins von beiden geändert hat, kommt die
+ganze Liste; zur Sicherheit zusätzlich einmal die Stunde. Der erste
+Abruf legt nur den Stand an, ohne Ereignisse. Passt eine geholte Liste
+nicht zur Gesamtzahl (fehlende Seite), wird nicht verglichen.
+
+Für Plugins:
+
+```php
+$app->twitch->followers()->total();   // ?int, null vor dem ersten Abgleich
+
+$hooks->on('core.followers.changed', function (int $gesamt) { … });
+```
+
+Wer Follower zählen oder auflisten will, nimmt diese Tabelle und
+fragt nicht selbst bei Twitch.
 
 ### Zurück, wo man hinwollte
 

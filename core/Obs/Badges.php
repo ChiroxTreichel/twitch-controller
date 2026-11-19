@@ -39,6 +39,7 @@ final class Badges
     {
         $badges = [
             'follow'         => ['label' => translate('badge.follow'),         'bg' => '#1f8b4c', 'text' => '#ffffff'],
+            'unfollow'       => ['label' => translate('badge.unfollow'),       'bg' => '#4a4f5a', 'text' => '#ffffff'],
             'sub'            => ['label' => translate('badge.sub'),            'bg' => '#9146ff', 'text' => '#ffffff'],
             'resub'          => ['label' => translate('badge.resub'),          'bg' => '#7a2df0', 'text' => '#ffffff'],
             'prime'          => ['label' => translate('badge.prime'),          'bg' => '#00a4dc', 'text' => '#ffffff'],

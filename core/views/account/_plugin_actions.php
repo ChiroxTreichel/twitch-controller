@@ -16,20 +16,30 @@
  * @var string $csrf
  */
 ?>
-<div class="row">
+<div class="row plugin-actions">
     <?php /*
-        Ein Plugin darf MEHRERE Einstellungsseiten anbieten - etwa
-        Zugangsdaten und Aussehen. Vorher war es genau eine, und die
-        zweite fiel still weg.
+        EIN Knopf, und er heisst bei jedem Plugin gleich. Vorher trug
+        er den Namen, den das Plugin ihm gab - "Einrichtung",
+        "Einstellungen der Umfragen", "Live-Benachrichtigung - Chat" -
+        und man musste in jeder Zeile lesen, was derselbe Knopf diesmal
+        heisst.
+
+        Meldet ein Plugin mehrere Seiten an, fuehrt der Knopf zur
+        ersten. Die weiteren erreicht man dort ueber Reiter - das ist
+        Sache des Plugins.
     */ ?>
-    <?php if ($row['enabled']): ?>
-        <?php foreach ($row['settings'] as $seite): ?>
-            <a class="btn btn-ghost btn-small" href="<?= $e($url($seite['href'])) ?>">
-                <?= $e($seite['label']) ?>
-            </a>
-        <?php endforeach ?>
+    <?php if ($row['enabled'] && $row['settings'] !== []): ?>
+        <a class="btn btn-ghost btn-small" href="<?= $e($url($row['settings'][0]['href'])) ?>">
+            <?= $e(translate('account.plugins.settings')) ?>
+        </a>
     <?php endif; ?>
 
+    <?php /*
+        Schalten und Entfernen als eigene Gruppe: auf dem Handy bekommen
+        sie eine eigene Reihe, rechtsbuendig - getrennt von den Links zu
+        den Einstellungen. Breit sieht man davon nichts.
+    */ ?>
+    <div class="row plugin-switches">
     <?php if ($row['catalog'] !== null): ?>
         <form method="post" action="<?= $e($url('/account/plugins')) ?>">
             <input type="hidden" name="csrf" value="<?= $e($csrf) ?>">
@@ -93,4 +103,5 @@
             'right'  => true,
         ], null) ?>
     <?php endif; ?>
+    </div>
 </div>
